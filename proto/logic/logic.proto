@@ -1,7 +1,57 @@
 syntax = "proto3";
 
 package lane.logic;
-option go_package = "proto/logic;logic";
-import "proto/protomsg";
+option go_package = "../proto/logic;logic";
+import "proto/msg";
 
-service
+message SingleReq {
+  userid int64 = 1;
+  lane.msg.Msg msg = 2;
+}
+
+message SingleResp {}
+
+message BrodcastReq {
+  roomid int64 = 1;
+  lane.msg.Msg msg = 2;
+}
+
+message BrodcastResp {}
+
+message BrodcastMeReq {
+  int64 roomid = 1;
+  int64 userid = 2;
+  lane.msg.Msg msg = 3;
+}
+
+message BrodcastMeResp {}
+
+message NoResp {}
+
+message SetOnlineReq {
+  int64 roomid = 1;
+  int64 userid = 2;
+}
+
+message SetOnlineResp {}
+
+message RoomReq { int64 roomid = 1; }
+
+message RoomResp { repeated UserInfo = 1; }
+
+message UserInfo {
+  int64 userid = 1;
+  bool online = 2;
+}
+
+message SetOfflineReq { int64 userid = ; }
+
+service comet {
+  rpc Single(SingleReq) returns (NoResp);
+  rpc Brodcast(BrodcastReq) returns (NoResp);
+  rpc BrodcastMe(BrodcastMeReq) returns (NoResp);
+
+  rpc SetOnline(SetOnlineReq) returns (NoResp);
+  rpc SetOffline(SetOfflineReq) returns (NoResp);
+  rpc Room(RoomReq) returns (RoomResp);
+}

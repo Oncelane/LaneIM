@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package lane.msg;
-option go_package = "proto/protomsg;protomsg";
+option go_package = "proto/msg;msg";
 
 enum MsgType {
   BRODCAST = 1;
