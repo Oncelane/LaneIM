@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package lane.logic;
+option go_package = "proto/logic;logic";
+import "proto/protomsg";
+
+service

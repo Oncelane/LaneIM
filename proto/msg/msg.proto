@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package lane.msg;
+option go_package = "proto/protomsg;protomsg";
+
+enum MsgType {
+  BRODCAST = 1;
+  SINGLE = 2;
+  BRODCASTMS = 3;
+}
+
+message Msg {
+  MsgType op = 1;
+  int64 seq = 2;
+  int32 var = 3;
+  bytes byte = 4;
+}
