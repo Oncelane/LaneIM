@@ -1,35 +1,33 @@
 syntax = "proto3";
 
 package lane.comet;
-option go_package = "../comet;comet";
-import "proto/msg";
+option go_package = "laneIM/proto/comet;comet";
+import "proto/msg/msg.proto";
 
 message SingleReq {
-  userid int64 = 1;
-  lane.msg.Msg msg = 2;
+  int64 userid = 1;
+  int32 roomid = 2;
+  lane.msg.Msg msg = 3;
 }
 
 message SingleResp {}
 
-message BrodcastReq {
-  roomid int64 = 1;
-  lane.msg.Msg msg = 2;
-}
+message BrodcastReq { lane.msg.Msg msg = 2; }
 
 message BrodcastResp {}
 
-message BrodcastMeReq {
-  int64 roomid = 1;
+message BrodcastRoomReq {
+  repeated int32 roomid = 1;
   int64 userid = 2;
   lane.msg.Msg msg = 3;
 }
 
-message BrodcastMeResp {}
+message BrodcastRoomResp {}
 
 message NoResp {}
 
 service comet {
   rpc Single(SingleReq) returns (NoResp);
   rpc Brodcast(BrodcastReq) returns (NoResp);
-  rpc BrodcastMe(BrodcastMeReq) returns (NoResp);
+  rpc BrodcastRoom(BrodcastRoomReq) returns (NoResp);
 }

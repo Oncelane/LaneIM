@@ -1,35 +1,33 @@
 syntax = "proto3";
 
 package lane.logic;
-option go_package = "../proto/logic;logic";
-import "proto/msg";
+option go_package = "laneIM/proto/logic;logic";
+import "proto/msg/msg.proto";
 
 message SingleReq {
-  userid int64 = 1;
-  lane.msg.Msg msg = 2;
+  int64 userid = 1;
+  int32 roomid = 2;
+  lane.msg.Msg msg = 3;
 }
 
 message SingleResp {}
 
-message BrodcastReq {
-  roomid int64 = 1;
-  lane.msg.Msg msg = 2;
-}
+message BrodcastReq { lane.msg.Msg msg = 2; }
 
 message BrodcastResp {}
 
-message BrodcastMeReq {
-  int64 roomid = 1;
+message BrodcastRoomReq {
+  repeated int32 roomid = 1;
   int64 userid = 2;
   lane.msg.Msg msg = 3;
 }
 
-message BrodcastMeResp {}
+message BrodcastRoomResp {}
 
 message NoResp {}
 
 message SetOnlineReq {
-  int64 roomid = 1;
+  int32 roomid = 1;
   int64 userid = 2;
 }
 
@@ -37,19 +35,19 @@ message SetOnlineResp {}
 
 message RoomReq { int64 roomid = 1; }
 
-message RoomResp { repeated UserInfo = 1; }
-
 message UserInfo {
   int64 userid = 1;
   bool online = 2;
 }
 
-message SetOfflineReq { int64 userid = ; }
+message RoomResp { repeated UserInfo userinfos = 1; }
 
-service comet {
+message SetOfflineReq { int64 userid = 1; }
+
+service logic {
   rpc Single(SingleReq) returns (NoResp);
   rpc Brodcast(BrodcastReq) returns (NoResp);
-  rpc BrodcastMe(BrodcastMeReq) returns (NoResp);
+  rpc BrodcastRoom(BrodcastRoomReq) returns (NoResp);
 
   rpc SetOnline(SetOnlineReq) returns (NoResp);
   rpc SetOffline(SetOfflineReq) returns (NoResp);

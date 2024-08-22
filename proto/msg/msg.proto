@@ -1,12 +1,12 @@
 syntax = "proto3";
 
 package lane.msg;
-option go_package = "proto/msg;msg";
+option go_package = "laneIM/proto/msg;msg";
 
 enum MsgType {
-  BRODCAST = 1;
-  SINGLE = 2;
-  BRODCASTMS = 3;
+  BRODCAST = 0;
+  SINGLE = 1;
+  BRODCASTMS = 2;
 }
 
 message Msg {

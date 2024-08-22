@@ -2,8 +2,10 @@ package comet
 
 import (
 	"context"
-	"laneIM/proto/pb"
+	"laneIM/proto/logic"
+	"laneIM/proto/msg"
 	"laneIM/src/pkg"
+
 	"log"
 	"math/rand"
 	"sync"
@@ -14,7 +16,7 @@ import (
 
 type Logic struct {
 	Addr string
-	C    pb.ExampleServiceClient
+	C    logic.LogicClient
 }
 
 func NewLogic(addr string) *Logic {
@@ -23,7 +25,7 @@ func NewLogic(addr string) *Logic {
 		log.Println("Dail faild ", err.Error())
 		return nil
 	}
-	c := pb.NewExampleServiceClient(conn)
+	c := logic.NewLogicClient(conn)
 	return &Logic{
 		Addr: addr,
 		C:    c,
@@ -70,13 +72,35 @@ func (c *Comet) pickLogic() *Logic {
 	return c.logics[rand.Int()%len(c.logics)]
 }
 
-func (c *Comet) Brodcast(msg string) {
-	req := pb.HelloReq{
-		Name: msg,
+func (c *Comet) LogicBrodcast(message *msg.Msg) {
+	req := logic.BrodcastReq{
+		Msg: message,
 	}
-	resp, err := c.pickLogic().C.SayHello(context.Background(), &req)
+	_, err := c.pickLogic().C.Brodcast(context.Background(), &req)
 	if err != nil {
 		log.Panicln(err)
 	}
-	log.Println(resp.Message)
+}
+
+func (c *Comet) LogicBrodcastRoom(message *msg.Msg, roomid []int32) {
+	req := logic.BrodcastRoomReq{
+		Msg:    message,
+		Roomid: roomid,
+	}
+	_, err := c.pickLogic().C.BrodcastRoom(context.Background(), &req)
+	if err != nil {
+		log.Panicln(err)
+	}
+}
+
+func (c *Comet) LogicSingle(message *msg.Msg, userid UserID, roomid int32) {
+	req := logic.SingleReq{
+		Msg:    message,
+		Roomid: roomid,
+		Userid: int64(userid),
+	}
+	_, err := c.pickLogic().C.Single(context.Background(), &req)
+	if err != nil {
+		log.Panicln(err)
+	}
 }
