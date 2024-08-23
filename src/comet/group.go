@@ -1,20 +1,21 @@
 package comet
 
-type Group struct {
-	id     int32
-	groups map[UserID]*Channel
+type Room struct {
+	id     int64
+	rooms  map[UserID]*Channel
+	Online int64
 }
 
-func (m *Manager) NewGroup() *Group {
-	return &Group{
-		groups: make(map[UserID]*Channel),
+func (m *Manager) NewRoom() *Room {
+	return &Room{
+		rooms: make(map[UserID]*Channel),
 	}
 }
 
-func (g *Group) PutChannel(channel *Channel) {
-	g.groups[channel.id] = channel
+func (g *Room) PutChannel(channel *Channel) {
+	g.rooms[channel.id] = channel
 }
 
-func (g *Group) DelChannel(channel *Channel) {
-	delete(g.groups, channel.id)
+func (g *Room) DelChannel(channel *Channel) {
+	delete(g.rooms, channel.id)
 }

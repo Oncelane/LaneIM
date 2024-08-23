@@ -15,8 +15,8 @@ import (
 )
 
 type Logic struct {
-	Addr string
-	C    logic.LogicClient
+	Addr   string
+	Client logic.LogicClient
 }
 
 func NewLogic(addr string) *Logic {
@@ -27,8 +27,8 @@ func NewLogic(addr string) *Logic {
 	}
 	c := logic.NewLogicClient(conn)
 	return &Logic{
-		Addr: addr,
-		C:    c,
+		Addr:   addr,
+		Client: c,
 	}
 }
 
@@ -76,30 +76,30 @@ func (c *Comet) LogicBrodcast(message *msg.Msg) {
 	req := logic.BrodcastReq{
 		Msg: message,
 	}
-	_, err := c.pickLogic().C.Brodcast(context.Background(), &req)
+	_, err := c.pickLogic().Client.Brodcast(context.Background(), &req)
 	if err != nil {
 		log.Panicln(err)
 	}
 }
 
-func (c *Comet) LogicBrodcastRoom(message *msg.Msg, roomid []int32) {
+func (c *Comet) LogicBrodcastRoom(message *msg.Msg, roomid int64) {
 	req := logic.BrodcastRoomReq{
 		Msg:    message,
 		Roomid: roomid,
 	}
-	_, err := c.pickLogic().C.BrodcastRoom(context.Background(), &req)
+	_, err := c.pickLogic().Client.BrodcastRoom(context.Background(), &req)
 	if err != nil {
 		log.Panicln(err)
 	}
 }
 
-func (c *Comet) LogicSingle(message *msg.Msg, userid UserID, roomid int32) {
+func (c *Comet) LogicSingle(message *msg.Msg, userid UserID, roomid int64) {
 	req := logic.SingleReq{
 		Msg:    message,
 		Roomid: roomid,
 		Userid: int64(userid),
 	}
-	_, err := c.pickLogic().C.Single(context.Background(), &req)
+	_, err := c.pickLogic().Client.Single(context.Background(), &req)
 	if err != nil {
 		log.Panicln(err)
 	}

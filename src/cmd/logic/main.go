@@ -31,8 +31,8 @@ func main() {
 	logic := Logic{
 		etcd: *pkg.NewEtcd(),
 	}
-	logic.etcd.SetAddr("logic1", Addr)
-	fmt.Println("etcd set logic1:", Addr)
+	logic.etcd.SetAddr("logic", Addr)
+	fmt.Println("etcd set logic:", Addr)
 	lis, err := net.Listen("tcp", Addr)
 	if err != nil {
 		log.Fatalln("failed to listen: ", err.Error())

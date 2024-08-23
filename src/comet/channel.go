@@ -14,7 +14,7 @@ type Channel struct {
 	sendCh chan *msg.Msg
 }
 
-func (m *Manager) newChannel(userId UserID, conn *websocket.Conn) *Channel {
+func (m *Manager) NewChannel(userId UserID, conn *websocket.Conn) *Channel {
 	ch := &Channel{
 		id:     userId,
 		ws:     pkg.NewWs(conn, &m.pool),

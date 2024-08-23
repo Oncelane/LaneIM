@@ -12,6 +12,6 @@ enum MsgType {
 message Msg {
   MsgType op = 1;
   int64 seq = 2;
-  int32 var = 3;
+  int64 var = 3;
   bytes byte = 4;
 }

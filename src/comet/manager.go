@@ -6,34 +6,34 @@ import (
 )
 
 type Manager struct {
-	pool   pkg.MsgPool
-	groups map[int32]*Group
-	nGroup int
-	mu     sync.Mutex
+	pool  pkg.MsgPool
+	rooms map[int64]*Room
+	nRoom int
+	mu    sync.Mutex
 }
 
-func (m *Manager) PutGroup(g *Group) {
+func (m *Manager) PutRoom(g *Room) {
 	m.mu.Lock()
-	m.nGroup++
-	m.groups[g.id] = g
+	m.nRoom++
+	m.rooms[g.id] = g
 	m.mu.Unlock()
 }
 
-func (m *Manager) DelGroup(id int32) {
+func (m *Manager) DelRoom(id int64) {
 	m.mu.Lock()
-	m.DelGroup(id)
-	m.nGroup--
+	delete(m.rooms, id)
+	m.nRoom--
 	m.mu.Unlock()
 }
 
-func (m *Manager) GetGroup(id int32) *Group {
-	return m.groups[id]
+func (m *Manager) GetRoom(id int64) *Room {
+	return m.rooms[id]
 }
 
-func (m *Manager) PutChannel(id int32, c *Channel) {
-	m.GetGroup(id).PutChannel(c)
+func (m *Manager) PutChannel(id int64, c *Channel) {
+	m.GetRoom(id).PutChannel(c)
 }
 
-func (m *Manager) DelChannel(id int32, c *Channel) {
-	m.GetGroup(id).DelChannel(c)
+func (m *Manager) DelChannel(id int64, c *Channel) {
+	m.GetRoom(id).DelChannel(c)
 }

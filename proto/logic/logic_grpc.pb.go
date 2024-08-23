@@ -24,6 +24,8 @@ const (
 	Logic_BrodcastRoom_FullMethodName = "/lane.logic.logic/BrodcastRoom"
 	Logic_SetOnline_FullMethodName    = "/lane.logic.logic/SetOnline"
 	Logic_SetOffline_FullMethodName   = "/lane.logic.logic/SetOffline"
+	Logic_JoinRoom_FullMethodName     = "/lane.logic.logic/JoinRoom"
+	Logic_QuitRoom_FullMethodName     = "/lane.logic.logic/QuitRoom"
 	Logic_Room_FullMethodName         = "/lane.logic.logic/Room"
 )
 
@@ -36,6 +38,8 @@ type LogicClient interface {
 	BrodcastRoom(ctx context.Context, in *BrodcastRoomReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOnline(ctx context.Context, in *SetOnlineReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOffline(ctx context.Context, in *SetOfflineReq, opts ...grpc.CallOption) (*NoResp, error)
+	JoinRoom(ctx context.Context, in *JoinRoomReq, opts ...grpc.CallOption) (*NoResp, error)
+	QuitRoom(ctx context.Context, in *QuitRoomReq, opts ...grpc.CallOption) (*NoResp, error)
 	Room(ctx context.Context, in *RoomReq, opts ...grpc.CallOption) (*RoomResp, error)
 }
 
@@ -97,6 +101,26 @@ func (c *logicClient) SetOffline(ctx context.Context, in *SetOfflineReq, opts ..
 	return out, nil
 }
 
+func (c *logicClient) JoinRoom(ctx context.Context, in *JoinRoomReq, opts ...grpc.CallOption) (*NoResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NoResp)
+	err := c.cc.Invoke(ctx, Logic_JoinRoom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *logicClient) QuitRoom(ctx context.Context, in *QuitRoomReq, opts ...grpc.CallOption) (*NoResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NoResp)
+	err := c.cc.Invoke(ctx, Logic_QuitRoom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *logicClient) Room(ctx context.Context, in *RoomReq, opts ...grpc.CallOption) (*RoomResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RoomResp)
@@ -116,6 +140,8 @@ type LogicServer interface {
 	BrodcastRoom(context.Context, *BrodcastRoomReq) (*NoResp, error)
 	SetOnline(context.Context, *SetOnlineReq) (*NoResp, error)
 	SetOffline(context.Context, *SetOfflineReq) (*NoResp, error)
+	JoinRoom(context.Context, *JoinRoomReq) (*NoResp, error)
+	QuitRoom(context.Context, *QuitRoomReq) (*NoResp, error)
 	Room(context.Context, *RoomReq) (*RoomResp, error)
 	mustEmbedUnimplementedLogicServer()
 }
@@ -141,6 +167,12 @@ func (UnimplementedLogicServer) SetOnline(context.Context, *SetOnlineReq) (*NoRe
 }
 func (UnimplementedLogicServer) SetOffline(context.Context, *SetOfflineReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetOffline not implemented")
+}
+func (UnimplementedLogicServer) JoinRoom(context.Context, *JoinRoomReq) (*NoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinRoom not implemented")
+}
+func (UnimplementedLogicServer) QuitRoom(context.Context, *QuitRoomReq) (*NoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QuitRoom not implemented")
 }
 func (UnimplementedLogicServer) Room(context.Context, *RoomReq) (*RoomResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Room not implemented")
@@ -256,6 +288,42 @@ func _Logic_SetOffline_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Logic_JoinRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JoinRoomReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).JoinRoom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_JoinRoom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).JoinRoom(ctx, req.(*JoinRoomReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Logic_QuitRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuitRoomReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).QuitRoom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_QuitRoom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).QuitRoom(ctx, req.(*QuitRoomReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Logic_Room_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RoomReq)
 	if err := dec(in); err != nil {
@@ -300,6 +368,14 @@ var Logic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetOffline",
 			Handler:    _Logic_SetOffline_Handler,
+		},
+		{
+			MethodName: "JoinRoom",
+			Handler:    _Logic_JoinRoom_Handler,
+		},
+		{
+			MethodName: "QuitRoom",
+			Handler:    _Logic_QuitRoom_Handler,
 		},
 		{
 			MethodName: "Room",
