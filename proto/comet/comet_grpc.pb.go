@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Comet_Single_FullMethodName       = "/lane.comet.comet/Single"
-	Comet_Brodcast_FullMethodName     = "/lane.comet.comet/Brodcast"
-	Comet_BrodcastRoom_FullMethodName = "/lane.comet.comet/BrodcastRoom"
+	Comet_Single_FullMethodName   = "/lane.comet.comet/Single"
+	Comet_Brodcast_FullMethodName = "/lane.comet.comet/Brodcast"
+	Comet_Room_FullMethodName     = "/lane.comet.comet/Room"
 )
 
 // CometClient is the client API for Comet service.
@@ -30,7 +30,7 @@ const (
 type CometClient interface {
 	Single(ctx context.Context, in *SingleReq, opts ...grpc.CallOption) (*NoResp, error)
 	Brodcast(ctx context.Context, in *BrodcastReq, opts ...grpc.CallOption) (*NoResp, error)
-	BrodcastRoom(ctx context.Context, in *BrodcastRoomReq, opts ...grpc.CallOption) (*NoResp, error)
+	Room(ctx context.Context, in *RoomReq, opts ...grpc.CallOption) (*NoResp, error)
 }
 
 type cometClient struct {
@@ -61,10 +61,10 @@ func (c *cometClient) Brodcast(ctx context.Context, in *BrodcastReq, opts ...grp
 	return out, nil
 }
 
-func (c *cometClient) BrodcastRoom(ctx context.Context, in *BrodcastRoomReq, opts ...grpc.CallOption) (*NoResp, error) {
+func (c *cometClient) Room(ctx context.Context, in *RoomReq, opts ...grpc.CallOption) (*NoResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(NoResp)
-	err := c.cc.Invoke(ctx, Comet_BrodcastRoom_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Comet_Room_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -72,16 +72,15 @@ func (c *cometClient) BrodcastRoom(ctx context.Context, in *BrodcastRoomReq, opt
 }
 
 // CometServer is the server API for Comet service.
-// All implementations must embed UnimplementedCometServer
+// All implementations should embed UnimplementedCometServer
 // for forward compatibility.
 type CometServer interface {
 	Single(context.Context, *SingleReq) (*NoResp, error)
 	Brodcast(context.Context, *BrodcastReq) (*NoResp, error)
-	BrodcastRoom(context.Context, *BrodcastRoomReq) (*NoResp, error)
-	mustEmbedUnimplementedCometServer()
+	Room(context.Context, *RoomReq) (*NoResp, error)
 }
 
-// UnimplementedCometServer must be embedded to have
+// UnimplementedCometServer should be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
@@ -94,11 +93,10 @@ func (UnimplementedCometServer) Single(context.Context, *SingleReq) (*NoResp, er
 func (UnimplementedCometServer) Brodcast(context.Context, *BrodcastReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Brodcast not implemented")
 }
-func (UnimplementedCometServer) BrodcastRoom(context.Context, *BrodcastRoomReq) (*NoResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BrodcastRoom not implemented")
+func (UnimplementedCometServer) Room(context.Context, *RoomReq) (*NoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Room not implemented")
 }
-func (UnimplementedCometServer) mustEmbedUnimplementedCometServer() {}
-func (UnimplementedCometServer) testEmbeddedByValue()               {}
+func (UnimplementedCometServer) testEmbeddedByValue() {}
 
 // UnsafeCometServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to CometServer will
@@ -154,20 +152,20 @@ func _Comet_Brodcast_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Comet_BrodcastRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BrodcastRoomReq)
+func _Comet_Room_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RoomReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CometServer).BrodcastRoom(ctx, in)
+		return srv.(CometServer).Room(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Comet_BrodcastRoom_FullMethodName,
+		FullMethod: Comet_Room_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CometServer).BrodcastRoom(ctx, req.(*BrodcastRoomReq))
+		return srv.(CometServer).Room(ctx, req.(*RoomReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -188,8 +186,8 @@ var Comet_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Comet_Brodcast_Handler,
 		},
 		{
-			MethodName: "BrodcastRoom",
-			Handler:    _Comet_BrodcastRoom_Handler,
+			MethodName: "Room",
+			Handler:    _Comet_Room_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

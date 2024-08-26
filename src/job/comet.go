@@ -13,7 +13,7 @@ type Comet struct {
 	addr       string
 	client     comet.CometClient
 	brodcastCh chan *comet.BrodcastReq
-	roomCh     chan *comet.BrodcastRoomReq
+	roomCh     chan *comet.RoomReq
 	singleCh   chan *comet.SingleReq
 }
 
@@ -28,7 +28,7 @@ func NewComet(addr string) *Comet {
 		addr:       addr,
 		client:     client,
 		brodcastCh: make(chan *comet.BrodcastReq, 1024),
-		roomCh:     make(chan *comet.BrodcastRoomReq, 1024),
+		roomCh:     make(chan *comet.RoomReq, 1024),
 		singleCh:   make(chan *comet.SingleReq, 1024),
 	}
 	go c.HandlerComet()
@@ -45,7 +45,7 @@ func (c *Comet) HandlerComet() {
 				continue
 			}
 		case msg := <-c.roomCh:
-			_, err := c.client.BrodcastRoom(context.Background(), msg)
+			_, err := c.client.Room(context.Background(), msg)
 			if err != nil {
 				log.Println("brodcrastRoom err:", err)
 				continue

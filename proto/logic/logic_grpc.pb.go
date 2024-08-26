@@ -19,28 +19,30 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Logic_Single_FullMethodName       = "/lane.logic.logic/Single"
-	Logic_Brodcast_FullMethodName     = "/lane.logic.logic/Brodcast"
-	Logic_BrodcastRoom_FullMethodName = "/lane.logic.logic/BrodcastRoom"
-	Logic_SetOnline_FullMethodName    = "/lane.logic.logic/SetOnline"
-	Logic_SetOffline_FullMethodName   = "/lane.logic.logic/SetOffline"
-	Logic_JoinRoom_FullMethodName     = "/lane.logic.logic/JoinRoom"
-	Logic_QuitRoom_FullMethodName     = "/lane.logic.logic/QuitRoom"
-	Logic_Room_FullMethodName         = "/lane.logic.logic/Room"
+	Logic_SendMsg_FullMethodName     = "/lane.logic.logic/SendMsg"
+	Logic_SetOnline_FullMethodName   = "/lane.logic.logic/SetOnline"
+	Logic_SetOffline_FullMethodName  = "/lane.logic.logic/SetOffline"
+	Logic_NewUser_FullMethodName     = "/lane.logic.logic/NewUser"
+	Logic_DelUser_FullMethodName     = "/lane.logic.logic/DelUser"
+	Logic_JoinRoom_FullMethodName    = "/lane.logic.logic/JoinRoom"
+	Logic_QuitRoom_FullMethodName    = "/lane.logic.logic/QuitRoom"
+	Logic_QueryRoom_FullMethodName   = "/lane.logic.logic/QueryRoom"
+	Logic_QueryServer_FullMethodName = "/lane.logic.logic/QueryServer"
 )
 
 // LogicClient is the client API for Logic service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LogicClient interface {
-	Single(ctx context.Context, in *SingleReq, opts ...grpc.CallOption) (*NoResp, error)
-	Brodcast(ctx context.Context, in *BrodcastReq, opts ...grpc.CallOption) (*NoResp, error)
-	BrodcastRoom(ctx context.Context, in *BrodcastRoomReq, opts ...grpc.CallOption) (*NoResp, error)
+	SendMsg(ctx context.Context, in *SendMsgReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOnline(ctx context.Context, in *SetOnlineReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOffline(ctx context.Context, in *SetOfflineReq, opts ...grpc.CallOption) (*NoResp, error)
+	NewUser(ctx context.Context, in *NewUserReq, opts ...grpc.CallOption) (*NoResp, error)
+	DelUser(ctx context.Context, in *DelUserReq, opts ...grpc.CallOption) (*NoResp, error)
 	JoinRoom(ctx context.Context, in *JoinRoomReq, opts ...grpc.CallOption) (*NoResp, error)
 	QuitRoom(ctx context.Context, in *QuitRoomReq, opts ...grpc.CallOption) (*NoResp, error)
-	Room(ctx context.Context, in *RoomReq, opts ...grpc.CallOption) (*RoomResp, error)
+	QueryRoom(ctx context.Context, in *QueryRoomReq, opts ...grpc.CallOption) (*QueryRoomResp, error)
+	QueryServer(ctx context.Context, in *QueryServerReq, opts ...grpc.CallOption) (*QueryServerResp, error)
 }
 
 type logicClient struct {
@@ -51,30 +53,10 @@ func NewLogicClient(cc grpc.ClientConnInterface) LogicClient {
 	return &logicClient{cc}
 }
 
-func (c *logicClient) Single(ctx context.Context, in *SingleReq, opts ...grpc.CallOption) (*NoResp, error) {
+func (c *logicClient) SendMsg(ctx context.Context, in *SendMsgReq, opts ...grpc.CallOption) (*NoResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(NoResp)
-	err := c.cc.Invoke(ctx, Logic_Single_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *logicClient) Brodcast(ctx context.Context, in *BrodcastReq, opts ...grpc.CallOption) (*NoResp, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoResp)
-	err := c.cc.Invoke(ctx, Logic_Brodcast_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *logicClient) BrodcastRoom(ctx context.Context, in *BrodcastRoomReq, opts ...grpc.CallOption) (*NoResp, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NoResp)
-	err := c.cc.Invoke(ctx, Logic_BrodcastRoom_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Logic_SendMsg_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +83,26 @@ func (c *logicClient) SetOffline(ctx context.Context, in *SetOfflineReq, opts ..
 	return out, nil
 }
 
+func (c *logicClient) NewUser(ctx context.Context, in *NewUserReq, opts ...grpc.CallOption) (*NoResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NoResp)
+	err := c.cc.Invoke(ctx, Logic_NewUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *logicClient) DelUser(ctx context.Context, in *DelUserReq, opts ...grpc.CallOption) (*NoResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NoResp)
+	err := c.cc.Invoke(ctx, Logic_DelUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *logicClient) JoinRoom(ctx context.Context, in *JoinRoomReq, opts ...grpc.CallOption) (*NoResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(NoResp)
@@ -121,10 +123,20 @@ func (c *logicClient) QuitRoom(ctx context.Context, in *QuitRoomReq, opts ...grp
 	return out, nil
 }
 
-func (c *logicClient) Room(ctx context.Context, in *RoomReq, opts ...grpc.CallOption) (*RoomResp, error) {
+func (c *logicClient) QueryRoom(ctx context.Context, in *QueryRoomReq, opts ...grpc.CallOption) (*QueryRoomResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RoomResp)
-	err := c.cc.Invoke(ctx, Logic_Room_FullMethodName, in, out, cOpts...)
+	out := new(QueryRoomResp)
+	err := c.cc.Invoke(ctx, Logic_QueryRoom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *logicClient) QueryServer(ctx context.Context, in *QueryServerReq, opts ...grpc.CallOption) (*QueryServerResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryServerResp)
+	err := c.cc.Invoke(ctx, Logic_QueryServer_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -132,35 +144,29 @@ func (c *logicClient) Room(ctx context.Context, in *RoomReq, opts ...grpc.CallOp
 }
 
 // LogicServer is the server API for Logic service.
-// All implementations must embed UnimplementedLogicServer
+// All implementations should embed UnimplementedLogicServer
 // for forward compatibility.
 type LogicServer interface {
-	Single(context.Context, *SingleReq) (*NoResp, error)
-	Brodcast(context.Context, *BrodcastReq) (*NoResp, error)
-	BrodcastRoom(context.Context, *BrodcastRoomReq) (*NoResp, error)
+	SendMsg(context.Context, *SendMsgReq) (*NoResp, error)
 	SetOnline(context.Context, *SetOnlineReq) (*NoResp, error)
 	SetOffline(context.Context, *SetOfflineReq) (*NoResp, error)
+	NewUser(context.Context, *NewUserReq) (*NoResp, error)
+	DelUser(context.Context, *DelUserReq) (*NoResp, error)
 	JoinRoom(context.Context, *JoinRoomReq) (*NoResp, error)
 	QuitRoom(context.Context, *QuitRoomReq) (*NoResp, error)
-	Room(context.Context, *RoomReq) (*RoomResp, error)
-	mustEmbedUnimplementedLogicServer()
+	QueryRoom(context.Context, *QueryRoomReq) (*QueryRoomResp, error)
+	QueryServer(context.Context, *QueryServerReq) (*QueryServerResp, error)
 }
 
-// UnimplementedLogicServer must be embedded to have
+// UnimplementedLogicServer should be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
 type UnimplementedLogicServer struct{}
 
-func (UnimplementedLogicServer) Single(context.Context, *SingleReq) (*NoResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Single not implemented")
-}
-func (UnimplementedLogicServer) Brodcast(context.Context, *BrodcastReq) (*NoResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Brodcast not implemented")
-}
-func (UnimplementedLogicServer) BrodcastRoom(context.Context, *BrodcastRoomReq) (*NoResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BrodcastRoom not implemented")
+func (UnimplementedLogicServer) SendMsg(context.Context, *SendMsgReq) (*NoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMsg not implemented")
 }
 func (UnimplementedLogicServer) SetOnline(context.Context, *SetOnlineReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetOnline not implemented")
@@ -168,17 +174,25 @@ func (UnimplementedLogicServer) SetOnline(context.Context, *SetOnlineReq) (*NoRe
 func (UnimplementedLogicServer) SetOffline(context.Context, *SetOfflineReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetOffline not implemented")
 }
+func (UnimplementedLogicServer) NewUser(context.Context, *NewUserReq) (*NoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewUser not implemented")
+}
+func (UnimplementedLogicServer) DelUser(context.Context, *DelUserReq) (*NoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DelUser not implemented")
+}
 func (UnimplementedLogicServer) JoinRoom(context.Context, *JoinRoomReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method JoinRoom not implemented")
 }
 func (UnimplementedLogicServer) QuitRoom(context.Context, *QuitRoomReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QuitRoom not implemented")
 }
-func (UnimplementedLogicServer) Room(context.Context, *RoomReq) (*RoomResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Room not implemented")
+func (UnimplementedLogicServer) QueryRoom(context.Context, *QueryRoomReq) (*QueryRoomResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryRoom not implemented")
 }
-func (UnimplementedLogicServer) mustEmbedUnimplementedLogicServer() {}
-func (UnimplementedLogicServer) testEmbeddedByValue()               {}
+func (UnimplementedLogicServer) QueryServer(context.Context, *QueryServerReq) (*QueryServerResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryServer not implemented")
+}
+func (UnimplementedLogicServer) testEmbeddedByValue() {}
 
 // UnsafeLogicServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to LogicServer will
@@ -198,56 +212,20 @@ func RegisterLogicServer(s grpc.ServiceRegistrar, srv LogicServer) {
 	s.RegisterService(&Logic_ServiceDesc, srv)
 }
 
-func _Logic_Single_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SingleReq)
+func _Logic_SendMsg_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendMsgReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(LogicServer).Single(ctx, in)
+		return srv.(LogicServer).SendMsg(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Logic_Single_FullMethodName,
+		FullMethod: Logic_SendMsg_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LogicServer).Single(ctx, req.(*SingleReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Logic_Brodcast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BrodcastReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(LogicServer).Brodcast(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Logic_Brodcast_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LogicServer).Brodcast(ctx, req.(*BrodcastReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Logic_BrodcastRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BrodcastRoomReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(LogicServer).BrodcastRoom(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Logic_BrodcastRoom_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LogicServer).BrodcastRoom(ctx, req.(*BrodcastRoomReq))
+		return srv.(LogicServer).SendMsg(ctx, req.(*SendMsgReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -288,6 +266,42 @@ func _Logic_SetOffline_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Logic_NewUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewUserReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).NewUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_NewUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).NewUser(ctx, req.(*NewUserReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Logic_DelUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelUserReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).DelUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_DelUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).DelUser(ctx, req.(*DelUserReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Logic_JoinRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(JoinRoomReq)
 	if err := dec(in); err != nil {
@@ -324,20 +338,38 @@ func _Logic_QuitRoom_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Logic_Room_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RoomReq)
+func _Logic_QueryRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryRoomReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(LogicServer).Room(ctx, in)
+		return srv.(LogicServer).QueryRoom(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Logic_Room_FullMethodName,
+		FullMethod: Logic_QueryRoom_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LogicServer).Room(ctx, req.(*RoomReq))
+		return srv.(LogicServer).QueryRoom(ctx, req.(*QueryRoomReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Logic_QueryServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryServerReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).QueryServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_QueryServer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).QueryServer(ctx, req.(*QueryServerReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -350,16 +382,8 @@ var Logic_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*LogicServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Single",
-			Handler:    _Logic_Single_Handler,
-		},
-		{
-			MethodName: "Brodcast",
-			Handler:    _Logic_Brodcast_Handler,
-		},
-		{
-			MethodName: "BrodcastRoom",
-			Handler:    _Logic_BrodcastRoom_Handler,
+			MethodName: "SendMsg",
+			Handler:    _Logic_SendMsg_Handler,
 		},
 		{
 			MethodName: "SetOnline",
@@ -370,6 +394,14 @@ var Logic_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Logic_SetOffline_Handler,
 		},
 		{
+			MethodName: "NewUser",
+			Handler:    _Logic_NewUser_Handler,
+		},
+		{
+			MethodName: "DelUser",
+			Handler:    _Logic_DelUser_Handler,
+		},
+		{
 			MethodName: "JoinRoom",
 			Handler:    _Logic_JoinRoom_Handler,
 		},
@@ -378,8 +410,12 @@ var Logic_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Logic_QuitRoom_Handler,
 		},
 		{
-			MethodName: "Room",
-			Handler:    _Logic_Room_Handler,
+			MethodName: "QueryRoom",
+			Handler:    _Logic_QueryRoom_Handler,
+		},
+		{
+			MethodName: "QueryServer",
+			Handler:    _Logic_QueryServer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

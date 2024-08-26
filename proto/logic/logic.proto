@@ -4,66 +4,76 @@ package lane.logic;
 option go_package = "laneIM/proto/logic;logic";
 import "proto/msg/msg.proto";
 
-message SingleReq {
-  int64 userid = 1;
-  int64 roomid = 2;
-  lane.msg.Msg msg = 3;
+message SendMsgReq {
+  string path = 1;
+  // from which server
+  string addr = 2;
+  // from which user
+  int64 userid = 3;
+  bytes data = 4;
 }
-
-message SingleResp {}
-
-message BrodcastReq { lane.msg.Msg msg = 1; }
-
-message BrodcastResp {}
-
-message BrodcastRoomReq {
-  int64 roomid = 1;
-  int64 userid = 2;
-  lane.msg.Msg msg = 3;
-}
-
-message BrodcastRoomResp {}
 
 message NoResp {}
 
 message SetOnlineReq {
-  int64 roomid = 1;
-  int64 userid = 2;
+  lane.msg.UserInfo userinfo = 1;
+  string server = 2;
 }
 
 message SetOnlineResp {}
 
-message RoomReq { int64 roomid = 1; }
-
-message UserInfo {
-  int64 userid = 1;
-  bool online = 2;
+message SetOfflineReq {
+  lane.msg.UserInfo userinfo = 1;
+  string server = 2;
 }
 
-message RoomResp { repeated UserInfo userinfos = 1; }
-
-message SetOfflineReq { int64 userid = 1; }
-
 message JoinRoomReq {
-  int64 userid = 1;
+  lane.msg.UserInfo userinfo = 1;
   int64 roomid = 2;
 }
 
 message QuitRoomReq {
-  int64 userid = 1;
+  lane.msg.UserInfo userinfo = 1;
   int64 roomid = 2;
 }
 
+message QueryRoomReq { repeated lane.msg.UserInfo userinfo = 1; }
+
+message QueryRoomResp {
+  message UserInfoResp {
+    bool online = 1;
+    repeated int64 roomid = 2;
+  }
+  repeated UserInfoResp userinfoResp = 1;
+}
+
+message QueryServerReq { repeated lane.msg.UserInfo userinfo = 1; }
+
+message QueryServerResp {
+  message UserInfoResp {
+    bool online = 1;
+    // userinfo的设备可以设置成-1，然后查询所有设备所在服务器id
+    repeated string serverAddrs = 2;
+  }
+  repeated UserInfoResp userinfoResp = 1;
+}
+
+message NewUserReq { lane.msg.UserInfo userinfo = 1; }
+
+message DelUserReq { lane.msg.UserInfo userinfo = 1; }
+
 service logic {
-  rpc Single(SingleReq) returns (NoResp);
-  rpc Brodcast(BrodcastReq) returns (NoResp);
-  rpc BrodcastRoom(BrodcastRoomReq) returns (NoResp);
+  rpc SendMsg(SendMsgReq) returns (NoResp);
 
   rpc SetOnline(SetOnlineReq) returns (NoResp);
   rpc SetOffline(SetOfflineReq) returns (NoResp);
 
+  rpc NewUser(NewUserReq) returns (NoResp);
+  rpc DelUser(DelUserReq) returns (NoResp);
+
   rpc JoinRoom(JoinRoomReq) returns (NoResp);
   rpc QuitRoom(QuitRoomReq) returns (NoResp);
+  rpc QueryRoom(QueryRoomReq) returns (QueryRoomResp);
 
-  rpc Room(RoomReq) returns (RoomResp);
+  rpc QueryServer(QueryServerReq) returns (QueryServerResp);
 }

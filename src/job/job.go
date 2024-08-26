@@ -2,6 +2,7 @@ package job
 
 import (
 	"laneIM/src/pkg"
+	"log"
 	"time"
 )
 
@@ -9,14 +10,18 @@ import (
 type Job struct {
 	bucket *Bucket
 	etcd   *pkg.EtcdClient
+	redis  *pkg.RedisClient
 }
 
 func NewJob() *Job {
 	e := pkg.NewEtcd()
 
+	addrs := e.GetAddr("redis")
+	log.Println("job starting...\n get redis addrs: %v", addrs)
 	j := &Job{
 		bucket: NewBucket(),
 		etcd:   e,
+		redis:  pkg.NewRedisClient(addrs),
 	}
 
 	// etcd

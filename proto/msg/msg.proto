@@ -12,6 +12,12 @@ enum MsgType {
 message Msg {
   MsgType op = 1;
   int64 seq = 2;
-  int64 var = 3;
+  int32 machine = 3;
   bytes byte = 4;
+}
+
+message UserInfo {
+  int64 userid = 1;
+  // 用户不同设备
+  int32 machine = 2;
 }

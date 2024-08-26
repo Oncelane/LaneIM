@@ -1,9 +1,7 @@
 package job
 
 import (
-	"context"
 	"laneIM/proto/comet"
-	"log"
 	"sync"
 )
 
@@ -12,7 +10,7 @@ import (
 
 type Room struct {
 	online int
-	Client map[string]*Comet
+	client map[string]*Comet
 	rw     sync.RWMutex
 	roomid int64
 	users  map[int64]struct{}
@@ -24,23 +22,23 @@ func NewRoom() *Room {
 
 func (r *Room) PutComet(addr string, c *Comet) {
 	r.rw.Lock()
-	r.Client[addr] = c
+	r.client[addr] = c
 	r.rw.Unlock()
 }
 
 func (r *Room) DelComet(addr string, c *Comet) {
 	r.rw.Lock()
-	delete(r.Client, addr)
+	delete(r.client, addr)
 	r.rw.Unlock()
 }
 
-func (r *Room) Push(message *comet.BrodcastRoomReq) {
+func (r *Room) Push(message *comet.RoomReq) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 	if r.online == 0 {
 		return
 	}
-	for _, c := range r.Client {
+	for _, c := range r.client {
 		c.roomCh <- message
 	}
 }
@@ -51,11 +49,8 @@ func (r *Room) PushSingle(message *comet.SingleReq) {
 	if r.online == 0 {
 		return
 	}
-	for _, c := range r.Client {
-		_, err := c.Single(context.Background(), m)
-		if err != nil {
-			log.Println("brodcrast err:", err)
-		}
+	for _, c := range r.client {
+		c.singleCh <- message
 	}
 }
 

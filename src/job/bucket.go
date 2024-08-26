@@ -29,7 +29,7 @@ func (g *Bucket) Brodcast(m *comet.BrodcastReq) {
 	}
 }
 
-func (g *Bucket) Room(m *comet.BrodcastRoomReq) {
+func (g *Bucket) Room(m *comet.RoomReq) {
 	g.rooms[m.Roomid].Push(m)
 }
 
