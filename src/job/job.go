@@ -32,7 +32,7 @@ func NewJob() *Job {
 func (j *Job) WatchComet() {
 	for {
 		addrs := j.etcd.GetAddr("comet")
-		newComets := make(map[string]*Comet)
+		newComets := make(map[string]*ClientComet)
 		for _, addr := range addrs {
 			// connet to comet
 			newComets[addr] = NewComet(addr)

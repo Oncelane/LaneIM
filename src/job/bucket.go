@@ -7,14 +7,14 @@ import (
 
 type Bucket struct {
 	rw     sync.RWMutex
-	comets map[string]*Comet
+	comets map[string]*ClientComet
 	rooms  map[int64]*Room //roomid to room
 
 }
 
 func NewBucket() *Bucket {
 	return &Bucket{
-		comets: make(map[string]*Comet),
+		comets: make(map[string]*ClientComet),
 	}
 }
 

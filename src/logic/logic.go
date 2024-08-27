@@ -17,8 +17,6 @@ type ServiceLogic struct {
 	conf  config.Logic
 	etcd  *pkg.EtcdClient
 	redis *pkg.RedisClient
-
-	comets map[string]*ClientComet
 }
 
 // new and register
@@ -70,7 +68,7 @@ func (s *ServiceLogic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp
 			if err != nil {
 				log.Panicln("ger user faild:", err)
 			}
-			//拿到user的comet地址,发起grpc调用
+			//拿到user的comet地址,一起放到
 
 		}
 
