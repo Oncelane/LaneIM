@@ -11,6 +11,4 @@ func main() {
 
 	comet := comet.NewComet()
 
-	comet.Brodcast("brodcastMsg")
-
 }

@@ -5,12 +5,14 @@ option go_package = "laneIM/proto/logic;logic";
 import "proto/msg/msg.proto";
 
 message SendMsgReq {
-  string path = 1;
+  bytes data = 1;
+  string path = 2;
   // from which server
-  string addr = 2;
+  string addr = 3;
   // from which user
-  int64 userid = 3;
-  bytes data = 4;
+  int64 userid = 4;
+  int64 roomid = 5;
+  int64 toUserid = 6;
 }
 
 message NoResp {}

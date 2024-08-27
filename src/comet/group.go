@@ -2,13 +2,13 @@ package comet
 
 type Room struct {
 	id     int64
-	rooms  map[UserID]*Channel
+	rooms  map[int64]*Channel
 	Online int64
 }
 
 func (m *Manager) NewRoom() *Room {
 	return &Room{
-		rooms: make(map[UserID]*Channel),
+		rooms: make(map[int64]*Channel),
 	}
 }
 

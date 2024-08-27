@@ -14,16 +14,29 @@ import (
 )
 
 type ServiceLogic struct {
-	etcd pkg.EtcdClient
-	conf config.Logic
+	conf  config.Logic
+	etcd  *pkg.EtcdClient
+	redis *pkg.RedisClient
+
+	comets map[string]*ClientComet
 }
 
+// new and register
 func NewServiceLogic(conf config.Logic) *ServiceLogic {
 	s := &ServiceLogic{
-		etcd: *pkg.NewEtcd(),
+		etcd: pkg.NewEtcd(),
 		conf: conf,
 	}
-	s.etcd.SetAddr("grpc:logic/"+conf.Name, conf.Addr)
+
+	// register etcd
+	s.etcd.SetAddr("grpc:logic/"+s.conf.Name, s.conf.Addr)
+
+	// get redis address
+	redisAddrs := s.etcd.GetAddr("redis")
+	log.Println("获取到的redis地址：", redisAddrs)
+	redis := pkg.NewRedisClient(redisAddrs)
+	s.redis = redis
+
 	lis, err := net.Listen("tcp", conf.Addr)
 	if err != nil {
 		log.Fatalf("error: logic start faild")
@@ -39,28 +52,45 @@ func NewServiceLogic(conf config.Logic) *ServiceLogic {
 
 var _ pb.LogicServer = new(ServiceLogic)
 
-func (s *ServiceLogic) SendMsg(context.Context, *pb.SendMsgReq) (*pb.NoResp, error) {
+func (s *ServiceLogic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error) {
+	switch in.Path {
+	case "brodcast/test":
+		// 从redis查询房间内其余成员
+		room, err := model.RoomGet(s.redis.Client, in.Roomid)
+		if err != nil {
+			log.Panicln("get room member faild:", err)
+		}
+		log.Panicln("get roomInfo", room)
+		for userid, online := range room.Users {
+			if !online {
+				log.Println("userid:", userid, "not online")
+				continue
+			}
+			user, err := model.UserGet(s.redis.Client, userid)
+			if err != nil {
+				log.Panicln("ger user faild:", err)
+			}
+			//拿到user的comet地址,发起grpc调用
 
+		}
+
+		// 获取comet地址
+	}
 	return nil, nil
 }
 func (s *ServiceLogic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NoResp, error) {
-
-	err := s.etcd.NewUser(model.UserStage{
-		Userid:  in.Userinfo.Userid,
-		Machine: in.Userinfo.Machine,
-	})
-	return nil, err
+	return nil, nil
 }
 func (s *ServiceLogic) DelUser(context.Context, *pb.DelUserReq) (*pb.NoResp, error) {
 	return nil, nil
 }
 func (s *ServiceLogic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, error) {
-	err := s.etcd.SetUserOnline(in.Userinfo.Userid)
-	return nil, err
+
+	return nil, nil
 }
 func (s *ServiceLogic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp, error) {
-	err := s.etcd.SetUserOffline(in.Userinfo.Userid)
-	return nil, err
+
+	return nil, nil
 }
 func (s *ServiceLogic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, error) {
 	return nil, nil

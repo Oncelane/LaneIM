@@ -10,7 +10,7 @@ import (
 
 type Room struct {
 	online int
-	client map[string]*Comet
+	client map[string]*ClientComet
 	rw     sync.RWMutex
 	roomid int64
 	users  map[int64]struct{}
@@ -20,13 +20,13 @@ func NewRoom() *Room {
 	return &Room{}
 }
 
-func (r *Room) PutComet(addr string, c *Comet) {
+func (r *Room) PutComet(addr string, c *ClientComet) {
 	r.rw.Lock()
 	r.client[addr] = c
 	r.rw.Unlock()
 }
 
-func (r *Room) DelComet(addr string, c *Comet) {
+func (r *Room) DelComet(addr string, c *ClientComet) {
 	r.rw.Lock()
 	delete(r.client, addr)
 	r.rw.Unlock()

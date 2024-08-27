@@ -2,7 +2,6 @@ package pkg_test
 
 import (
 	"encoding/json"
-	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
 	"reflect"
@@ -96,32 +95,32 @@ func TestEtcdServerAddr(t *testing.T) {
 	log.Println(value)
 }
 
-func TestEtcdSetWithFunc(t *testing.T) {
-	testUser := model.UserStage{
-		Userid:  1,
-		Online:  false,
-		Server:  "localhost",
-		Machine: 1,
-	}
-	err := etcd.NewUser(testUser)
-	if err != nil {
-		t.Error(err)
-	}
-	v, err := etcd.Get(testUser.Userid, pkg.UseridToEtcdStageKey)
-	if err != nil {
-		t.Error(err)
-	}
-	getUser := &model.UserStage{}
-	json.Unmarshal(v, getUser)
-	log.Println(getUser)
+// func TestEtcdSetWithFunc(t *testing.T) {
+// 	testUser := model.UserStage{
+// 		Userid:  1,
+// 		Online:  false,
+// 		Server:  "localhost",
+// 		Machine: 1,
+// 	}
+// 	err := etcd.NewUser(testUser)
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// 	v, err := etcd.Get(testUser.Userid, pkg.UseridToEtcdStageKey)
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// 	getUser := &model.UserStage{}
+// 	json.Unmarshal(v, getUser)
+// 	log.Println(getUser)
 
-	etcd.SetUserOnline(testUser.Userid)
+// 	etcd.SetUserOnline(testUser.Userid)
 
-	v, err = etcd.Get(testUser.Userid, pkg.UseridToEtcdStageKey)
-	if err != nil {
-		t.Error(err)
-	}
-	getUser = &model.UserStage{}
-	json.Unmarshal(v, getUser)
-	log.Println(getUser)
-}
+// 	v, err = etcd.Get(testUser.Userid, pkg.UseridToEtcdStageKey)
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// 	getUser = &model.UserStage{}
+// 	json.Unmarshal(v, getUser)
+// 	log.Println(getUser)
+// }

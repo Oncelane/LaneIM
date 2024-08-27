@@ -8,13 +8,13 @@ import (
 )
 
 type Channel struct {
-	id     UserID
+	id     int64
 	ws     pkg.RWMsg
 	recvCh chan *msg.Msg
 	sendCh chan *msg.Msg
 }
 
-func (m *Manager) NewChannel(userId UserID, conn *websocket.Conn) *Channel {
+func (m *Manager) NewChannel(userId int64, conn *websocket.Conn) *Channel {
 	ch := &Channel{
 		id:     userId,
 		ws:     pkg.NewWs(conn, &m.pool),

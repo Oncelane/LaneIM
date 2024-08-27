@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"laneIM/src/model"
 	"log"
 	"strconv"
 	"strings"
@@ -238,42 +237,42 @@ func (e *EtcdClient) atomicUpdate(key, old, new string) error {
 	return errors.New("failed")
 }
 
-func (e *EtcdClient) GetUserStage(userid int64) (model.UserStage, error) {
-	rt, err := e.etcd.Get(context.Background(), UseridToEtcdStageKey(userid))
-	if err != nil {
-		log.Fatalln("failed to get etcd:", err.Error())
-		return model.UserStage{}, err
-	}
-	userStage := &model.UserStage{}
-	err = json.Unmarshal(rt.Kvs[0].Value, userStage)
-	return *userStage, err
-}
+// func (e *EtcdClient) GetUserStage(userid int64) (model.UserStage, error) {
+// 	rt, err := e.etcd.Get(context.Background(), UseridToEtcdStageKey(userid))
+// 	if err != nil {
+// 		log.Fatalln("failed to get etcd:", err.Error())
+// 		return model.UserStage{}, err
+// 	}
+// 	userStage := &model.UserStage{}
+// 	err = json.Unmarshal(rt.Kvs[0].Value, userStage)
+// 	return *userStage, err
+// }
 
-func (e *EtcdClient) SetUserStage(userid int64, m model.UserStage) error {
-	key := UseridToEtcdStageKey(userid)
+// func (e *EtcdClient) SetUserStage(userid int64, m model.UserStage) error {
+// 	key := UseridToEtcdStageKey(userid)
 
-	oldm, err := e.GetUserStage(userid)
-	if err != nil {
-		return err
-	}
+// 	oldm, err := e.GetUserStage(userid)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	oldValue, err := json.Marshal(oldm)
-	if err != nil {
-		return err
-	}
-	newValue, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
+// 	oldValue, err := json.Marshal(oldm)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	newValue, err := json.Marshal(m)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	err = e.atomicUpdate(key, string(oldValue), string(newValue))
-	return err
-}
+// 	err = e.atomicUpdate(key, string(oldValue), string(newValue))
+// 	return err
+// }
 
-func UseridToEtcdStageKey(userid any) string {
-	in := userid.(int64)
-	return "laneIM/us/" + strconv.FormatInt(in, 36)
-}
+// func UseridToEtcdStageKey(userid any) string {
+// 	in := userid.(int64)
+// 	return "laneIM/us/" + strconv.FormatInt(in, 36)
+// }
 
 func (e *EtcdClient) Get(keyI any, genkey func(in any) (out string)) (out []byte, err error) {
 	key := genkey(keyI)
@@ -320,32 +319,32 @@ func (e *EtcdClient) Set(keyI any, genkey func(in any) (out string), m any) erro
 	return err
 }
 
-func (e *EtcdClient) SetUserOnline(userid int64) error {
-	return e.Update(userid, UseridToEtcdStageKey, func(in []byte) (out []byte, err error) {
-		ustage := &model.UserStage{}
-		err = json.Unmarshal(in, ustage)
-		if err != nil {
-			return nil, err
-		}
-		ustage.Online = true
-		out, err = json.Marshal(ustage)
-		return
-	})
-}
+// func (e *EtcdClient) SetUserOnline(userid int64) error {
+// 	return e.Update(userid, UseridToEtcdStageKey, func(in []byte) (out []byte, err error) {
+// 		ustage := &model.UserStage{}
+// 		err = json.Unmarshal(in, ustage)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		ustage.Online = true
+// 		out, err = json.Marshal(ustage)
+// 		return
+// 	})
+// }
 
-func (e *EtcdClient) SetUserOffline(userid int64) error {
-	return e.Update(userid, UseridToEtcdStageKey, func(in []byte) (out []byte, err error) {
-		ustage := &model.UserStage{}
-		err = json.Unmarshal(in, ustage)
-		if err != nil {
-			return nil, err
-		}
-		ustage.Online = false
-		out, err = json.Marshal(ustage)
-		return
-	})
-}
+// func (e *EtcdClient) SetUserOffline(userid int64) error {
+// 	return e.Update(userid, UseridToEtcdStageKey, func(in []byte) (out []byte, err error) {
+// 		ustage := &model.UserStage{}
+// 		err = json.Unmarshal(in, ustage)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		ustage.Online = false
+// 		out, err = json.Marshal(ustage)
+// 		return
+// 	})
+// }
 
-func (e *EtcdClient) NewUser(m model.UserStage) error {
-	return e.Set(m.Userid, UseridToEtcdStageKey, m)
-}
+// func (e *EtcdClient) NewUser(m model.UserStage) error {
+// 	return e.Set(m.Userid, UseridToEtcdStageKey, m)
+// }
