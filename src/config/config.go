@@ -13,3 +13,11 @@ type Comet struct {
 type Job struct {
 	Addr string
 }
+
+type KafkaProducer struct {
+	Addr []string
+}
+
+type KafkaComsumer struct {
+	Addr string
+}

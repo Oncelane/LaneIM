@@ -42,7 +42,7 @@ func TestRoom(t *testing.T) {
 }
 
 func TestUser(t *testing.T) {
-	r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7006"})
+	r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7005"})
 	v, err := model.UserGet(r.Client, 1)
 	if err != nil {
 		t.Error("get err")
