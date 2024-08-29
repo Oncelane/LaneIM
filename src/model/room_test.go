@@ -2,6 +2,7 @@ package model_test
 
 import (
 	"laneIM/proto/msg"
+	"laneIM/src/config"
 	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
@@ -73,7 +74,7 @@ func TestUser(t *testing.T) {
 // 四个用户进行广播
 func TestInitRoomAndUser(t *testing.T) {
 	r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7006"})
-	e := pkg.NewEtcd()
+	e := pkg.NewEtcd(config.Etcd{Addr: []string{"127.0.0.1:2379"}})
 	e.SetAddr("redis/1", "127.0.0.1:7001")
 	e.SetAddr("redis/2", "127.0.0.1:7003")
 	e.SetAddr("redis/3", "127.0.0.1:7006")
@@ -82,6 +83,7 @@ func TestInitRoomAndUser(t *testing.T) {
 		Roomid:    1005,
 		Users:     usermap,
 		OnlineNum: 3,
+		Server:    []string{"127.0.0.1:50051"},
 	}
 	err := model.RoomSet(r.Client, &testroom)
 	if err != nil {

@@ -2,9 +2,11 @@ package comet
 
 import (
 	"context"
+	"laneIM/proto/comet"
 	"laneIM/proto/logic"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
+	"net"
 	"time"
 
 	"log"
@@ -27,6 +29,7 @@ func NewLogic(addr string) *Logic {
 		return nil
 	}
 	c := logic.NewLogicClient(conn)
+	log.Println("connet to logic:", addr)
 	return &Logic{
 		Addr:   addr,
 		Client: c,
@@ -34,29 +37,54 @@ func NewLogic(addr string) *Logic {
 }
 
 type Comet struct {
-	mu     *sync.RWMutex
+	mu     sync.RWMutex
 	userId int64
 	etcd   *pkg.EtcdClient
 	logics map[string]*Logic
+	conf   config.Comet
+	grpc   *grpc.Server
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 	ret = &Comet{
-		etcd: pkg.NewEtcd(),
+		etcd:   pkg.NewEtcd(conf.Etcd),
+		logics: make(map[string]*Logic),
+		conf:   conf,
 	}
 
-	// 注册自己
-	ret.etcd.SetAddr("comet/1", "127.0.0.1:50051")
-
-	// 发现logic
+	// watch logic
 	go ret.WatchLogic()
+
+	// server grpc
+	lis, err := net.Listen("tcp", conf.Addr)
+	if err != nil {
+		log.Fatalf("error: logic start faild")
+	}
+	gServer := grpc.NewServer()
+	comet.RegisterCometServer(gServer, ret)
+	log.Println("Logic serivce is running on port")
+	ret.grpc = gServer
+	go func() {
+		if err := gServer.Serve(lis); err != nil {
+			log.Fatalln("failed to serve : ", err.Error())
+		}
+	}()
+
+	// regieter etcd
+	ret.etcd.SetAddr("grpc:comet/"+conf.Name, conf.Addr)
 	return ret
+}
+
+func (c *Comet) Close() {
+	c.etcd.DelAddr("grpc:comet/"+c.conf.Name, c.conf.Addr)
+	c.grpc.Stop()
+	log.Println("exit comet")
 }
 
 func (c *Comet) WatchLogic() {
 	for {
-		addrs := c.etcd.GetAddr("logic")
+		addrs := c.etcd.GetAddr("grpc:logic")
 		c.mu.Lock()
 
 		for _, addr := range addrs {
@@ -82,11 +110,13 @@ func (c *Comet) GenUserID() (ret int64) {
 
 func (c *Comet) pickLogic() *Logic {
 	for {
+		c.mu.RLock()
 		for _, v := range c.logics {
 			return v
 		}
+		c.mu.RUnlock()
 		log.Println("暂无发现logic 5秒后再查询")
-		time.Sleep(5)
+		time.Sleep(time.Second)
 	}
 }
 
@@ -94,28 +124,27 @@ func (c *Comet) LogicBrodcast(message *logic.SendMsgReq, data []byte) {
 
 }
 
-func (c *Comet) LogictRoom(message *logic.SendMsgReq, data []byte, userid int64, roomid int64) {
-	req := logic.SendMsgReq{
-		Data:   data,
-		Roomid: roomid,
-		Path:   "brodcast",
-		Userid: userid,
-	}
-	_, err := c.pickLogic().Client.SendMsg(context.Background(), &req)
+func (c *Comet) LogictRoom(message *logic.SendMsgReq) {
+	_, err := c.pickLogic().Client.SendMsg(context.Background(), message)
 	if err != nil {
 		log.Panicln(err)
 	}
 }
 
-func (c *Comet) LogicSingle(message *logic.SendMsgReq, data []byte, userid int64, touserid int64, roomid int64) {
-	req := logic.SendMsgReq{
-		Data:     data,
-		Path:     "brodcast",
-		Userid:   userid,
-		ToUserid: userid,
-	}
-	_, err := c.pickLogic().Client.SendMsg(context.Background(), &req)
+func (c *Comet) LogicSingle(message *logic.SendMsgReq) {
+	_, err := c.pickLogic().Client.SendMsg(context.Background(), message)
 	if err != nil {
 		log.Panicln(err)
 	}
+}
+
+func (c *Comet) Single(context.Context, *comet.SingleReq) (*comet.NoResp, error) {
+	return nil, nil
+}
+func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, error) {
+	return nil, nil
+}
+func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
+	log.Println(in.String())
+	return nil, nil
 }

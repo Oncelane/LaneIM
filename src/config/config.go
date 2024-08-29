@@ -1,17 +1,27 @@
 package config
 
 type Logic struct {
-	Addr string
-	Name string
+	Addr          string
+	Name          string
+	KafkaProducer KafkaProducer
+	Etcd          Etcd
 }
 
 type Comet struct {
 	Addr string
 	Name string
+	Etcd Etcd
 }
 
 type Job struct {
-	Addr string
+	Addr          string
+	Name          string
+	KafkaComsumer KafkaComsumer
+	Etcd          Etcd
+}
+
+type Etcd struct {
+	Addr []string
 }
 
 type KafkaProducer struct {
@@ -19,5 +29,5 @@ type KafkaProducer struct {
 }
 
 type KafkaComsumer struct {
-	Addr string
+	Addr []string
 }

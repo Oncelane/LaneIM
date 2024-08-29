@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/IBM/sarama"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 type KafkaProducer struct {
@@ -13,7 +12,7 @@ type KafkaProducer struct {
 }
 
 type KafkaComsumer struct {
-	Client *kafka.Consumer
+	Client sarama.Consumer
 }
 
 func NewKafkaProducer(conf config.KafkaProducer) *KafkaProducer {
@@ -34,12 +33,9 @@ func NewKafkaProducer(conf config.KafkaProducer) *KafkaProducer {
 
 func NewKafkaComsumer(conf config.KafkaComsumer) *KafkaComsumer {
 	kc := &KafkaComsumer{}
-	config := &kafka.ConfigMap{
-		"bootstrap.servers": conf.Addr,  // Kafka 服务器地址
-		"group.id":          "im-group", // 消费者组 ID
-		"auto.offset.reset": "earliest", // 从最早的消息开始消费
-	}
-	c, err := kafka.NewConsumer(config)
+	config := sarama.NewConfig()
+	config.Consumer.Return.Errors = true
+	c, err := sarama.NewConsumer(conf.Addr, config)
 	if err != nil {
 		log.Panicln("failed to create kafka comsumer:", err)
 	}

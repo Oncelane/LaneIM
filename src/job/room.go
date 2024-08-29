@@ -2,6 +2,10 @@ package job
 
 import (
 	"laneIM/proto/comet"
+	"laneIM/proto/msg"
+	"laneIM/src/model"
+	"laneIM/src/pkg"
+	"log"
 	"sync"
 )
 
@@ -9,15 +13,17 @@ import (
 // 应该是查询 redis， 缓存失效再查询数据库
 
 type Room struct {
-	online int
+	roomid int64
+	info   *msg.RoomInfo
 	client map[string]*ClientComet
 	rw     sync.RWMutex
-	roomid int64
-	users  map[int64]struct{}
 }
 
-func NewRoom() *Room {
-	return &Room{}
+func NewRoom(id int64) *Room {
+	return &Room{
+		roomid: id,
+		client: make(map[string]*ClientComet),
+	}
 }
 
 func (r *Room) PutComet(addr string, c *ClientComet) {
@@ -35,7 +41,7 @@ func (r *Room) DelComet(addr string, c *ClientComet) {
 func (r *Room) Push(message *comet.RoomReq) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
-	if r.online == 0 {
+	if r.info.OnlineNum == 0 {
 		return
 	}
 	for _, c := range r.client {
@@ -46,7 +52,7 @@ func (r *Room) Push(message *comet.RoomReq) {
 func (r *Room) PushSingle(message *comet.SingleReq) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
-	if r.online == 0 {
+	if r.info.OnlineNum == 0 {
 		return
 	}
 	for _, c := range r.client {
@@ -54,8 +60,12 @@ func (r *Room) PushSingle(message *comet.SingleReq) {
 	}
 }
 
-func (r *Room) updateOnline(n int) {
+func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
+	info, err := model.RoomGet(client.Client, r.roomid)
+	if err != nil {
+		log.Println("filed to update room:", r.roomid)
+	}
 	r.rw.Lock()
-	r.online = n
+	r.info = info
 	r.rw.Unlock()
 }

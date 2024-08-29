@@ -15,6 +15,7 @@ type Bucket struct {
 func NewBucket() *Bucket {
 	return &Bucket{
 		comets: make(map[string]*ClientComet),
+		rooms:  make(map[int64]*Room),
 	}
 }
 
@@ -30,9 +31,13 @@ func (g *Bucket) Brodcast(m *comet.BrodcastReq) {
 }
 
 func (g *Bucket) Room(m *comet.RoomReq) {
+	g.rw.RLock()
 	g.rooms[m.Roomid].Push(m)
+	g.rw.RUnlock()
 }
 
 func (g *Bucket) Single(m *comet.SingleReq) {
+	g.rw.RLock()
 	g.rooms[m.Roomid].PushSingle(m)
+	g.rw.RUnlock()
 }

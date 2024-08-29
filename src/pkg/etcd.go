@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"laneIM/src/config"
 	"log"
 	"strconv"
 	"strings"
@@ -22,9 +23,9 @@ var (
 	ErrFaild       = errors.New("op faild for some reason")
 )
 
-func NewEtcd() *EtcdClient {
+func NewEtcd(conf config.Etcd) *EtcdClient {
 	etcdClient, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
+		Endpoints:   conf.Addr,
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
@@ -51,6 +52,15 @@ func (e *EtcdClient) SetAddr(key, addr string) {
 		log.Fatalln("failed to set etcd:", err.Error())
 		return
 	}
+	log.Printf("registe %s:%s\n", key, addr)
+}
+
+func (e *EtcdClient) DelAddr(key, addr string) {
+	rt, err := e.etcd.Delete(context.Background(), "laneIM/"+key)
+	if err != nil {
+		log.Fatalln("failed to get etcd:", err.Error())
+	}
+	log.Println("delete addr:", addr, "num (should be one):", rt.Deleted)
 }
 
 func (e *EtcdClient) GetUserServerAddr(userid int64) ([]string, error) {

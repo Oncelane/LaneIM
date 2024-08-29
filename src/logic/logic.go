@@ -5,36 +5,43 @@ import (
 	"fmt"
 	pb "laneIM/proto/logic"
 	"laneIM/src/config"
-	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
 	"net"
 
+	"github.com/IBM/sarama"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
-type ServiceLogic struct {
+type Logic struct {
 	conf  config.Logic
 	etcd  *pkg.EtcdClient
 	redis *pkg.RedisClient
+	kafka *pkg.KafkaProducer
+	grpc  *grpc.Server
 }
 
 // new and register
-func NewServiceLogic(conf config.Logic) *ServiceLogic {
-	s := &ServiceLogic{
-		etcd: pkg.NewEtcd(),
+func NewLogic(conf config.Logic) *Logic {
+	s := &Logic{
+		etcd: pkg.NewEtcd(conf.Etcd),
 		conf: conf,
 	}
 
-	// register etcd
-	s.etcd.SetAddr("grpc:logic/"+s.conf.Name, s.conf.Addr)
-
-	// get redis address
+	// init redis
 	redisAddrs := s.etcd.GetAddr("redis")
 	log.Println("获取到的redis地址：", redisAddrs)
 	redis := pkg.NewRedisClient(redisAddrs)
 	s.redis = redis
 
+	// init kafka producer
+	s.kafka = pkg.NewKafkaProducer(conf.KafkaProducer)
+
+	// register etcd
+	s.etcd.SetAddr("grpc:logic/"+s.conf.Name, s.conf.Addr)
+
+	// server grpc
 	lis, err := net.Listen("tcp", conf.Addr)
 	if err != nil {
 		log.Fatalf("error: logic start faild")
@@ -42,63 +49,70 @@ func NewServiceLogic(conf config.Logic) *ServiceLogic {
 	gServer := grpc.NewServer()
 	pb.RegisterLogicServer(gServer, s)
 	fmt.Println("Logic serivce is running on port")
-	if err := gServer.Serve(lis); err != nil {
-		log.Fatalln("failed to serve : ", err.Error())
-	}
+	s.grpc = gServer
+	go func() {
+		if err := gServer.Serve(lis); err != nil {
+			log.Fatalln("failed to serve : ", err.Error())
+		}
+	}()
+
 	return s
 }
 
-var _ pb.LogicServer = new(ServiceLogic)
+func (l *Logic) Close() {
+	log.Println("logic exit:", l.conf.Addr)
+	l.etcd.DelAddr("grpc:logic/"+l.conf.Name, l.conf.Addr)
+	l.grpc.Stop()
+}
 
-func (s *ServiceLogic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error) {
+var _ pb.LogicServer = new(Logic)
+
+func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error) {
 	switch in.Path {
 	case "brodcast/test":
-		// 从redis查询房间内其余成员
-		room, err := model.RoomGet(s.redis.Client, in.Roomid)
+
+		//no op just send to kafka
+		data, err := proto.Marshal(in)
 		if err != nil {
-			log.Panicln("get room member faild:", err)
-		}
-		log.Panicln("get roomInfo", room)
-		for userid, online := range room.Users {
-			if !online {
-				log.Println("userid:", userid, "not online")
-				continue
-			}
-			user, err := model.UserGet(s.redis.Client, userid)
-			if err != nil {
-				log.Panicln("ger user faild:", err)
-			}
-			//拿到user的comet地址,一起放到
-
+			log.Println("proto marshal error")
 		}
 
-		// 获取comet地址
+		msg := &sarama.ProducerMessage{
+			Topic: "laneIM",
+			Value: sarama.ByteEncoder(data),
+		}
+		_, _, err = s.kafka.Client.SendMessage(msg)
+		if err != nil {
+			log.Println("faild to send kafka:", err)
+		}
+		log.Println("success send message:", in.String())
+
 	}
 	return nil, nil
 }
-func (s *ServiceLogic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NoResp, error) {
+func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NoResp, error) {
 	return nil, nil
 }
-func (s *ServiceLogic) DelUser(context.Context, *pb.DelUserReq) (*pb.NoResp, error) {
+func (s *Logic) DelUser(context.Context, *pb.DelUserReq) (*pb.NoResp, error) {
 	return nil, nil
 }
-func (s *ServiceLogic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, error) {
+func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, error) {
 
 	return nil, nil
 }
-func (s *ServiceLogic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp, error) {
+func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp, error) {
 
 	return nil, nil
 }
-func (s *ServiceLogic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, error) {
+func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, error) {
 	return nil, nil
 }
-func (s *ServiceLogic) QuitRoom(context.Context, *pb.QuitRoomReq) (*pb.NoResp, error) {
+func (s *Logic) QuitRoom(context.Context, *pb.QuitRoomReq) (*pb.NoResp, error) {
 	return nil, nil
 }
-func (s *ServiceLogic) QueryRoom(context.Context, *pb.QueryRoomReq) (*pb.QueryRoomResp, error) {
+func (s *Logic) QueryRoom(context.Context, *pb.QueryRoomReq) (*pb.QueryRoomResp, error) {
 	return nil, nil
 }
-func (s *ServiceLogic) QueryServer(context.Context, *pb.QueryServerReq) (*pb.QueryServerResp, error) {
+func (s *Logic) QueryServer(context.Context, *pb.QueryServerReq) (*pb.QueryServerResp, error) {
 	return nil, nil
 }

@@ -31,6 +31,7 @@ func NewComet(addr string) *ClientComet {
 		roomCh:     make(chan *comet.RoomReq, 1024),
 		singleCh:   make(chan *comet.SingleReq, 1024),
 	}
+	log.Println("connet to comet:", addr)
 	go c.HandlerComet()
 	return c
 }
