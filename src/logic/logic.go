@@ -5,6 +5,7 @@ import (
 	"fmt"
 	pb "laneIM/proto/logic"
 	"laneIM/src/config"
+	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
 	"net"
@@ -91,6 +92,7 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 	return nil, nil
 }
 func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NoResp, error) {
+	model.UserSet(s.redis.Client,)
 	return nil, nil
 }
 func (s *Logic) DelUser(context.Context, *pb.DelUserReq) (*pb.NoResp, error) {
