@@ -92,12 +92,28 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 	return nil, nil
 }
 func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NoResp, error) {
-	model.UserSet(s.redis.Client,)
+	err := model.UserSet(s.redis.Client, in.Userinfo)
+	if err != nil {
+		log.Println("faild to create user:", in.Userinfo.String())
+		return nil, err
+	}
+	log.Println("create user:", in.Userinfo.String())
 	return nil, nil
 }
-func (s *Logic) DelUser(context.Context, *pb.DelUserReq) (*pb.NoResp, error) {
-	return nil, nil
+
+func (s *Logic) DelUser(_ context.Context, in *pb.DelUserReq) (*pb.NoResp, error) {
+	num, err := model.UserDel(s.redis.Client, in.Userinfo)
+	if err != nil {
+		return nil, err
+	}
+	if num != 1 {
+		log.Println("delete a empty user:", in.Userinfo.String())
+		return nil, nil
+	}
+	log.Println("delete  user:", in.Userinfo.String())
+	return nil, err
 }
+
 func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, error) {
 
 	return nil, nil
@@ -107,9 +123,17 @@ func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp,
 	return nil, nil
 }
 func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, error) {
+	room, err := model.RoomGet(s.redis.Client, in.Roomid)
+	if err != nil {
+		return nil, err
+	}
+	if _, exist := room.Server[in.Addr]; !exist {
+
+	}
 	return nil, nil
 }
 func (s *Logic) QuitRoom(context.Context, *pb.QuitRoomReq) (*pb.NoResp, error) {
+
 	return nil, nil
 }
 func (s *Logic) QueryRoom(context.Context, *pb.QueryRoomReq) (*pb.QueryRoomResp, error) {

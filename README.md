@@ -126,3 +126,45 @@ server.properties
    # 消费消息
    bin/kafka-console-consumer.sh --topic test-topic --from-beginning --bootstrap-server localhost:9092
 ```
+
+# Room design
+in redis
+
+roomMgr set int
+
+room:online:%id int
+
+room:comet:%id set string
+
+room:userid:%id set int
+
+user:comet:%id string
+
+user:room:%id set string
+
+user:online:%id bool
+
+room{
+   new
+   del
+
+   joinUserid
+   quitUserid
+   queryUserid
+   onlienUser
+   offlineUser
+}
+
+user{
+   new
+   del
+
+   online
+   offline
+   queryOnline
+}
+
+
+
+
+

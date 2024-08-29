@@ -101,7 +101,6 @@ func TestEtcdServerAddr(t *testing.T) {
 // 		Userid:  1,
 // 		Online:  false,
 // 		Server:  "localhost",
-// 		Machine: 1,
 // 	}
 // 	err := etcd.NewUser(testUser)
 // 	if err != nil {

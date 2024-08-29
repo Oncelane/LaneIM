@@ -13,20 +13,18 @@ message Msg {
   bytes byte = 1;
   MsgType op = 2;
   int64 seq = 3;
-  int32 machine = 4;
 }
 
 message UserInfo {
   int64 userid = 1;
-  repeated int64 roomid = 2;
-  bool online = 3;
-  int32 machine = 4;
-  repeated string server = 5;
+  bool online = 2;
+  map<int64, bool> roomid = 3;
+  map<string, bool> server = 4;
 }
 
 message RoomInfo {
   int64 roomid = 1;
-  repeated string server = 2;
+  map<string, bool> server = 2;
   map<int64, bool> users = 3;
   int64 onlineNum = 4;
 }

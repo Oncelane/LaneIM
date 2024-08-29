@@ -32,11 +32,13 @@ message SetOfflineReq {
 message JoinRoomReq {
   lane.msg.UserInfo userinfo = 1;
   int64 roomid = 2;
+  string addr = 3;
 }
 
 message QuitRoomReq {
   lane.msg.UserInfo userinfo = 1;
   int64 roomid = 2;
+  string addr = 3;
 }
 
 message QueryRoomReq { repeated lane.msg.UserInfo userinfo = 1; }

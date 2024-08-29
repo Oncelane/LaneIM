@@ -22,7 +22,7 @@ func TestRoom(t *testing.T) {
 		v.Reset()
 	}
 	v.Roomid = 1
-	v.Server = append(v.Server, "testHost")
+	v.Server["testHost"] = true
 	model.RoomSet(r.Client, v)
 
 	v, err = model.RoomGet(r.Client, 1)
@@ -36,7 +36,7 @@ func TestRoom(t *testing.T) {
 	if err != nil {
 		t.Error("get err")
 	}
-	if v.Server[0] != "testHost" {
+	if _, exist := v.Server["testHost"]; !exist {
 		t.Error("set err")
 	}
 	log.Println(v.String())
@@ -52,8 +52,8 @@ func TestUser(t *testing.T) {
 	v.Reset()
 
 	v.Userid = 1
-	v.Roomid = append(v.Roomid, 1)
-	v.Server = append(v.Server, "testHost")
+	v.Roomid[1] = true
+	v.Server["testHost"] = true
 	err = model.UserSet(r.Client, v)
 	if err != nil {
 		t.Error("set err")
@@ -64,7 +64,7 @@ func TestUser(t *testing.T) {
 	if err != nil {
 		t.Error("get err")
 	}
-	if v.Server[0] != "testHost" {
+	if _, exist := v.Server["testHost"]; !exist {
 		t.Error("set err")
 	}
 	log.Println(v.String())
@@ -83,7 +83,7 @@ func TestInitRoomAndUser(t *testing.T) {
 		Roomid:    1005,
 		Users:     usermap,
 		OnlineNum: 3,
-		Server:    []string{"127.0.0.1:50051"},
+		Server:    map[string]bool{"127.0.0.1:50051": true},
 	}
 	err := model.RoomSet(r.Client, &testroom)
 	if err != nil {
@@ -92,17 +92,15 @@ func TestInitRoomAndUser(t *testing.T) {
 	userid := []int64{21, 22, 23, 24}
 	roomid := []int64{1005, 1005, 1005, 1005}
 	online := []bool{true, true, true, false}
-	machine := []int32{0, 0, 0, 0}
 	server := []string{"127.0.0.1:50051", "127.0.0.1:50051", "127.0.0.1:50051", "127.0.0.1:50051"}
 
 	user := msg.UserInfo{}
 	for i := range len(userid) {
 		user.Reset()
 		user.Userid = userid[i]
-		user.Roomid = append(user.Roomid, roomid[i])
+		user.Roomid[roomid[i]] = true
 		user.Online = online[i]
-		user.Machine = machine[i]
-		user.Server = append(user.Server, server[i])
+		user.Server[server[i]] = true
 
 		err := model.UserSet(r.Client, &user)
 		if err != nil {

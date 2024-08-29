@@ -89,7 +89,7 @@ func (j *Job) RunComsumer() {
 				continue
 			}
 			log.Println("get roomInfo", room.String())
-			for _, addr := range room.Server {
+			for addr, _ := range room.Server {
 				if cometClient, exist := j.bucket.comets[addr]; exist {
 					cometClient.roomCh <- &comet.RoomReq{
 						Roomid: protoMsg.Roomid,
