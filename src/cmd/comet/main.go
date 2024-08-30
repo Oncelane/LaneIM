@@ -33,7 +33,7 @@ func main() {
 
 func testSend(comet *comet.Comet) {
 	msg := &logic.SendMsgReq{
-		Data:   []byte("hello laneIM!"),
+		Data:   []byte("hello laneIM! from 21"),
 		Roomid: 1005,
 		Path:   "brodcast/test",
 		Userid: 21,

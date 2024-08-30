@@ -3,9 +3,6 @@ package job
 import (
 	"laneIM/proto/comet"
 	"laneIM/proto/msg"
-	"laneIM/src/model"
-	"laneIM/src/pkg"
-	"log"
 	"sync"
 )
 
@@ -60,12 +57,12 @@ func (r *Room) PushSingle(message *comet.SingleReq) {
 	}
 }
 
-func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
-	info, err := model.RoomGet(client.Client, r.roomid)
-	if err != nil {
-		log.Println("filed to update room:", r.roomid)
-	}
-	r.rw.Lock()
-	r.info = info
-	r.rw.Unlock()
-}
+// func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
+// 	info, err := model.RoomGet(client.Client, r.roomid)
+// 	if err != nil {
+// 		log.Println("filed to update room:", r.roomid)
+// 	}
+// 	r.rw.Lock()
+// 	r.info = info
+// 	r.rw.Unlock()
+// }

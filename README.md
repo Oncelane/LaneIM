@@ -128,6 +128,7 @@ server.properties
 ```
 
 # Room design
+
 in redis
 
 roomMgr set int
@@ -138,11 +139,16 @@ room:comet:%id set string
 
 room:userid:%id set int
 
+userMgr set int
+
 user:comet:%id string
 
 user:room:%id set string
 
 user:online:%id bool
+
+```
+Allroomid
 
 room{
    new
@@ -151,9 +157,15 @@ room{
    joinUserid
    quitUserid
    queryUserid
-   onlienUser
-   offlineUser
+
+   putComet
+   delComet
+   queryComet
+
+   countUserid
 }
+
+Alluserid
 
 user{
    new
@@ -163,8 +175,4 @@ user{
    offline
    queryOnline
 }
-
-
-
-
-
+```

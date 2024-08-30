@@ -3,6 +3,7 @@ package job
 import (
 	"laneIM/proto/comet"
 	"laneIM/proto/logic"
+	"laneIM/src/common"
 	"laneIM/src/config"
 	"laneIM/src/model"
 	"laneIM/src/pkg"
@@ -82,14 +83,9 @@ func (j *Job) RunComsumer() {
 			}
 			log.Printf("Received message: %s\n", protoMsg.String())
 
-			// 从redis查询房间内其余成员
-			room, err := model.RoomGet(j.redis.Client, protoMsg.Roomid)
-			if err != nil {
-				log.Println("get room member faild:", err)
-				continue
-			}
-			log.Println("get roomInfo", room.String())
-			for addr, _ := range room.Server {
+			// 从redis查询房间内其余comet
+			cometAddr, err := model.RoomQueryComet(j.redis.Client, common.Int64(protoMsg.Roomid))
+			for _, addr := range cometAddr {
 				if cometClient, exist := j.bucket.comets[addr]; exist {
 					cometClient.roomCh <- &comet.RoomReq{
 						Roomid: protoMsg.Roomid,
