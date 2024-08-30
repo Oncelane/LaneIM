@@ -1,6 +1,7 @@
 package pkg_test
 
 import (
+	"context"
 	"fmt"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
@@ -13,10 +14,34 @@ import (
 var n int = 30
 var topic string = "laneIMTest"
 
+type MyConsumer struct {
+	// 可以添加其他字段，如日志记录器、统计信息等
+}
+
+func (consumer *MyConsumer) Setup(session sarama.ConsumerGroupSession) error {
+	// 在这里可以执行一些初始化操作，比如日志记录
+	return nil
+}
+
+func (consumer *MyConsumer) Cleanup(session sarama.ConsumerGroupSession) error {
+	// 在这里可以执行一些清理操作
+	return nil
+}
+
+func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	for message := range claim.Messages() {
+		fmt.Printf("Received message: %s from %s/%d\n", message.Value, message.Topic, message.Partition)
+		// 处理消息...
+
+		// 标记消息为已消费
+		session.MarkMessage(message, "")
+	}
+	return nil
+}
 func TestPC(t *testing.T) {
 	// go TestSaramComsumer(t)
-	go TestSaramComsumer(t)
-	go TestSaramComsumer(t)
+	go TestSaramGroupComsumer(t)
+	go TestSaramGroupComsumer(t)
 	go TestProducer(t)
 	select {}
 }
@@ -110,6 +135,29 @@ func TestSaramComsumer(t *testing.T) {
 		}
 	}
 
+}
+func TestSaramGroupComsumer(t *testing.T) {
+	// Kafka broker address
+	brokers := []string{"localhost:9092"}
+
+	// Create a new Sarama config
+	config := sarama.NewConfig()
+	config.Consumer.Return.Errors = true
+
+	// Create a new Sarama consumer
+	consumer, err := sarama.NewConsumerGroup(brokers, "jobTest", config)
+	if err != nil {
+		log.Fatalf("Failed to start Kafka consumer: %v", err)
+	}
+	defer consumer.Close()
+	handler := &MyConsumer{}
+
+	// 注意：Consume 方法会阻塞，直到接收到上下文取消信号或发生错误
+	ctx := context.Background() // 或者使用带取消的上下文
+	if err := consumer.Consume(ctx, []string{topic}, handler); err != nil {
+		log.Fatalf("Error from consumer group: %v", err)
+	}
+	log.Println("comsumer exit")
 }
 
 // func TestKafkaComsumer(t *testing.T) {

@@ -176,3 +176,13 @@ user{
    queryOnline
 }
 ```
+
+# next
+
+## comet
+
+room 模块
+websocekt 长连接模块
+
+job 集群部署
+comet 集群部署
