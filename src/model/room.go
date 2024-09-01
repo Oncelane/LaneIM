@@ -9,7 +9,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-func AllRoomid(rdb *redis.ClusterClient) ([]lane.Int64, error) {
+func AllRoomid(rdb *redis.ClusterClient) ([]int64, error) {
 	roomStr, err := rdb.SMembers("roomMgr").Result()
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func RoomQuitUser(rdb *redis.ClusterClient, roomid lane.Int64, userid lane.Int64
 	return err
 }
 
-func RoomQueryUserid(rdb *redis.ClusterClient, roomid lane.Int64) ([]lane.Int64, error) {
+func RoomQueryUserid(rdb *redis.ClusterClient, roomid lane.Int64) ([]int64, error) {
 	userStr, err := rdb.SMembers(fmt.Sprintf("room:userid:%s", roomid.String())).Result()
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func RoomCount(rdb *redis.ClusterClient, roomid lane.Int64) (int64, error) {
 	return count, nil
 }
 
-func AllUserid(rdb *redis.ClusterClient) ([]lane.Int64, error) {
+func AllUserid(rdb *redis.ClusterClient) ([]int64, error) {
 	userStr, err := rdb.SMembers("userMgr").Result()
 	if err != nil {
 		return nil, err
@@ -147,6 +147,24 @@ func UserQueryOnline(rdb *redis.ClusterClient, userid lane.Int64) (bool, string,
 	return true, cometAddr, err
 }
 
+func UserJoinRoomid(rdb *redis.ClusterClient, userid lane.Int64, roomid lane.Int64) error {
+	_, err := rdb.SAdd(fmt.Sprintf("user:room:%s", userid.String()), roomid.String()).Result()
+	return err
+}
+
+func UserQuitRoomid(rdb *redis.ClusterClient, userid lane.Int64, roomid lane.Int64) error {
+	_, err := rdb.SRem(fmt.Sprintf("user:room:%s", userid.String()), roomid.String()).Result()
+	return err
+}
+
+func UserQueryRoomid(rdb *redis.ClusterClient, userid lane.Int64) ([]int64, error) {
+	roomStr, err := rdb.SMembers(fmt.Sprintf("user:room:%s", userid.String())).Result()
+	if err != nil {
+		return nil, err
+	}
+	return RedisStrsToInt64(roomStr)
+}
+
 // func AtomicRedis(rdb *redis.ClusterClient, key string, value string) error {
 // 	// Lua脚本，用于实现原子性的读取-修改-写入
 // 	// KEYS[1] 是键名，ARGV[1] 是新值
@@ -175,11 +193,12 @@ func UserQueryOnline(rdb *redis.ClusterClient, userid lane.Int64) (bool, string,
 // 	return nil
 // }
 
-func RedisStrsToInt64(strs []string) ([]lane.Int64, error) {
-	userid := make([]lane.Int64, len(strs))
-
+func RedisStrsToInt64(strs []string) ([]int64, error) {
+	ret := make([]int64, len(strs))
+	var tmp lane.Int64
 	for i, str := range strs {
-		userid[i].PasrseString(str)
+		tmp.PasrseString(str)
+		ret[i] = int64(tmp)
 	}
-	return userid, nil
+	return ret, nil
 }

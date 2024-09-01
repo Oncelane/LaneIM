@@ -8,24 +8,26 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type Ws struct {
+type MsgReadWriteCloser interface {
+	ReadMsg() (message *msg.Msg, err error)
+	WriteMsg(message *msg.Msg) error
+	Close() error
+}
+type ConnWs struct {
 	conn *websocket.Conn
 	pool *MsgPool
 }
 
-type RWMsg interface {
-	ReadMsg() (message *msg.Msg, err error)
-	WriteMsg(message *msg.Msg) error
-}
+var _ MsgReadWriteCloser = new(ConnWs)
 
-func NewWs(conn *websocket.Conn, pool *MsgPool) *Ws {
-	return &Ws{
+func NewConnWs(conn *websocket.Conn, pool *MsgPool) *ConnWs {
+	return &ConnWs{
 		conn: conn,
 		pool: pool,
 	}
 }
 
-func (w *Ws) ReadMsg() (message *msg.Msg, err error) {
+func (w *ConnWs) ReadMsg() (message *msg.Msg, err error) {
 	_, p, err := w.conn.ReadMessage()
 	if err != nil {
 		log.Println("read err")
@@ -40,7 +42,7 @@ func (w *Ws) ReadMsg() (message *msg.Msg, err error) {
 	return
 }
 
-func (w *Ws) WriteMsg(message *msg.Msg) error {
+func (w *ConnWs) WriteMsg(message *msg.Msg) error {
 	p, err := proto.Marshal(message)
 	if err != nil {
 		log.Println("marshal err", err)
@@ -52,4 +54,8 @@ func (w *Ws) WriteMsg(message *msg.Msg) error {
 		return err
 	}
 	return nil
+}
+
+func (w *ConnWs) Close() error {
+	return w.conn.Close()
 }

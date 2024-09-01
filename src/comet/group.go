@@ -6,7 +6,7 @@ type Room struct {
 	Online int64
 }
 
-func (m *Manager) NewRoom() *Room {
+func (m *Bucket) NewRoom() *Room {
 	return &Room{
 		rooms: make(map[int64]*Channel),
 	}

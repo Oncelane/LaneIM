@@ -28,6 +28,7 @@ const (
 	Logic_QuitRoom_FullMethodName    = "/lane.logic.logic/QuitRoom"
 	Logic_QueryRoom_FullMethodName   = "/lane.logic.logic/QueryRoom"
 	Logic_QueryServer_FullMethodName = "/lane.logic.logic/QueryServer"
+	Logic_Auth_FullMethodName        = "/lane.logic.logic/Auth"
 )
 
 // LogicClient is the client API for Logic service.
@@ -43,6 +44,7 @@ type LogicClient interface {
 	QuitRoom(ctx context.Context, in *QuitRoomReq, opts ...grpc.CallOption) (*NoResp, error)
 	QueryRoom(ctx context.Context, in *QueryRoomReq, opts ...grpc.CallOption) (*QueryRoomResp, error)
 	QueryServer(ctx context.Context, in *QueryServerReq, opts ...grpc.CallOption) (*QueryServerResp, error)
+	Auth(ctx context.Context, in *AuthReq, opts ...grpc.CallOption) (*AuthResp, error)
 }
 
 type logicClient struct {
@@ -143,6 +145,16 @@ func (c *logicClient) QueryServer(ctx context.Context, in *QueryServerReq, opts 
 	return out, nil
 }
 
+func (c *logicClient) Auth(ctx context.Context, in *AuthReq, opts ...grpc.CallOption) (*AuthResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AuthResp)
+	err := c.cc.Invoke(ctx, Logic_Auth_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LogicServer is the server API for Logic service.
 // All implementations should embed UnimplementedLogicServer
 // for forward compatibility.
@@ -156,6 +168,7 @@ type LogicServer interface {
 	QuitRoom(context.Context, *QuitRoomReq) (*NoResp, error)
 	QueryRoom(context.Context, *QueryRoomReq) (*QueryRoomResp, error)
 	QueryServer(context.Context, *QueryServerReq) (*QueryServerResp, error)
+	Auth(context.Context, *AuthReq) (*AuthResp, error)
 }
 
 // UnimplementedLogicServer should be embedded to have
@@ -191,6 +204,9 @@ func (UnimplementedLogicServer) QueryRoom(context.Context, *QueryRoomReq) (*Quer
 }
 func (UnimplementedLogicServer) QueryServer(context.Context, *QueryServerReq) (*QueryServerResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryServer not implemented")
+}
+func (UnimplementedLogicServer) Auth(context.Context, *AuthReq) (*AuthResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Auth not implemented")
 }
 func (UnimplementedLogicServer) testEmbeddedByValue() {}
 
@@ -374,6 +390,24 @@ func _Logic_QueryServer_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Logic_Auth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).Auth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_Auth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).Auth(ctx, req.(*AuthReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Logic_ServiceDesc is the grpc.ServiceDesc for Logic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -416,6 +450,10 @@ var Logic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryServer",
 			Handler:    _Logic_QueryServer_Handler,
+		},
+		{
+			MethodName: "Auth",
+			Handler:    _Logic_Auth_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

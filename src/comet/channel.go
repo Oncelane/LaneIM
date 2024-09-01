@@ -9,30 +9,30 @@ import (
 
 type Channel struct {
 	id     int64
-	ws     pkg.RWMsg
+	conn   pkg.MsgReadWriteCloser
 	recvCh chan *msg.Msg
 	sendCh chan *msg.Msg
 }
 
-func (m *Manager) NewChannel(userId int64, conn *websocket.Conn) *Channel {
+func (c *Comet) NewChannel(wsconn *websocket.Conn) *Channel {
 	ch := &Channel{
-		id:     userId,
-		ws:     pkg.NewWs(conn, &m.pool),
+		id:     -1,
+		conn:   pkg.NewConnWs(wsconn, c.pool),
 		recvCh: make(chan *msg.Msg, 100),
 		sendCh: make(chan *msg.Msg, 100),
 	}
-	ch.ServeIO()
+	ch.serveIO()
 	return ch
 }
 
-func (c *Channel) ServeIO() {
+func (c *Channel) serveIO() {
 	go c.recvRoutine()
 	go c.sendRoutine()
 }
 
 func (c *Channel) recvRoutine() {
 	for {
-		message, err := c.ws.ReadMsg()
+		message, err := c.conn.ReadMsg()
 		if err != nil {
 			// TODO
 			continue
@@ -43,7 +43,7 @@ func (c *Channel) recvRoutine() {
 
 func (c *Channel) sendRoutine() {
 	for message := range c.sendCh {
-		err := c.ws.WriteMsg(message)
+		err := c.conn.WriteMsg(message)
 		if err != nil {
 			// TODO
 			continue

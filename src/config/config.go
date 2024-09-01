@@ -11,6 +11,9 @@ type Comet struct {
 	Addr string
 	Name string
 	Etcd Etcd
+
+	BucketSize    int
+	BucketRoutine int
 }
 
 type Job struct {
@@ -29,5 +32,7 @@ type KafkaProducer struct {
 }
 
 type KafkaComsumer struct {
-	Addr []string
+	Addr    []string
+	Topics  []string
+	GroupId string
 }

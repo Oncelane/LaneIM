@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	pb "laneIM/proto/logic"
+	"laneIM/src/common"
 	"laneIM/src/config"
+	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
 	"net"
@@ -112,9 +114,29 @@ func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, err
 func (s *Logic) QuitRoom(context.Context, *pb.QuitRoomReq) (*pb.NoResp, error) {
 	return nil, nil
 }
-func (s *Logic) QueryRoom(context.Context, *pb.QueryRoomReq) (*pb.QueryRoomResp, error) {
-	return nil, nil
+func (s *Logic) QueryRoom(_ context.Context, in *pb.QueryRoomReq) (*pb.QueryRoomResp, error) {
+	out := pb.QueryRoomResp{
+		Roomids: make([]*pb.QueryRoomResp_RoomSlice, 0),
+	}
+	for _, userid := range in.Userid {
+		rawRoomids, err := model.UserQueryRoomid(s.redis.Client, common.Int64(userid))
+		if err != nil {
+			return nil, err
+		}
+		out.Roomids = append(out.Roomids, &pb.QueryRoomResp_RoomSlice{
+			Roomid: rawRoomids,
+		})
+
+	}
+
+	return &out, nil
 }
 func (s *Logic) QueryServer(context.Context, *pb.QueryServerReq) (*pb.QueryServerResp, error) {
 	return nil, nil
+}
+
+func (s *Logic) Auth(_ context.Context, in *pb.AuthReq) (*pb.AuthResp, error) {
+	log.Println("auth pass:", in.Userid)
+	out := &pb.AuthResp{Pass: true, Userid: in.Userid}
+	return out, nil
 }

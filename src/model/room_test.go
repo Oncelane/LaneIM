@@ -123,13 +123,19 @@ func TestInitRoomAndUser(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println("添加user")
+	log.Println("给room添加user")
+	log.Println("给user添加room")
 	for _, id := range userid {
 		err = model.RoomJoinUser(r.Client, common.Int64(testroom.Roomid), common.Int64(id))
 		if err != nil {
 			t.Error(err)
 		}
+		err = model.UserJoinRoomid(r.Client, common.Int64(id), common.Int64(testroom.Roomid))
+		if err != nil {
+			t.Error(err)
+		}
 	}
+
 	log.Println("查看user")
 	getUserId, err = model.RoomQueryUserid(r.Client, common.Int64(testroom.Roomid))
 	if err != nil {
@@ -142,5 +148,12 @@ func TestInitRoomAndUser(t *testing.T) {
 		t.Error(err)
 	}
 	log.Println(cometAddr)
+
+	log.Println("查询user的roomid")
+	userRoomid, err := model.UserQueryRoomid(r.Client, common.Int64(userid[0]))
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println(userRoomid)
 
 }

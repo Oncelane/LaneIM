@@ -149,7 +149,7 @@ func TestSaramGroupComsumer(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Failed to start Kafka consumer: %v", err)
 	}
-	defer consumer.Close()
+
 	handler := &MyConsumer{}
 
 	// 注意：Consume 方法会阻塞，直到接收到上下文取消信号或发生错误

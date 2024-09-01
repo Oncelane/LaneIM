@@ -3,15 +3,9 @@ syntax = "proto3";
 package lane.msg;
 option go_package = "laneIM/proto/msg;msg";
 
-enum MsgType {
-  BRODCAST = 0;
-  SINGLE = 1;
-  BRODCASTMS = 2;
-}
-
 message Msg {
   bytes byte = 1;
-  MsgType op = 2;
+  string path = 2;
   int64 seq = 3;
 }
 

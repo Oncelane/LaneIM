@@ -50,6 +50,15 @@ export PKG_CONFIG_PATH=/usr/lib/pkgconfig
 # 启动 kafka 集群
 
 确保 Kafka 版本支持 Kraft 模式（Kafka 2.8.0 及以上版本）
+
+依赖 jdk11
+
+```bash
+export JAVA_HOME=/usr/local/java/jdk1.8.0_411
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export PATH=${JAVA_HOME}/bin:$PATH
+```
 下载
 
 ```sh
@@ -174,6 +183,9 @@ user{
    online
    offline
    queryOnline
+
+   joinRoomid
+   quitRoomid
 }
 ```
 

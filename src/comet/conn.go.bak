@@ -1,0 +1,33 @@
+package comet
+
+import (
+	"io"
+
+	"github.com/gorilla/websocket"
+)
+
+type Websocket struct {
+	conn *websocket.Conn
+}
+
+var _ io.ReadWriteCloser = new(Websocket)
+
+func (w *Websocket) Read(in []byte) (n int, err error) {
+	var tmp []byte
+	_, tmp, err = w.conn.ReadMessage()
+	if tmp != nil {
+		n = copy(in, tmp)
+	}
+	return
+}
+
+func (w *Websocket) Write(in []byte) (n int, err error) {
+	err = w.conn.WriteMessage(websocket.BinaryMessage, in)
+	n = len(in)
+	return
+}
+
+func (w *Websocket) Close() error {
+
+	return w.conn.Close()
+}

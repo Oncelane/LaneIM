@@ -30,28 +30,23 @@ message SetOfflineReq {
 }
 
 message JoinRoomReq {
-  lane.msg.UserInfo userinfo = 1;
-  int64 roomid = 2;
-  string addr = 3;
+  int64 userid = 1;
+  int64 roomid = 3;
 }
 
 message QuitRoomReq {
-  lane.msg.UserInfo userinfo = 1;
+  int64 userid = 1;
   int64 roomid = 2;
-  string addr = 3;
 }
 
-message QueryRoomReq { repeated lane.msg.UserInfo userinfo = 1; }
+message QueryRoomReq { repeated int64 userid = 1; }
 
 message QueryRoomResp {
-  message UserInfoResp {
-    bool online = 1;
-    repeated int64 roomid = 2;
-  }
-  repeated UserInfoResp userinfoResp = 1;
+  message RoomSlice { repeated int64 roomid = 1; }
+  repeated RoomSlice roomids = 1;
 }
 
-message QueryServerReq { repeated lane.msg.UserInfo userinfo = 1; }
+message QueryServerReq { repeated int64 userid = 1; }
 
 message QueryServerResp {
   message UserInfoResp {
@@ -65,6 +60,16 @@ message QueryServerResp {
 message NewUserReq { lane.msg.UserInfo userinfo = 1; }
 
 message DelUserReq { lane.msg.UserInfo userinfo = 1; }
+
+message AuthReq {
+  bytes token = 1;
+  int64 userid = 2;
+}
+
+message AuthResp {
+  bool pass = 1;
+  int64 userid = 2;
+}
 
 service logic {
   rpc SendMsg(SendMsgReq) returns (NoResp);
@@ -80,4 +85,6 @@ service logic {
   rpc QueryRoom(QueryRoomReq) returns (QueryRoomResp);
 
   rpc QueryServer(QueryServerReq) returns (QueryServerResp);
+
+  rpc Auth(AuthReq) returns (AuthResp);
 }

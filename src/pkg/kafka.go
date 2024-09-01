@@ -43,3 +43,16 @@ func NewKafkaComsumer(conf config.KafkaComsumer) *KafkaComsumer {
 	log.Println("create kafka comsumer:", conf.Addr)
 	return kc
 }
+
+func NewKafkaGroupComsumer(conf config.KafkaComsumer) sarama.ConsumerGroup {
+	// Create a new Sarama config
+	config := sarama.NewConfig()
+	config.Consumer.Return.Errors = true
+
+	// Create a new Sarama consumer
+	consumer, err := sarama.NewConsumerGroup(conf.Addr, conf.GroupId, config)
+	if err != nil {
+		log.Fatalf("Failed to start Kafka consumer: %v", err)
+	}
+	return consumer
+}

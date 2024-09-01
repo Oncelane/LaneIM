@@ -6,6 +6,7 @@ import (
 	"laneIM/proto/logic"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
+	"math/rand"
 	"net"
 	"time"
 
@@ -43,6 +44,9 @@ type Comet struct {
 	logics map[string]*Logic
 	conf   config.Comet
 	grpc   *grpc.Server
+
+	pool    *pkg.MsgPool
+	buckets []*Bucket
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
@@ -51,6 +55,10 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 		etcd:   pkg.NewEtcd(conf.Etcd),
 		logics: make(map[string]*Logic),
 		conf:   conf,
+		pool:   pkg.NewMsgPool(),
+
+		//bucket
+		buckets: make([]*Bucket, conf.BucketSize),
 	}
 
 	// watch logic
@@ -118,6 +126,10 @@ func (c *Comet) pickLogic() *Logic {
 		log.Println("暂无发现logic 5秒后再查询")
 		time.Sleep(time.Second)
 	}
+}
+
+func (c *Comet) Bucket(key int64) *Bucket {
+	return c.buckets[rand.Int()%c.conf.BucketSize]
 }
 
 func (c *Comet) LogicBrodcast(message *logic.SendMsgReq, data []byte) {
