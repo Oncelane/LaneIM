@@ -66,7 +66,7 @@ func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := &Token{}
-	err = json.Unmarshal(message.Byte, token)
+	err = json.Unmarshal(message.Data, token)
 	if err != nil {
 		log.Println("faild to decode token")
 		w.Write([]byte("faild to decode token"))

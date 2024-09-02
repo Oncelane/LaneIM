@@ -4,7 +4,7 @@ package lane.msg;
 option go_package = "laneIM/proto/msg;msg";
 
 message Msg {
-  bytes byte = 1;
+  bytes data = 1;
   string path = 2;
   int64 seq = 3;
 }

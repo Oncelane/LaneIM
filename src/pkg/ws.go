@@ -13,6 +13,7 @@ type MsgReadWriteCloser interface {
 	WriteMsg(message *msg.Msg) error
 	Close() error
 }
+
 type ConnWs struct {
 	conn *websocket.Conn
 	pool *MsgPool
