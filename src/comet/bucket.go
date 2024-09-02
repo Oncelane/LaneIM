@@ -31,8 +31,13 @@ func (m *Bucket) DelRoom(roomid int64) {
 	m.mu.Unlock()
 }
 
-func (m *Bucket) GetRoom(id int64) *Room {
-	return m.rooms[id]
+func (m *Bucket) GetRoom(roomid int64) *Room {
+
+	if r, exist := m.rooms[roomid]; exist {
+		return r
+	}
+	r := m.NewRoom(roomid)
+	return r
 }
 
 func (m *Bucket) PutChannel(roomid int64, c *Channel) {

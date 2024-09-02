@@ -21,6 +21,9 @@ type Job struct {
 	Name          string
 	KafkaComsumer KafkaComsumer
 	Etcd          Etcd
+
+	BucketSize       int
+	CometRoutineSize int
 }
 
 type Etcd struct {

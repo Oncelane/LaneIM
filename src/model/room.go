@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"laneIM/proto/msg"
 	lane "laneIM/src/common"
 
 	"github.com/go-redis/redis"
@@ -112,14 +113,14 @@ func UserNew(rdb *redis.ClusterClient, userid lane.Int64) error {
 	return nil
 }
 
-func UserDel(rdb *redis.ClusterClient, userid lane.Int64) (lane.Int64, error) {
+func UserDel(rdb *redis.ClusterClient, userid lane.Int64) (int64, error) {
 	err := rdb.SRem("userMgr", userid.String()).Err()
 	if err != nil {
 		log.Fatalf("could not set room info: %v", err)
 		return 0, err
 	}
 	rt, err := rdb.Del(fmt.Sprintf("user:online:%s", userid.String()), fmt.Sprintf("user:comet:%s", userid.String()), fmt.Sprintf("user:room:%s", userid.String())).Result()
-	return lane.Int64(rt), err
+	return rt, err
 }
 
 func UserOnline(rdb *redis.ClusterClient, userid lane.Int64, comet string) error {
@@ -163,6 +164,31 @@ func UserQueryRoomid(rdb *redis.ClusterClient, userid lane.Int64) ([]int64, erro
 		return nil, err
 	}
 	return RedisStrsToInt64(roomStr)
+}
+
+func UpdateRoom(rdb *redis.ClusterClient, roomid int64) (*msg.RoomInfo, error) {
+	roomInfo := &msg.RoomInfo{}
+	comets, err := RoomQueryComet(rdb, lane.Int64(roomid))
+	if err != nil {
+		return nil, err
+	}
+
+	cometMap := make(map[string]bool)
+	for _, addr := range comets {
+		cometMap[addr] = true
+	}
+	userMap := make(map[int64]bool)
+	userids, err := RoomQueryUserid(rdb, lane.Int64(roomid))
+	if err != nil {
+		return nil, err
+	}
+	for _, userid := range userids {
+		userMap[userid] = true
+	}
+	roomInfo.OnlineNum = -1
+	roomInfo.Server = cometMap
+	roomInfo.Users = userMap
+	return roomInfo, nil
 }
 
 // func AtomicRedis(rdb *redis.ClusterClient, key string, value string) error {

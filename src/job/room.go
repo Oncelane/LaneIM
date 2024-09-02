@@ -3,6 +3,9 @@ package job
 import (
 	"laneIM/proto/comet"
 	"laneIM/proto/msg"
+	"laneIM/src/model"
+	"laneIM/src/pkg"
+	"log"
 	"sync"
 )
 
@@ -12,57 +15,47 @@ import (
 type Room struct {
 	roomid int64
 	info   *msg.RoomInfo
-	client map[string]*ClientComet
 	rw     sync.RWMutex
 }
 
-func NewRoom(id int64) *Room {
-	return &Room{
+func (j *Job) NewRoom(id int64) *Room {
+	rt := &Room{
 		roomid: id,
-		client: make(map[string]*ClientComet),
 	}
+	// update from redis
+	log.Println("create new room:", rt.roomid)
+	rt.UpdateFromRedis(j.redis)
+	log.Println("sync room from redis:", rt.roomid)
+	j.Bucket(id).rooms[id] = rt
+	return rt
 }
 
-func (r *Room) PutComet(addr string, c *ClientComet) {
-	r.rw.Lock()
-	r.client[addr] = c
-	r.rw.Unlock()
+func (j *Job) GetRoom(id int64) *Room {
+	if room, exist := j.Bucket(id).rooms[id]; exist {
+		return room
+	}
+	return j.NewRoom(id)
 }
 
-func (r *Room) DelComet(addr string, c *ClientComet) {
-	r.rw.Lock()
-	delete(r.client, addr)
-	r.rw.Unlock()
+func (j *Job) Push(message *comet.RoomReq) {
+	j.Bucket(message.Roomid).Room(message)
 }
 
-func (r *Room) Push(message *comet.RoomReq) {
-	r.rw.RLock()
-	defer r.rw.RUnlock()
-	if r.info.OnlineNum == 0 {
-		return
-	}
-	for _, c := range r.client {
-		c.roomCh <- message
-	}
-}
-
-func (r *Room) PushSingle(message *comet.SingleReq) {
-	r.rw.RLock()
-	defer r.rw.RUnlock()
-	if r.info.OnlineNum == 0 {
-		return
-	}
-	for _, c := range r.client {
-		c.singleCh <- message
-	}
-}
-
-// func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
-// 	info, err := model.RoomGet(client.Client, r.roomid)
-// 	if err != nil {
-// 		log.Println("filed to update room:", r.roomid)
+// func (r *Room) PushSingle(message *comet.SingleReq) {
+// 	if r.info.OnlineNum == 0 {
+// 		return
 // 	}
-// 	r.rw.Lock()
-// 	r.info = info
-// 	r.rw.Unlock()
+// 	for _, c := range r.client {
+// 		c.singleCh <- message
+// 	}
 // }
+
+func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
+	info, err := model.UpdateRoom(client.Client, r.roomid)
+	if err != nil {
+		log.Println("filed to update room:", r.roomid)
+	}
+	r.rw.Lock()
+	r.info = info
+	r.rw.Unlock()
+}

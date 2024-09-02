@@ -9,22 +9,23 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type ClientComet struct {
-	addr       string
-	client     comet.CometClient
+type CometClient struct {
+	addr   string
+	client comet.CometClient
+
 	brodcastCh chan *comet.BrodcastReq
 	roomCh     chan *comet.RoomReq
 	singleCh   chan *comet.SingleReq
 }
 
-func NewComet(addr string) *ClientComet {
+func (j *Job) NewComet(addr string) *CometClient {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Println("Dail faild ", err.Error())
 		return nil
 	}
 	client := comet.NewCometClient(conn)
-	c := &ClientComet{
+	c := &CometClient{
 		addr:       addr,
 		client:     client,
 		brodcastCh: make(chan *comet.BrodcastReq, 1024),
@@ -32,11 +33,14 @@ func NewComet(addr string) *ClientComet {
 		singleCh:   make(chan *comet.SingleReq, 1024),
 	}
 	log.Println("connet to comet:", addr)
-	go c.HandlerComet()
+	j.comets[addr] = c
+	for range j.conf.CometRoutineSize {
+		go c.HandlerComet()
+	}
 	return c
 }
 
-func (c *ClientComet) HandlerComet() {
+func (c *CometClient) HandlerComet() {
 	for {
 		select {
 		case msg := <-c.brodcastCh:

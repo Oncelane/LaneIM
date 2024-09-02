@@ -30,7 +30,7 @@ func NewConnWs(conn *websocket.Conn, pool *MsgPool) *ConnWs {
 func (w *ConnWs) ReadMsg() (message *msg.Msg, err error) {
 	_, p, err := w.conn.ReadMessage()
 	if err != nil {
-		log.Println("read err")
+		log.Println("read err:", err)
 		return nil, err
 	}
 	message = w.pool.Get()

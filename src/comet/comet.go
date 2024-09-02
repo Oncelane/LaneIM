@@ -6,7 +6,6 @@ import (
 	"laneIM/proto/logic"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
-	"math/rand"
 	"net"
 	"time"
 
@@ -47,6 +46,11 @@ type Comet struct {
 
 	pool    *pkg.MsgPool
 	buckets []*Bucket
+
+	chmu     sync.RWMutex
+	channels map[int64]*Channel
+
+	funcRout *WsFuncRouter
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
@@ -59,6 +63,11 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 		//bucket
 		buckets: make([]*Bucket, conf.BucketSize),
+
+		//func router
+		funcRout: NewWsFuncRouter(),
+
+		channels: make(map[int64]*Channel),
 	}
 
 	// watch logic
@@ -78,6 +87,10 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 			log.Fatalln("failed to serve : ", err.Error())
 		}
 	}()
+
+	//init func
+	ret.funcRout.Use("newUser", ret.TestNewUser)
+	ret.funcRout.Use("room", ret.TestRoom)
 
 	// regieter etcd
 	ret.etcd.SetAddr("grpc:comet/"+conf.Name, conf.Addr)
@@ -128,8 +141,8 @@ func (c *Comet) pickLogic() *Logic {
 	}
 }
 
-func (c *Comet) Bucket(key int64) *Bucket {
-	return c.buckets[rand.Int()%c.conf.BucketSize]
+func (c *Comet) Bucket(roomid int64) *Bucket {
+	return c.buckets[int(roomid)%len(c.buckets)]
 }
 
 func (c *Comet) LogicBrodcast(message *logic.SendMsgReq, data []byte) {

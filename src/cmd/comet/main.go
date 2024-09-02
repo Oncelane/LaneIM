@@ -1,10 +1,10 @@
 package main
 
 import (
-	"laneIM/proto/logic"
 	"laneIM/src/comet"
 	"laneIM/src/config"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,8 +20,10 @@ func main() {
 	}
 	c := comet.NewSerivceComet(conf)
 
-	log.Println("send test message")
-	testSend(c)
+	// 启动websocket服务
+	http.HandleFunc("/ws", c.ServeHTTP)
+	http.ListenAndServe(":40051", nil)
+
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -29,15 +31,4 @@ func main() {
 	log.Println("close comet")
 	c.Close()
 
-}
-
-func testSend(comet *comet.Comet) {
-	msg := &logic.SendMsgReq{
-		Data:   []byte("hello laneIM! from 21"),
-		Roomid: 1005,
-		Path:   "brodcast/test",
-		Userid: 21,
-	}
-
-	comet.LogictRoom(msg)
 }

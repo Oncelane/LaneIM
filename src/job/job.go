@@ -12,11 +12,13 @@ import (
 
 // singleton
 type Job struct {
-	bucket        *Bucket
 	etcd          *pkg.EtcdClient
 	redis         *pkg.RedisClient
 	kafkaComsumer sarama.ConsumerGroup
 	conf          config.Job
+
+	buckets []*Bucket
+	comets  map[string]*CometClient
 }
 
 func NewJob(conf config.Job) *Job {
@@ -26,14 +28,15 @@ func NewJob(conf config.Job) *Job {
 	addrs := e.GetAddr("redis")
 	log.Printf("job starting...\n get redis addrs: %v", addrs)
 	j := &Job{
-		bucket: NewBucket(),
-		etcd:   e,
-		redis:  pkg.NewRedisClient(addrs),
-		conf:   conf,
+		etcd:          e,
+		redis:         pkg.NewRedisClient(addrs),
+		kafkaComsumer: pkg.NewKafkaGroupComsumer(conf.KafkaComsumer),
+		conf:          conf,
+		comets:        make(map[string]*CometClient),
 	}
 
-	// connet to kafka
-	j.kafkaComsumer = pkg.NewKafkaGroupComsumer(j.conf.KafkaComsumer)
+	j.NewBucket()
+
 	// wathc comet
 	go j.WatchComet()
 	go j.RunGroupComsumer()
@@ -45,13 +48,12 @@ func (j *Job) WatchComet() {
 		addrs := j.etcd.GetAddr("grpc:comet")
 		for _, addr := range addrs {
 			// connet to comet
-			if _, exist := j.bucket.comets[addr]; exist {
+			if _, exist := j.comets[addr]; exist {
 				continue
 			}
 			log.Println("发现comet:", addr)
-			j.bucket.comets[addr] = NewComet(addr)
+			j.NewComet(addr)
 		}
-
 		time.Sleep(time.Second)
 	}
 }
@@ -106,7 +108,9 @@ func (j *Job) Close() {
 }
 
 func (j *Job) RunGroupComsumer() {
-	handler := &MyConsumer{}
+	handler := &MyConsumer{
+		job: j,
+	}
 	if err := j.kafkaComsumer.Consume(context.Background(), j.conf.KafkaComsumer.Topics, handler); err != nil {
 		log.Fatalf("Error from consumer group: %v", err)
 	}

@@ -18,11 +18,37 @@ var upGrader = websocket.Upgrader{
 }
 
 type Token struct {
-	Content string `json:"token"`
+	Content []byte
+	Userid  int64
+}
+
+func (c *Comet) ServerWebsocket(ch *Channel) {
+	for {
+		message, err := ch.conn.ReadMsg()
+		if ch.done {
+			return
+		}
+		if err != nil {
+			log.Println("faild to get ws message")
+			ch.Close()
+			return
+		}
+		log.Println("receive a path message")
+		f := c.funcRout.Find(message.Path)
+		if f == nil {
+			log.Println("wrong method")
+			continue
+		}
+		f(message)
+		if ch.done {
+			return
+		}
+	}
 }
 
 func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 建立websocket链接
+	log.Println("receive ws connect")
 	ws, err := upGrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("upGrader fail", err)
@@ -50,7 +76,8 @@ func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// send token to logic
 	authReq := &logic.AuthReq{
-		Token: []byte("this is token message password:XXX userid:XXX"),
+		Token:  []byte(token.Content),
+		Userid: token.Userid,
 	}
 
 	rt, err := c.pickLogic().Client.Auth(context.Background(), authReq)
@@ -72,6 +99,11 @@ func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ch.id = rt.Userid
 	log.Println("user id:", rt.Userid, "auth success")
 
+	// add to channels
+	c.chmu.Lock()
+	c.channels[ch.id] = ch
+	c.chmu.Unlock()
+
 	// 查询 userid  所处 room
 
 	roomReq := &logic.QueryRoomReq{
@@ -82,14 +114,12 @@ func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Println("faild to query userid", ch.id, "'s roomid")
 		return
 	}
-	// 加入room
+	// comet初始化已加入的room
 	if len(roomResp.Roomids) != 0 {
 		for _, roomid := range roomResp.Roomids[0].Roomid {
 			c.Bucket(ch.id).PutChannel(roomid, ch)
 			log.Println("userid:", ch.id, "in room", roomid)
 		}
 	}
-
-	return
-
+	go c.ServerWebsocket(ch)
 }

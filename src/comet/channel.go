@@ -12,6 +12,7 @@ type Channel struct {
 	conn   pkg.MsgReadWriteCloser
 	recvCh chan *msg.Msg
 	sendCh chan *msg.Msg
+	done   bool
 }
 
 func (c *Comet) NewChannel(wsconn *websocket.Conn) *Channel {
@@ -21,32 +22,37 @@ func (c *Comet) NewChannel(wsconn *websocket.Conn) *Channel {
 		recvCh: make(chan *msg.Msg, 100),
 		sendCh: make(chan *msg.Msg, 100),
 	}
-	ch.serveIO()
+	// ch.serveIO()
 	return ch
 }
 
-func (c *Channel) serveIO() {
-	go c.recvRoutine()
-	go c.sendRoutine()
-}
+// func (c *Channel) serveIO() {
+// 	go c.recvRoutine()
+// 	go c.sendRoutine()
+// }
 
-func (c *Channel) recvRoutine() {
-	for {
-		message, err := c.conn.ReadMsg()
-		if err != nil {
-			// TODO
-			continue
-		}
-		c.recvCh <- message
-	}
-}
+// func (c *Channel) recvRoutine() {
+// 	for {
+// 		message, err := c.conn.ReadMsg()
+// 		if err != nil {
+// 			// TODO
+// 			continue
+// 		}
+// 		c.recvCh <- message
+// 	}
+// }
 
-func (c *Channel) sendRoutine() {
-	for message := range c.sendCh {
-		err := c.conn.WriteMsg(message)
-		if err != nil {
-			// TODO
-			continue
-		}
-	}
+// func (c *Channel) sendRoutine() {
+// 	for message := range c.sendCh {
+// 		err := c.conn.WriteMsg(message)
+// 		if err != nil {
+// 			// TODO
+// 			continue
+// 		}
+// 	}
+// }
+
+func (c *Channel) Close() {
+	c.done = true
+	c.conn.Close()
 }

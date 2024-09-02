@@ -16,8 +16,12 @@ func main() {
 			Addr: []string{"127.0.0.1:2379"},
 		},
 		KafkaComsumer: config.KafkaComsumer{
-			Addr: []string{"127.0.0.1:9092"},
+			Addr:    []string{"127.0.0.1:9092"},
+			Topics:  []string{"laneIM"},
+			GroupId: "job",
 		},
+		CometRoutineSize: 32,
+		BucketSize:       32,
 	}
 	j := job.NewJob(conf)
 	// 等待信号
