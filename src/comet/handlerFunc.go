@@ -48,6 +48,7 @@ func (c *Comet) TestRoom(m *msg.Msg) {
 	if err != nil {
 		log.Println("faild to query logic room", err)
 	}
+	outData
 	out := &msg.Msg{
 		Path: m.Path,
 		Seq:  m.Seq,
