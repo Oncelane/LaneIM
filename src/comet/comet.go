@@ -170,6 +170,8 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 	return nil, nil
 }
 func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
-	log.Println(in.String())
+	c.chmu.RLock()
+	c.Bucket(in.Roomid).
+		c.chmu.Runlock()
 	return nil, nil
 }

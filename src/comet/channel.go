@@ -8,8 +8,9 @@ import (
 )
 
 type Channel struct {
-	id     int64
-	conn   pkg.MsgReadWriteCloser
+	id   int64
+	conn pkg.MsgReadWriteCloser
+	// conn   pkg.MsgReadWriteCloser
 	recvCh chan *msg.Msg
 	sendCh chan *msg.Msg
 	done   bool
