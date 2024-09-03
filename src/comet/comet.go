@@ -4,6 +4,7 @@ import (
 	"context"
 	"laneIM/proto/comet"
 	"laneIM/proto/logic"
+	"laneIM/proto/msg"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
 	"net"
@@ -69,6 +70,9 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 		channels: make(map[int64]*Channel),
 	}
+	for i := range ret.buckets {
+		ret.buckets[i] = NewBucket()
+	}
 
 	// watch logic
 	go ret.WatchLogic()
@@ -89,8 +93,10 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 	}()
 
 	//init func
-	ret.funcRout.Use("newUser", ret.TestNewUser)
-	ret.funcRout.Use("room", ret.TestRoom)
+	// ret.funcRout.Use("newUser", ret.HandleNewUser)
+	ret.funcRout.Use("sendRoom", ret.HandleSendRoom)
+	ret.funcRout.Use("queryRoom", ret.HandleRoom)
+	ret.funcRout.Use("auth", ret.HandleAuth)
 
 	// regieter etcd
 	ret.etcd.SetAddr("grpc:comet/"+conf.Name, conf.Addr)
@@ -140,7 +146,6 @@ func (c *Comet) pickLogic() *Logic {
 		time.Sleep(time.Second)
 	}
 }
-
 func (c *Comet) Bucket(roomid int64) *Bucket {
 	return c.buckets[int(roomid)%len(c.buckets)]
 }
@@ -170,8 +175,11 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 	return nil, nil
 }
 func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
-	c.chmu.RLock()
-	c.Bucket(in.Roomid).
-		c.chmu.Runlock()
+	log.Println("comet send room")
+	c.Bucket(in.Roomid).GetRoom(in.Roomid).Send(&msg.Msg{
+		Path: "roomMsg",
+		Data: in.Data,
+	})
+
 	return nil, nil
 }

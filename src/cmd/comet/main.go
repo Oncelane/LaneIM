@@ -17,14 +17,16 @@ func main() {
 		Etcd: config.Etcd{
 			Addr: []string{"127.0.0.1:2379"},
 		},
+		BucketSize: 32,
 	}
 	c := comet.NewSerivceComet(conf)
 
 	// 启动websocket服务
 	http.HandleFunc("/ws", c.ServeHTTP)
-	http.ListenAndServe(":40051", nil)
+	go http.ListenAndServe(":40051", nil)
 
 	// 等待信号
+	log.Println("wait ctrl+c")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan // 阻塞等待信号

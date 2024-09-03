@@ -188,6 +188,6 @@ func (s *Logic) QueryServer(context.Context, *pb.QueryServerReq) (*pb.QueryServe
 
 func (s *Logic) Auth(_ context.Context, in *pb.AuthReq) (*pb.AuthResp, error) {
 	log.Println("auth pass:", in.Userid)
-	out := &pb.AuthResp{Pass: true, Userid: in.Userid}
+	out := &pb.AuthResp{Pass: true}
 	return out, nil
 }

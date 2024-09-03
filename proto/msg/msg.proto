@@ -23,4 +23,31 @@ message RoomInfo {
   int64 onlineNum = 4;
 }
 
+// Auth
+
+message CAuthReq {
+  repeated string params = 1;
+  int64 userid = 2;
+}
+
+message CAuthResp { bool pass = 1; }
+
+// query roomid
+
+message CRoomidReq { int64 userid = 1; }
+message CRoomidResp { repeated int64 roomid = 1; }
+
+// send msg to room
+
+message CSendRoomReq {
+  int64 userid = 1;
+  int64 roomid = 2;
+  string msg = 3;
+}
+
+message CSendRoomResp { bool ack = 1; }
+
+// offline
+message COfflineReq { int64 userid = 1; }
+
 message CometInfo { repeated int64 rooms = 1; }

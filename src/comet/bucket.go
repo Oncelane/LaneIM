@@ -7,7 +7,7 @@ import (
 type Bucket struct {
 	rooms map[int64]*Room
 	nRoom int
-	mu    sync.Mutex
+	mu    sync.RWMutex
 }
 
 func NewBucket() *Bucket {

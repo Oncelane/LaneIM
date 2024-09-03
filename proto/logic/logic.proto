@@ -63,14 +63,12 @@ message NewUserResp { int64 userid = 1; }
 message DelUserReq { int64 userid = 1; }
 
 message AuthReq {
-  bytes token = 1;
+  repeated string params = 1;
   int64 userid = 2;
+  string cometAddr = 3;
 }
 
-message AuthResp {
-  bool pass = 1;
-  int64 userid = 2;
-}
+message AuthResp { bool pass = 1; }
 
 service logic {
   rpc SendMsg(SendMsgReq) returns (NoResp);

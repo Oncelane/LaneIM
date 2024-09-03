@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-type WsHandler func(in *msg.Msg)
+type WsHandler func(in *msg.Msg, ch *Channel)
 
 type WsFuncRouter struct {
 	fmap map[string]WsHandler
