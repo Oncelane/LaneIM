@@ -32,10 +32,12 @@ func (m *Bucket) DelRoom(roomid int64) {
 }
 
 func (m *Bucket) GetRoom(roomid int64) *Room {
-
+	m.mu.RLock()
 	if r, exist := m.rooms[roomid]; exist {
+		m.mu.RUnlock()
 		return r
 	}
+	m.mu.RUnlock()
 	r := m.NewRoom(roomid)
 	return r
 }

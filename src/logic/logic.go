@@ -87,7 +87,7 @@ var _ pb.LogicServer = new(Logic)
 
 func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error) {
 	switch in.Path {
-	case "room":
+	case "sendRoom":
 
 		//no op just send to kafka
 		data, err := proto.Marshal(in)

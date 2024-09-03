@@ -34,9 +34,9 @@ func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, cl
 			log.Println("wrong protobuf decode")
 		}
 		switch protoMsg.Path {
-		case "room":
+		case "sendRoom":
 			// 可能的初始化room，获取room所处的comets
-			room := consumer.job.GetRoom(protoMsg.Roomid)
+			room := consumer.job.Bucket(protoMsg.Roomid).GetRoom(protoMsg.Roomid)
 			for addr := range room.info.Server {
 				log.Printf("message to roomid:%d hava comet:%s", room.roomid, addr)
 				// 检查是否实际连接上了comet

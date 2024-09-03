@@ -2,6 +2,7 @@ package job
 
 import (
 	"laneIM/proto/comet"
+	"log"
 	"sync"
 )
 
@@ -21,11 +22,42 @@ func (j *Job) NewBucket() {
 			job:    j,
 		}
 	}
-	return
 }
 
 func (j *Job) Bucket(roomid int64) *Bucket {
+	log.Println("choose bucket:", int(roomid)%len(j.buckets))
 	return j.buckets[int(roomid)%len(j.buckets)]
+}
+
+func (b *Bucket) GetRoom(roomid int64) *Room {
+	b.rw.RLock()
+	if room, exist := b.rooms[roomid]; exist {
+		b.rw.RUnlock()
+		return room
+	}
+	b.rw.RUnlock()
+	return b.NewRoom(roomid)
+}
+
+func (b *Bucket) NewRoom(roomid int64) *Room {
+
+	// update from redis
+
+	b.rw.Lock()
+	defer b.rw.Unlock()
+	if r, exist := b.rooms[roomid]; exist {
+		log.Println("room:", roomid, "already exist,can not new")
+		return r
+	}
+	newRoom := &Room{
+		roomid: roomid,
+	}
+	log.Println("create new room:", roomid)
+	newRoom.UpdateFromRedis(b.job.redis)
+	log.Println("sync room from redis:", roomid)
+	b.rooms[roomid] = newRoom
+
+	return newRoom
 }
 
 // receive control msg
@@ -40,22 +72,11 @@ func (j *Job) Brodcast(m *comet.BrodcastReq) {
 }
 
 func (g *Bucket) Room(m *comet.RoomReq) {
-	g.rw.RLock()
-	if room, exist := g.rooms[m.Roomid]; exist {
-		g.rw.RUnlock()
-		room.rw.RLock()
-		for cometAddr := range room.info.Server {
-			g.job.comets[cometAddr].roomCh <- m
-		}
-		room.rw.RUnlock()
-	} else {
-		g.rw.RUnlock()
-		room = g.job.NewRoom(m.Roomid)
-		room.rw.RLock()
-		for cometAddr := range room.info.Server {
-			g.job.comets[cometAddr].roomCh <- m
-		}
-		room.rw.RUnlock()
+	room := g.GetRoom(m.Roomid)
+	room.rw.RLock()
+	defer room.rw.RUnlock()
+	for cometAddr := range room.info.Server {
+		g.job.comets[cometAddr].roomCh <- m
 	}
 
 }

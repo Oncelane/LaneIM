@@ -44,7 +44,6 @@ func (c *Comet) recvRoutine(ch *Channel) {
 			ch.Close()
 			return
 		}
-		log.Println("receive a message")
 		f := c.funcRout.Find(message.Path)
 		if f == nil {
 			log.Println("wrong method")

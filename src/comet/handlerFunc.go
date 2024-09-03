@@ -71,7 +71,7 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 	}
 	if len(rt.Roomids) != 0 {
 		for _, roomid := range rt.Roomids[0].Roomid {
-			c.Bucket(ch.id).PutChannel(roomid, ch)
+			c.Bucket(roomid).PutChannel(roomid, ch)
 			log.Println("userid:", ch.id, "in room", roomid)
 		}
 	}
@@ -100,10 +100,10 @@ func (c *Comet) HandleSendRoom(m *msg.Msg, ch *Channel) {
 
 	_, err = c.pickLogic().Client.SendMsg(context.Background(), &logic.SendMsgReq{
 		Data:   []byte(cSendRoomReq.Msg),
-		Path:   "sendroom",
+		Path:   m.Path,
 		Addr:   c.conf.Addr,
 		Userid: cSendRoomReq.Userid,
-		Roomid: cSendRoomReq.Userid,
+		Roomid: cSendRoomReq.Roomid,
 	})
 	if err != nil {
 		log.Println("faild to send logic", err)

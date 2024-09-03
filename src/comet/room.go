@@ -13,27 +13,21 @@ type Room struct {
 }
 
 func (m *Bucket) NewRoom(roomid int64) *Room {
-	m.mu.RLock()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if r, exist := m.rooms[roomid]; exist {
-		m.mu.RUnlock()
 		log.Println("room:", roomid, "already exist,can not new")
 		return r
 	}
-	m.mu.RUnlock()
-	r := &Room{
+	newRoom := &Room{
 		id: roomid,
 	}
-	m.mu.Lock()
-	if r, exist := m.rooms[roomid]; exist {
-		m.mu.RUnlock()
-		log.Println("room:", roomid, "already exist,can not new")
-		return r
-	} else {
-		m.rooms[roomid] = r
-	}
-	m.mu.Unlock()
-	log.Println("new room:", roomid)
-	return r
+	log.Printf("%p new room:%d before:%p", m, roomid, m.rooms[roomid])
+	m.rooms[roomid] = newRoom
+	log.Printf("%p new room:%d after:%p", m, roomid, m.rooms[roomid])
+	return newRoom
+
 }
 
 func (g *Room) PutChannel(channel *Channel) {
@@ -49,6 +43,7 @@ func (g *Room) Send(m *msg.Msg) {
 	g.chsMap.Range(func(key, value any) bool {
 		ch, ok := value.(*Channel)
 		if ok {
+			log.Println("room msg success send")
 			ch.sendCh <- m
 		}
 		return true

@@ -18,25 +18,6 @@ type Room struct {
 	rw     sync.RWMutex
 }
 
-func (j *Job) NewRoom(id int64) *Room {
-	rt := &Room{
-		roomid: id,
-	}
-	// update from redis
-	log.Println("create new room:", rt.roomid)
-	rt.UpdateFromRedis(j.redis)
-	log.Println("sync room from redis:", rt.roomid)
-	j.Bucket(id).rooms[id] = rt
-	return rt
-}
-
-func (j *Job) GetRoom(id int64) *Room {
-	if room, exist := j.Bucket(id).rooms[id]; exist {
-		return room
-	}
-	return j.NewRoom(id)
-}
-
 func (j *Job) Push(message *comet.RoomReq) {
 	j.Bucket(message.Roomid).Room(message)
 }

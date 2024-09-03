@@ -136,6 +136,31 @@ server.properties
    bin/kafka-console-consumer.sh --topic test-topic --from-beginning --bootstrap-server localhost:9092
 ```
 
+# etcd 集群
+
+goreman工具
+```sh
+go install github.com/mattn/goreman@latest
+goreman -f local-cluster-profile start
+```
+
+下载etcd
+```sh
+wget https://github.com/etcd-io/etcd/releases/download/v3.5.15/etcd-v3.5.15-linux-amd64.tar.gz
+cd etcd
+./build.sh
+nano ~/.bashrc
+export PATH="$PATH:$GOPATH/src/github.com/etcd-io/etcd/bin"
+source ~/.bashrc
+```
+
+
+
+
+
+
+
+
 # Room design
 
 in redis

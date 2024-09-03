@@ -5,6 +5,7 @@ import (
 	"laneIM/src/config"
 	"laneIM/src/pkg"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -16,9 +17,9 @@ type Job struct {
 	redis         *pkg.RedisClient
 	kafkaComsumer sarama.ConsumerGroup
 	conf          config.Job
-
-	buckets []*Bucket
-	comets  map[string]*CometClient
+	mu            sync.RWMutex
+	buckets       []*Bucket
+	comets        map[string]*CometClient
 }
 
 func NewJob(conf config.Job) *Job {
