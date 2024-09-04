@@ -76,15 +76,15 @@ import (
 func TestInitRoomAndUser(t *testing.T) {
 	r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7006"})
 	e := pkg.NewEtcd(config.Etcd{Addr: []string{"127.0.0.1:2379"}})
-	e.SetAddr("redis/1", "127.0.0.1:7001")
-	e.SetAddr("redis/2", "127.0.0.1:7003")
-	e.SetAddr("redis/3", "127.0.0.1:7006")
-	usermap := map[int64]bool{21: true, 22: true, 23: true, 24: false}
+	e.SetAddr("redis:1", "127.0.0.1:7001")
+	e.SetAddr("redis:2", "127.0.0.1:7003")
+	e.SetAddr("redis:3", "127.0.0.1:7006")
+	// usermap := map[int64]bool{21: true, 22: true, 23: true, 24: false}
 
 	userid := []int64{21, 22, 23, 24}
 	roomid := []int64{1005, 1005, 1005, 1005}
 	online := []bool{true, true, true, false}
-	server := []string{"127.0.0.1:50051", "127.0.0.1:50051", "127.0.0.1:50051", "127.0.0.1:50051"}
+	server := []string{"127.0.0.1:50050", "127.0.0.1:50050", "127.0.0.1:50050", "127.0.0.1:50050"}
 
 	user := msg.UserInfo{}
 	log.Println("写入user")
@@ -113,10 +113,10 @@ func TestInitRoomAndUser(t *testing.T) {
 	log.Println(getUserId)
 
 	testroom := msg.RoomInfo{
-		Roomid:    1005,
-		Users:     usermap,
-		OnlineNum: 3,
-		Server:    map[string]bool{"127.0.0.1:50051": true},
+		Roomid: 1005,
+		// Users:     usermap,
+		// OnlineNum: 3,
+		// Server:    map[string]bool{"127.0.0.1:50050": true},
 	}
 	log.Println("创建room")
 	err = model.RoomNew(r.Client, common.Int64(testroom.Roomid), common.Int64(userid[0]), server[0])

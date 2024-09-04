@@ -98,7 +98,7 @@ func (c *Comet) HandleSendRoom(m *msg.Msg, ch *Channel) {
 		return
 	}
 
-	_, err = c.pickLogic().Client.SendMsg(context.Background(), &logic.SendMsgReq{
+	err = c.LogictSendMsg(&logic.SendMsgReq{
 		Data:   []byte(cSendRoomReq.Msg),
 		Path:   m.Path,
 		Addr:   c.conf.Addr,

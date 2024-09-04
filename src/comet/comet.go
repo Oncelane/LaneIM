@@ -80,11 +80,11 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 	// server grpc
 	lis, err := net.Listen("tcp", conf.Addr)
 	if err != nil {
-		log.Fatalf("error: logic start faild")
+		log.Fatalf("error: comet start faild")
 	}
 	gServer := grpc.NewServer()
 	comet.RegisterCometServer(gServer, ret)
-	log.Println("Logic serivce is running on port")
+	log.Println("comet serivce is running on port")
 	ret.grpc = gServer
 	go func() {
 		if err := gServer.Serve(lis); err != nil {
@@ -99,7 +99,8 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 	ret.funcRout.Use("auth", ret.HandleAuth)
 
 	// regieter etcd
-	ret.etcd.SetAddr("grpc:comet/"+conf.Name, conf.Addr)
+	ret.etcd.SetAddr("grpc:comet:"+conf.Name, conf.Addr)
+	log.Println("pass")
 	return ret
 }
 
@@ -151,22 +152,12 @@ func (c *Comet) Bucket(roomid int64) *Bucket {
 	return c.buckets[int(roomid)%len(c.buckets)]
 }
 
-func (c *Comet) LogicBrodcast(message *logic.SendMsgReq, data []byte) {
-
-}
-
-func (c *Comet) LogictRoom(message *logic.SendMsgReq) {
+func (c *Comet) LogictSendMsg(message *logic.SendMsgReq) error {
 	_, err := c.pickLogic().Client.SendMsg(context.Background(), message)
 	if err != nil {
-		log.Panicln(err)
+		log.Println(err)
 	}
-}
-
-func (c *Comet) LogicSingle(message *logic.SendMsgReq) {
-	_, err := c.pickLogic().Client.SendMsg(context.Background(), message)
-	if err != nil {
-		log.Panicln(err)
-	}
+	return err
 }
 
 func (c *Comet) Single(context.Context, *comet.SingleReq) (*comet.NoResp, error) {

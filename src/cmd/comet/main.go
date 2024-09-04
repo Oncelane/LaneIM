@@ -11,14 +11,9 @@ import (
 )
 
 func main() {
-	conf := config.Comet{
-		Addr: "127.0.0.1:50051",
-		Name: "comet1",
-		Etcd: config.Etcd{
-			Addr: []string{"127.0.0.1:2379"},
-		},
-		BucketSize: 32,
-	}
+	conf := config.Comet{Type: "comet"}
+	config.Init(&conf)
+	log.Printf("[%s] server start by env:%+v", conf.GetType()+conf.GetName(), conf)
 	c := comet.NewSerivceComet(conf)
 
 	// 启动websocket服务

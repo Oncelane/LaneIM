@@ -56,13 +56,10 @@ func NewLogic(conf config.Logic) *Logic {
 	// init kafka producer
 	s.kafka = pkg.NewKafkaProducer(conf.KafkaProducer)
 
-	// register etcd
-	s.etcd.SetAddr("grpc:logic/"+s.conf.Name, s.conf.Addr)
-
 	// server grpc
 	lis, err := net.Listen("tcp", conf.Addr)
 	if err != nil {
-		log.Fatalf("error: logic start faild")
+		log.Fatalln("error: logic start faild", err)
 	}
 	gServer := grpc.NewServer()
 	pb.RegisterLogicServer(gServer, s)
@@ -73,7 +70,8 @@ func NewLogic(conf config.Logic) *Logic {
 			log.Fatalln("failed to serve : ", err.Error())
 		}
 	}()
-
+	// register etcd
+	s.etcd.SetAddr("grpc:logic:"+s.conf.Name, s.conf.Addr)
 	return s
 }
 

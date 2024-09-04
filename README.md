@@ -22,6 +22,18 @@ redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.
 
 通过`cluster info`查看集群信息
 
+查看所有 key
+
+```bash
+
+```
+
+删除所有 kv
+
+```bash
+
+```
+
 # kafka 客户端
 
 客户端：confluent-kafka-go
@@ -59,6 +71,7 @@ export JRE_HOME=${JAVA_HOME}/jre
 export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
 export PATH=${JAVA_HOME}/bin:$PATH
 ```
+
 下载
 
 ```sh
@@ -138,13 +151,15 @@ server.properties
 
 # etcd 集群
 
-goreman工具
+goreman 工具
+
 ```sh
 go install github.com/mattn/goreman@latest
 goreman -f local-cluster-profile start
 ```
 
-下载etcd
+下载 etcd
+
 ```sh
 wget https://github.com/etcd-io/etcd/releases/download/v3.5.15/etcd-v3.5.15-linux-amd64.tar.gz
 cd etcd
@@ -154,12 +169,24 @@ export PATH="$PATH:$GOPATH/src/github.com/etcd-io/etcd/bin"
 source ~/.bashrc
 ```
 
+删除所有键
 
+列出所有键：
+使用 etcdctl 列出所有键：
 
+```bash
+etcdctl get "" --prefix --keys-only
+```
 
+这会列出所有键。
 
+删除所有键：
+使用 etcdctl del 命令删除所有键：
 
-
+```bash
+etcdctl del "" --prefix
+--prefix 选项会删除以指定前缀开头的所有键。由于指定了空字符串 "" 作为前缀，这会删除所有键。
+```
 
 # Room design
 

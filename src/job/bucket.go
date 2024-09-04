@@ -75,6 +75,8 @@ func (g *Bucket) Room(m *comet.RoomReq) {
 	room := g.GetRoom(m.Roomid)
 	room.rw.RLock()
 	defer room.rw.RUnlock()
+	log.Println("cometAddr:", room.info.Server)
+	log.Println("job.comets:", g.job.comets)
 	for cometAddr := range room.info.Server {
 		g.job.comets[cometAddr].roomCh <- m
 	}

@@ -35,7 +35,7 @@ func NewEtcd(conf config.Etcd) *EtcdClient {
 }
 
 func (e *EtcdClient) GetAddr(key string) (addrs []string) {
-	rt, err := e.etcd.Get(context.Background(), "laneIM/"+key, clientv3.WithPrefix())
+	rt, err := e.etcd.Get(context.Background(), "laneIM:"+key, clientv3.WithPrefix())
 	if err != nil {
 		log.Fatalln("failed to get etcd:", err.Error())
 		return nil
@@ -47,7 +47,7 @@ func (e *EtcdClient) GetAddr(key string) (addrs []string) {
 }
 
 func (e *EtcdClient) SetAddr(key, addr string) {
-	_, err := e.etcd.Put(context.Background(), "laneIM/"+key, addr)
+	_, err := e.etcd.Put(context.Background(), "laneIM:"+key, addr)
 	if err != nil {
 		log.Fatalln("failed to set etcd:", err.Error())
 		return
@@ -56,7 +56,7 @@ func (e *EtcdClient) SetAddr(key, addr string) {
 }
 
 func (e *EtcdClient) DelAddr(key, addr string) {
-	rt, err := e.etcd.Delete(context.Background(), "laneIM/"+key)
+	rt, err := e.etcd.Delete(context.Background(), "laneIM:"+key)
 	if err != nil {
 		log.Fatalln("failed to get etcd:", err.Error())
 	}
