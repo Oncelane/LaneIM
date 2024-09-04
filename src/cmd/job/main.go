@@ -9,20 +9,8 @@ import (
 )
 
 func main() {
-	conf := config.Job{
-		Addr: "127.0.0.50052",
-		Name: "job1",
-		Etcd: config.Etcd{
-			Addr: []string{"127.0.0.1:2379"},
-		},
-		KafkaComsumer: config.KafkaComsumer{
-			Addr:    []string{"127.0.0.1:9092"},
-			Topics:  []string{"laneIM"},
-			GroupId: "job",
-		},
-		CometRoutineSize: 32,
-		BucketSize:       32,
-	}
+	conf := config.Job{Type: "job"}
+	config.Init(&conf)
 	j := job.NewJob(conf)
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)
