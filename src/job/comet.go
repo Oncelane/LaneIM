@@ -16,6 +16,8 @@ type CometClient struct {
 	brodcastCh chan *comet.BrodcastReq
 	roomCh     chan *comet.RoomReq
 	singleCh   chan *comet.SingleReq
+	conn       *grpc.ClientConn
+	done       chan struct{}
 }
 
 func (j *Job) NewComet(addr string) *CometClient {
@@ -31,15 +33,18 @@ func (j *Job) NewComet(addr string) *CometClient {
 		brodcastCh: make(chan *comet.BrodcastReq, 1024),
 		roomCh:     make(chan *comet.RoomReq, 1024),
 		singleCh:   make(chan *comet.SingleReq, 1024),
+		conn:       conn,
+		done:       make(chan struct{}, j.conf.CometRoutineSize),
 	}
 	log.Println("connet to comet:", addr)
+	j.mu.Lock()
 	j.comets[addr] = c
+	j.mu.Unlock()
 	for range j.conf.CometRoutineSize {
 		go c.HandlerComet()
 	}
 	return c
 }
-
 func (c *CometClient) HandlerComet() {
 	for {
 		select {
@@ -62,6 +67,9 @@ func (c *CometClient) HandlerComet() {
 				log.Println("single err:", err)
 				continue
 			}
+		case <-c.done:
+			goto OUT
 		}
 	}
+OUT:
 }

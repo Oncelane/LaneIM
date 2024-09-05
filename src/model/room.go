@@ -49,7 +49,18 @@ func RoomDel(rdb *redis.ClusterClient, roomid lane.Int64) (lane.Int64, error) {
 		log.Fatalf("could not set room info: %v", err)
 		return 0, err
 	}
-	rt, err := rdb.Del(fmt.Sprintf("room:online:%s", roomid.String()), fmt.Sprintf("room:comet:%s", roomid.String()), fmt.Sprintf("room:userid:%s", roomid.String())).Result()
+	rt, err := rdb.Del(fmt.Sprintf("room:online:%s", roomid.String())).Result()
+	if err != nil {
+		return lane.Int64(rt), err
+	}
+	rt, err = rdb.Del(fmt.Sprintf("room:comet:%s", roomid.String())).Result()
+	if err != nil {
+		return lane.Int64(rt), err
+	}
+	rt, err = rdb.Del(fmt.Sprintf("room:userid:%s", roomid.String())).Result()
+	if err != nil {
+		return lane.Int64(rt), err
+	}
 	return lane.Int64(rt), err
 }
 
@@ -119,8 +130,19 @@ func UserDel(rdb *redis.ClusterClient, userid lane.Int64) (int64, error) {
 		log.Fatalf("could not set room info: %v", err)
 		return 0, err
 	}
-	rt, err := rdb.Del(fmt.Sprintf("user:online:%s", userid.String()), fmt.Sprintf("user:comet:%s", userid.String()), fmt.Sprintf("user:room:%s", userid.String())).Result()
-	return rt, err
+	rt, err := rdb.Del(fmt.Sprintf("user:online:%s", userid.String())).Result()
+	if err != nil {
+		return rt, err
+	}
+	rt, err = rdb.Del(fmt.Sprintf("user:comet:%s", userid.String())).Result()
+	if err != nil {
+		return rt, err
+	}
+	rt, err = rdb.Del(fmt.Sprintf("user:room:%s", userid.String())).Result()
+	if err != nil {
+		return rt, err
+	}
+	return rt, nil
 }
 
 func UserOnline(rdb *redis.ClusterClient, userid lane.Int64, comet string) error {

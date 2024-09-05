@@ -57,10 +57,11 @@ func (c *Logic) ReadLocal() error {
 }
 
 type Comet struct {
-	Addr string
-	Name string
-	Type string
-	Etcd Etcd
+	Addr          string
+	Name          string
+	Type          string
+	Etcd          Etcd
+	WebsocketAddr string
 
 	BucketSize int
 }
@@ -83,7 +84,8 @@ func (c *Comet) Default() {
 		Etcd: Etcd{
 			Addr: []string{ip + ":2379"},
 		},
-		BucketSize: 32,
+		BucketSize:    32,
+		WebsocketAddr: ip + ":40050",
 	}
 }
 func (c *Comet) ReadLocal() error {

@@ -1,0 +1,8 @@
+addr: 127.0.0.1:50051
+name: "1"
+type: comet
+etcd:
+  addr:
+    - 127.0.0.1:2379
+websocketaddr: 127.0.0.1:40051
+bucketsize: 32

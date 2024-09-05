@@ -77,7 +77,7 @@ func NewLogic(conf config.Logic) *Logic {
 
 func (l *Logic) Close() {
 	log.Println("logic exit:", l.conf.Addr)
-	l.etcd.DelAddr("grpc:logic/"+l.conf.Name, l.conf.Addr)
+	l.etcd.DelAddr("grpc:logic:"+l.conf.Name, l.conf.Addr)
 	l.grpc.Stop()
 }
 

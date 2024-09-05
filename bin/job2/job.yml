@@ -1,0 +1,14 @@
+addr: 127.0.0.1:50070
+name: "0"
+type: job
+kafkacomsumer:
+  addr:
+    - 127.0.0.1:9092
+  topics:
+    - laneIM
+  groupid: job
+etcd:
+  addr:
+    - 127.0.0.1:2379
+bucketsize: 32
+cometroutinesize: 32

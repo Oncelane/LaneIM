@@ -18,7 +18,8 @@ func main() {
 
 	// 启动websocket服务
 	http.HandleFunc("/ws", c.ServeHTTP)
-	go http.ListenAndServe(":40051", nil)
+	log.Println("listening websocket", conf.WebsocketAddr)
+	go http.ListenAndServe(conf.WebsocketAddr, nil)
 
 	// 等待信号
 	log.Println("wait ctrl+c")

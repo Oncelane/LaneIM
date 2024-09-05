@@ -23,6 +23,7 @@ func (c *Comet) NewChannel(wsconn *websocket.Conn) *Channel {
 		conn:   pkg.NewConnWs(wsconn, c.pool),
 		recvCh: make(chan *msg.Msg, 100),
 		sendCh: make(chan *msg.Msg, 100),
+		done:   false,
 	}
 	// ch.serveIO()
 	return ch
@@ -40,7 +41,12 @@ func (c *Comet) recvRoutine(ch *Channel) {
 			return
 		}
 		if err != nil {
-			log.Println("faild to get ws message")
+			if _, ok := err.(*websocket.CloseError); !ok {
+				log.Println("faild to get ws message")
+				ch.Close()
+				return
+			}
+			log.Println("websocket close", ch.id)
 			ch.Close()
 			return
 		}

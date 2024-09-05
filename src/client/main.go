@@ -5,6 +5,7 @@ import (
 	"laneIM/src/pkg"
 	"log"
 	"strconv"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
@@ -18,17 +19,24 @@ type Client struct {
 	message string
 }
 
-var cometAddr string = "ws://localhost:40051/ws"
+var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 var clients []*Client
+
+var clientQueryRoom sync.WaitGroup
 
 func main() {
 	clients = make([]*Client, 4)
 	for i := range clients {
 		clients[i] = NewClient(21 + int64(i))
-		clients[i].Connect(cometAddr)
+		clients[i].Connect(cometAddr[i%2])
 		clients[i].Auth("i am 2" + strconv.FormatInt(int64(i+1), 10))
+		clientQueryRoom.Add(1)
 		clients[i].message = "hello i am 2" + strconv.FormatInt(int64(i+1), 10)
 		clients[i].Receive()
+	}
+	clientQueryRoom.Wait()
+	for _, c := range clients {
+		c.SendRoomMsg(c.message)
 	}
 	select {}
 }
@@ -135,7 +143,7 @@ func (c *Client) Receive() {
 					continue
 				}
 				c.roomids = roomResp.Roomid
-				c.SendRoomMsg(c.message)
+				clientQueryRoom.Done()
 				log.Println("query room:", c.roomids[0])
 			case "roomMsg":
 				log.Printf("ch.id[%d] roomMsg receive:%s\n", c.userid, string(message.Data))

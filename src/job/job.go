@@ -47,14 +47,33 @@ func NewJob(conf config.Job) *Job {
 func (j *Job) WatchComet() {
 	for {
 		addrs := j.etcd.GetAddr("grpc:comet")
+		// log.Println("addrs:", addrs)
+		remoteAddrs := make(map[string]struct{})
 		for _, addr := range addrs {
+			remoteAddrs[addr] = struct{}{}
 			// connet to comet
 			if _, exist := j.comets[addr]; exist {
 				continue
 			}
-			log.Println("发现comet:", addr)
+
+			// discovery comet
+			log.Println("discovery comet:", addr)
 			j.NewComet(addr)
 		}
+		for addr, c := range j.comets {
+			if _, exist := remoteAddrs[addr]; !exist {
+				j.mu.Lock()
+				delete(j.comets, c.addr)
+				c.conn.Close()
+				for range j.conf.CometRoutineSize {
+					c.done <- struct{}{}
+				}
+				log.Println("remove comet:", addr)
+				j.mu.Unlock()
+			}
+
+		}
+
 		time.Sleep(time.Second)
 	}
 }
@@ -105,7 +124,7 @@ func (j *Job) WatchComet() {
 // }
 
 func (j *Job) Close() {
-	log.Println("job close:", j.conf.Addr)
+	log.Println("job exit", j.conf.Addr)
 }
 
 func (j *Job) RunGroupComsumer() {

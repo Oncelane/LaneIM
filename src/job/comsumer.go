@@ -37,19 +37,15 @@ func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, cl
 		case "sendRoom":
 			// 可能的初始化room，获取room所处的comets
 			room := consumer.job.Bucket(protoMsg.Roomid).GetRoom(protoMsg.Roomid)
-			for addr := range room.info.Server {
-				log.Printf("message to roomid:%d hava comet:%s", room.roomid, addr)
-				// 检查是否实际连接上了comet
-				if _, exist := consumer.job.comets[addr]; exist {
-					// 通过bucket的routine进行实际IO
-					consumer.job.Push(&comet.RoomReq{
-						Roomid: protoMsg.Roomid,
-						Data:   protoMsg.Data,
-					})
-				} else {
-					log.Println("error job doesn't have this comet:", addr)
-				}
-			}
+			// for addr := range room.info.Server {
+			log.Printf("message to roomid:%d hava comet:%v", room.roomid, room.info.Server)
+			// 检查是否实际连接上了comet
+			consumer.job.Push(&comet.RoomReq{
+				Roomid: protoMsg.Roomid,
+				Data:   protoMsg.Data,
+			})
+
+			// }
 		}
 		// 标记消息为已消费
 		session.MarkMessage(message, "")

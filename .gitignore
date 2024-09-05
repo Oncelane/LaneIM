@@ -3,3 +3,5 @@
 *.rdb
 *.aof
 *.conf
+
+*bin/

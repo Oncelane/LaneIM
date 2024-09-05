@@ -2,8 +2,8 @@ addr: 127.0.0.1:50060
 name: "0"
 type: logic
 kafkaproducer:
-    addr:
-        - 127.0.0.1:9092
+  addr:
+    - 127.0.0.1:9092
 etcd:
-    addr:
-        - 127.0.0.1:2379
+  addr:
+    - 127.0.0.1:2379

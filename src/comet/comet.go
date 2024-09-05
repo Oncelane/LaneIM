@@ -20,6 +20,8 @@ import (
 type Logic struct {
 	Addr   string
 	Client logic.LogicClient
+	Online bool
+	conn   *grpc.ClientConn
 }
 
 // grpc 连接
@@ -34,7 +36,16 @@ func NewLogic(addr string) *Logic {
 	return &Logic{
 		Addr:   addr,
 		Client: c,
+		Online: true,
+		conn:   conn,
 	}
+}
+
+func (l *Logic) Close() {
+	l.Online = false
+	l.Client = nil
+	l.conn.Close()
+	log.Println("remove logic", l.Addr)
 }
 
 type Comet struct {
@@ -80,7 +91,7 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 	// server grpc
 	lis, err := net.Listen("tcp", conf.Addr)
 	if err != nil {
-		log.Fatalf("error: comet start faild")
+		log.Fatalln("error: comet start faild", err)
 	}
 	gServer := grpc.NewServer()
 	comet.RegisterCometServer(gServer, ret)
@@ -105,7 +116,7 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 }
 
 func (c *Comet) Close() {
-	c.etcd.DelAddr("grpc:comet/"+c.conf.Name, c.conf.Addr)
+	c.etcd.DelAddr("grpc:comet:"+c.conf.Name, c.conf.Addr)
 	c.grpc.Stop()
 	log.Println("exit comet")
 }
@@ -113,17 +124,33 @@ func (c *Comet) Close() {
 func (c *Comet) WatchLogic() {
 	for {
 		addrs := c.etcd.GetAddr("grpc:logic")
-		c.mu.Lock()
-
+		remoteAddrs := make(map[string]struct{})
 		for _, addr := range addrs {
+			remoteAddrs[addr] = struct{}{}
 			// connet to comet
+
+			// already exist
 			if _, exist := c.logics[addr]; exist {
 				continue
 			}
-			log.Println("发现logic:", addr)
+
+			// not exist
+			log.Println("etcd discovery logic:", addr)
+			c.mu.Lock()
 			c.logics[addr] = NewLogic(addr)
+			c.mu.Unlock()
 		}
-		c.mu.Unlock()
+
+		// exist before but now gone
+		for addr, client := range c.logics {
+			if _, exist := remoteAddrs[addr]; !exist {
+				c.mu.Lock()
+				delete(c.logics, addr)
+				client.Close()
+				c.mu.Unlock()
+			}
+		}
+
 		time.Sleep(time.Second)
 	}
 }
@@ -143,13 +170,20 @@ func (c *Comet) pickLogic() *Logic {
 			return v
 		}
 		c.mu.RUnlock()
-		log.Println("暂无发现logic 5秒后再查询")
+		log.Println("non discovery logic")
 		time.Sleep(time.Second)
 	}
 }
 func (c *Comet) Bucket(roomid int64) *Bucket {
 	log.Println("choos bucket:", int(roomid)%len(c.buckets))
 	return c.buckets[int(roomid)%len(c.buckets)]
+}
+
+// delete channel from all room
+func (c *Comet) DelChannel(ch *Channel) {
+	c.mu.Lock()
+	delete(c.channels, ch.id)
+	c.mu.Unlock()
 }
 
 func (c *Comet) LogictSendMsg(message *logic.SendMsgReq) error {

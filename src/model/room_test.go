@@ -84,7 +84,7 @@ func TestInitRoomAndUser(t *testing.T) {
 	userid := []int64{21, 22, 23, 24}
 	roomid := []int64{1005, 1005, 1005, 1005}
 	online := []bool{true, true, true, false}
-	server := []string{"127.0.0.1:50050", "127.0.0.1:50050", "127.0.0.1:50050", "127.0.0.1:50050"}
+	server := []string{"127.0.0.1:50050", "127.0.0.1:50051", "127.0.0.1:50050", "127.0.0.1:50051"}
 
 	user := msg.UserInfo{}
 	log.Println("写入user")
@@ -96,8 +96,11 @@ func TestInitRoomAndUser(t *testing.T) {
 		user.Roomid[roomid[i]] = true
 		user.Online = online[i]
 		user.Server[server[i]] = true
-
-		err := model.UserNew(r.Client, common.Int64(user.Userid))
+		_, err := model.UserDel(r.Client, common.Int64(user.Userid))
+		if err != nil {
+			t.Error(err)
+		}
+		err = model.UserNew(r.Client, common.Int64(user.Userid))
 		if err != nil {
 			t.Error(err)
 		}
@@ -118,6 +121,10 @@ func TestInitRoomAndUser(t *testing.T) {
 		// OnlineNum: 3,
 		// Server:    map[string]bool{"127.0.0.1:50050": true},
 	}
+	_, err = model.RoomDel(r.Client, common.Int64(testroom.Roomid))
+	if err != nil {
+		t.Error(err)
+	}
 	log.Println("创建room")
 	err = model.RoomNew(r.Client, common.Int64(testroom.Roomid), common.Int64(userid[0]), server[0])
 	if err != nil {
@@ -125,8 +132,12 @@ func TestInitRoomAndUser(t *testing.T) {
 	}
 	log.Println("给room添加user")
 	log.Println("给user添加room")
-	for _, id := range userid {
+	for i, id := range userid {
 		err = model.RoomJoinUser(r.Client, common.Int64(testroom.Roomid), common.Int64(id))
+		if err != nil {
+			t.Error(err)
+		}
+		err = model.RoomPutComet(r.Client, common.Int64(testroom.Roomid), server[i])
 		if err != nil {
 			t.Error(err)
 		}

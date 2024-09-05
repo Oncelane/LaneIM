@@ -25,7 +25,6 @@ func (j *Job) NewBucket() {
 }
 
 func (j *Job) Bucket(roomid int64) *Bucket {
-	log.Println("choose bucket:", int(roomid)%len(j.buckets))
 	return j.buckets[int(roomid)%len(j.buckets)]
 }
 
@@ -75,10 +74,13 @@ func (g *Bucket) Room(m *comet.RoomReq) {
 	room := g.GetRoom(m.Roomid)
 	room.rw.RLock()
 	defer room.rw.RUnlock()
-	log.Println("cometAddr:", room.info.Server)
-	log.Println("job.comets:", g.job.comets)
 	for cometAddr := range room.info.Server {
-		g.job.comets[cometAddr].roomCh <- m
+		if _, exist := g.job.comets[cometAddr]; exist {
+			// 通过bucket的routine进行实际IO
+			g.job.comets[cometAddr].roomCh <- m
+		} else {
+			log.Println("error job doesn't have this comet:", cometAddr)
+		}
 	}
 
 }
