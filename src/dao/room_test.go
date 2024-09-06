@@ -1,9 +1,10 @@
-package model_test
+package dao_test
 
 import (
 	"laneIM/proto/msg"
 	"laneIM/src/common"
 	"laneIM/src/config"
+	"laneIM/src/dao"
 	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
@@ -12,7 +13,7 @@ import (
 
 // func TestRoom(t *testing.T) {
 // 	r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7006"})
-// 	v, err := model.RoomGet(r.Client, 1)
+// 	v, err := dao.RoomGet(r.Client, 1)
 // 	if err != nil {
 // 		t.Error("get err")
 // 	}
@@ -24,16 +25,16 @@ import (
 // 	}
 // 	v.Roomid = 1
 // 	v.Server["testHost"] = true
-// 	model.RoomSet(r.Client, v)
+// 	dao.RoomSet(r.Client, v)
 
-// 	v, err = model.RoomGet(r.Client, 1)
+// 	v, err = dao.RoomGet(r.Client, 1)
 // 	if err != nil {
 // 		t.Error("get err")
 // 	}
 // 	log.Println("value:", v.String())
 // 	v.Reset()
 
-// 	v, err = model.RoomGet(r.Client, 1)
+// 	v, err = dao.RoomGet(r.Client, 1)
 // 	if err != nil {
 // 		t.Error("get err")
 // 	}
@@ -45,7 +46,7 @@ import (
 
 // func TestUser(t *testing.T) {
 // 	r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7005"})
-// 	v, err := model.UserGet(r.Client, 1)
+// 	v, err := dao.UserGet(r.Client, 1)
 // 	if err != nil {
 // 		t.Error("get err")
 // 	}
@@ -55,13 +56,13 @@ import (
 // 	v.Userid = 1
 // 	v.Roomid[1] = true
 // 	v.Server["testHost"] = true
-// 	err = model.UserSet(r.Client, v)
+// 	err = dao.UserSet(r.Client, v)
 // 	if err != nil {
 // 		t.Error("set err")
 // 	}
 // 	v.Reset()
 
-// 	v, err = model.UserGet(r.Client, 1)
+// 	v, err = dao.UserGet(r.Client, 1)
 // 	if err != nil {
 // 		t.Error("get err")
 // 	}
@@ -73,6 +74,41 @@ import (
 
 // 初始化1005房间
 // 四个用户进行广播
+
+func TestRedisAndSqlAllRoomid(t *testing.T) {
+	db := dao.SqlDB()
+	rdb := pkg.NewRedisClient([]string{"127.0.0.1:7001"})
+	rt, err := dao.AllRoomid(rdb.Client, db)
+	if err != nil {
+		t.Error()
+	}
+	log.Println("query redis and sql", rt)
+}
+
+func TestSqlRoomAddAndDelete(t *testing.T) {
+	db := dao.SqlDB()
+	model.Init(db)
+	err := dao.SqlRoomNew(db, common.Int64(1006), 21, "127.0.0.1:50051")
+	if err != nil {
+		t.Error(err)
+	}
+	roomids, err := dao.SqlAllRoomid(db)
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println("query sql roomid:", roomids)
+	// _, err = dao.SqlRoomDel(db, common.Int64(1006))
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	roomids, err = dao.SqlAllRoomid(db)
+
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println("query sql roomid after delete:", roomids)
+}
+
 func TestInitRoomAndUser(t *testing.T) {
 	r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7006"})
 	e := pkg.NewEtcd(config.Etcd{Addr: []string{"127.0.0.1:2379"}})
@@ -96,20 +132,20 @@ func TestInitRoomAndUser(t *testing.T) {
 		user.Roomid[roomid[i]] = true
 		user.Online = online[i]
 		user.Server[server[i]] = true
-		_, err := model.UserDel(r.Client, common.Int64(user.Userid))
+		_, err := dao.UserDel(r.Client, common.Int64(user.Userid))
 		if err != nil {
 			t.Error(err)
 		}
-		err = model.UserNew(r.Client, common.Int64(user.Userid))
+		err = dao.UserNew(r.Client, common.Int64(user.Userid))
 		if err != nil {
 			t.Error(err)
 		}
 		if user.Online {
-			model.UserOnline(r.Client, common.Int64(user.Userid), server[i])
+			dao.UserOnline(r.Client, common.Int64(user.Userid), server[i])
 		}
 	}
 	log.Println("查看user")
-	getUserId, err := model.AllUserid(r.Client)
+	getUserId, err := dao.AllUserid(r.Client)
 	if err != nil {
 		t.Error(err)
 	}
@@ -121,47 +157,47 @@ func TestInitRoomAndUser(t *testing.T) {
 		// OnlineNum: 3,
 		// Server:    map[string]bool{"127.0.0.1:50050": true},
 	}
-	_, err = model.RoomDel(r.Client, common.Int64(testroom.Roomid))
+	_, err = dao.RoomDel(r.Client, common.Int64(testroom.Roomid))
 	if err != nil {
 		t.Error(err)
 	}
 	log.Println("创建room")
-	err = model.RoomNew(r.Client, common.Int64(testroom.Roomid), common.Int64(userid[0]), server[0])
+	err = dao.RoomNew(r.Client, common.Int64(testroom.Roomid), common.Int64(userid[0]), server[0])
 	if err != nil {
 		t.Error(err)
 	}
 	log.Println("给room添加user")
 	log.Println("给user添加room")
 	for i, id := range userid {
-		err = model.RoomJoinUser(r.Client, common.Int64(testroom.Roomid), common.Int64(id))
+		err = dao.RoomJoinUser(r.Client, common.Int64(testroom.Roomid), common.Int64(id))
 		if err != nil {
 			t.Error(err)
 		}
-		err = model.RoomPutComet(r.Client, common.Int64(testroom.Roomid), server[i])
+		err = dao.RoomPutComet(r.Client, common.Int64(testroom.Roomid), server[i])
 		if err != nil {
 			t.Error(err)
 		}
-		err = model.UserJoinRoomid(r.Client, common.Int64(id), common.Int64(testroom.Roomid))
+		err = dao.UserJoinRoomid(r.Client, common.Int64(id), common.Int64(testroom.Roomid))
 		if err != nil {
 			t.Error(err)
 		}
 	}
 
 	log.Println("查看user")
-	getUserId, err = model.RoomQueryUserid(r.Client, common.Int64(testroom.Roomid))
+	getUserId, err = dao.RoomQueryUserid(r.Client, common.Int64(testroom.Roomid))
 	if err != nil {
 		t.Error(err)
 	}
 	log.Println(getUserId)
 	log.Println("查看comet")
-	cometAddr, err := model.RoomQueryComet(r.Client, common.Int64(testroom.Roomid))
+	cometAddr, err := dao.RoomQueryComet(r.Client, common.Int64(testroom.Roomid))
 	if err != nil {
 		t.Error(err)
 	}
 	log.Println(cometAddr)
 
 	log.Println("查询user的roomid")
-	userRoomid, err := model.UserQueryRoomid(r.Client, common.Int64(userid[0]))
+	userRoomid, err := dao.UserQueryRoomid(r.Client, common.Int64(userid[0]))
 	if err != nil {
 		t.Error(err)
 	}

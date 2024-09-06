@@ -3,7 +3,7 @@ package job
 import (
 	"laneIM/proto/comet"
 	"laneIM/proto/msg"
-	"laneIM/src/model"
+	"laneIM/src/dao"
 	"laneIM/src/pkg"
 	"log"
 	"sync"
@@ -32,7 +32,7 @@ func (j *Job) Push(message *comet.RoomReq) {
 // }
 
 func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
-	info, err := model.UpdateRoom(client.Client, r.roomid)
+	info, err := dao.UpdateRoom(client.Client, r.roomid)
 	if err != nil {
 		log.Println("filed to update room:", r.roomid)
 	}

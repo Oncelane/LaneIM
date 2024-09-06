@@ -6,7 +6,7 @@ import (
 	pb "laneIM/proto/logic"
 	"laneIM/src/common"
 	"laneIM/src/config"
-	"laneIM/src/model"
+	"laneIM/src/dao"
 	"laneIM/src/pkg"
 	"log"
 	"net"
@@ -110,7 +110,7 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, error) {
 	uuid := s.uuid.Generator()
 	log.Println("new user id:", uuid)
-	err := model.UserNew(s.redis.Client, common.Int64(uuid))
+	err := dao.UserNew(s.redis.Client, common.Int64(uuid))
 	if err != nil {
 		log.Println("faild to new user", err)
 		return nil, err
@@ -123,7 +123,7 @@ func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, 
 }
 
 func (s *Logic) DelUser(_ context.Context, in *pb.DelUserReq) (*pb.NoResp, error) {
-	count, err := model.UserDel(s.redis.Client, common.Int64(in.Userid))
+	count, err := dao.UserDel(s.redis.Client, common.Int64(in.Userid))
 	if err != nil || count == 0 {
 		log.Println("faild to del user:", s.uuid, err)
 	}
@@ -131,7 +131,7 @@ func (s *Logic) DelUser(_ context.Context, in *pb.DelUserReq) (*pb.NoResp, error
 }
 
 func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, error) {
-	err := model.UserOnline(s.redis.Client, common.Int64(in.Userid), in.Server)
+	err := dao.UserOnline(s.redis.Client, common.Int64(in.Userid), in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)
 	}
@@ -139,7 +139,7 @@ func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, e
 }
 
 func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp, error) {
-	err := model.UserOffline(s.redis.Client, common.Int64(in.Userid), in.Server)
+	err := dao.UserOffline(s.redis.Client, common.Int64(in.Userid), in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)
 	}
@@ -147,7 +147,7 @@ func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp,
 }
 
 func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, error) {
-	err := model.RoomJoinUser(s.redis.Client, common.Int64(in.Roomid), common.Int64(in.Userid))
+	err := dao.RoomJoinUser(s.redis.Client, common.Int64(in.Roomid), common.Int64(in.Userid))
 	if err != nil {
 		log.Printf("faild user %d to join room:%d\n", in.Userid, in.Roomid)
 	}
@@ -155,7 +155,7 @@ func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, err
 }
 
 func (s *Logic) QuitRoom(_ context.Context, in *pb.QuitRoomReq) (*pb.NoResp, error) {
-	err := model.RoomQuitUser(s.redis.Client, common.Int64(in.Roomid), common.Int64(in.Userid))
+	err := dao.RoomQuitUser(s.redis.Client, common.Int64(in.Roomid), common.Int64(in.Userid))
 	if err != nil {
 		log.Printf("faild user %d to quit room:%d\n", in.Roomid, in.Userid)
 	}
@@ -167,7 +167,7 @@ func (s *Logic) QueryRoom(_ context.Context, in *pb.QueryRoomReq) (*pb.QueryRoom
 		Roomids: make([]*pb.QueryRoomResp_RoomSlice, 0),
 	}
 	for _, userid := range in.Userid {
-		rawRoomids, err := model.UserQueryRoomid(s.redis.Client, common.Int64(userid))
+		rawRoomids, err := dao.UserQueryRoomid(s.redis.Client, common.Int64(userid))
 		if err != nil {
 			return nil, err
 		}
