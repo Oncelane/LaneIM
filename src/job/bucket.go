@@ -77,6 +77,7 @@ func (g *Bucket) Room(m *comet.RoomReq) {
 	for cometAddr := range room.info.Server {
 		if _, exist := g.job.comets[cometAddr]; exist {
 			// 通过bucket的routine进行实际IO
+			log.Printf("message to roomid:%d comet:%v", room.roomid, cometAddr)
 			g.job.comets[cometAddr].roomCh <- m
 		} else {
 			log.Println("error job doesn't have this comet:", cometAddr)

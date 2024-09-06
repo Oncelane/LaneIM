@@ -175,7 +175,6 @@ func (c *Comet) pickLogic() *Logic {
 	}
 }
 func (c *Comet) Bucket(roomid int64) *Bucket {
-	log.Println("choos bucket:", int(roomid)%len(c.buckets))
 	return c.buckets[int(roomid)%len(c.buckets)]
 }
 

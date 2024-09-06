@@ -1,5 +1,11 @@
 # laneIM golang 分布式 im
 
+分为三个模块，comet 集群（网关/代理）， job 集群（消息推送），logic（业务服务器：登录，上下线）
+mysql+canel+redis 集群（用户状态，房间信息，路由）
+kafka 集群 消息推送队列
+etcd 集群 服务注册发现（后续换成手搓的 raft）
+grpc+protobuf 微服务通讯
+
 安装 protobuf grpc complier
 sudo apt-get install protobuf-compiler
 
