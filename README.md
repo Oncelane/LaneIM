@@ -1,4 +1,6 @@
-# laneIM golang 分布式 im
+# laneIM
+
+集群部署的分布式 IM，主要使用到的组件：etcd，kafka，redis，canal，mysql，grpc，protobuf
 
 分为三个模块，comet 集群（网关/代理）， job 集群（消息推送），logic（业务服务器：登录，上下线）
 mysql+canel+redis 集群（用户状态，房间信息，路由）
@@ -203,7 +205,7 @@ sudo apt install mysql-server
 sudo cat /etc/mysql/debian.cnf
 ```
 
-# mysql
+# mysql 建库
 
 ```bash
 # 创建数据库laneIM
@@ -219,7 +221,7 @@ wget https://github.com/alibaba/canal/releases/download/canal-1.1.7/canal.deploy
 tar -zxvf canal.deployer-1.1.7.tar.gz
 ```
 
-# canal 启动
+# canal 配置
 
 ```bash
 mkdir -p conf/laneIM
@@ -300,6 +302,8 @@ canal.mq.partition=0
 canal.instance.multi.stream.on=false
 #################################################
 ```
+
+# canal 启动
 
 ```sh
 bash bin/startup.sh
