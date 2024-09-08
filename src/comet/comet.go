@@ -167,6 +167,7 @@ func (c *Comet) pickLogic() *Logic {
 	for {
 		c.mu.RLock()
 		for _, v := range c.logics {
+			c.mu.RUnlock()
 			return v
 		}
 		c.mu.RUnlock()
@@ -174,6 +175,7 @@ func (c *Comet) pickLogic() *Logic {
 		time.Sleep(time.Second)
 	}
 }
+
 func (c *Comet) Bucket(roomid int64) *Bucket {
 	return c.buckets[int(roomid)%len(c.buckets)]
 }
@@ -181,7 +183,11 @@ func (c *Comet) Bucket(roomid int64) *Bucket {
 // delete channel from all room
 func (c *Comet) DelChannel(ch *Channel) {
 	c.mu.Lock()
+	ch.Close()
 	delete(c.channels, ch.id)
+	for i := range c.buckets {
+		c.buckets[i].DelChannelAll(ch)
+	}
 	c.mu.Unlock()
 }
 

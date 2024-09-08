@@ -4,6 +4,7 @@ import (
 	"laneIM/src/model"
 	"log"
 
+	mysql2 "github.com/go-sql-driver/mysql"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -31,7 +32,7 @@ func RoomNew(db *gorm.DB, roomid int64, userid int64, serverAddr string) error {
 	}
 	roomUserid := model.RoomUserid{
 		RoomID: roomid,
-		UserID: int64(userid),
+		UserID: userid,
 	}
 	rt := db.Create(&roommgr)
 	if rt.Error != nil {
@@ -71,7 +72,7 @@ func RoomNew(db *gorm.DB, roomid int64, userid int64, serverAddr string) error {
 // 	}
 // 	roomUserid := model.RoomUserid{
 // 		RoomID: roomid,
-// 		UserID: int64(userid),
+// 		UserID: userid,
 // 	}
 // 	err := db.Transaction(func(tx *gorm.DB) error {
 // 		rt := tx.Create(&roommgr)
@@ -212,8 +213,13 @@ func RoomCount(db *gorm.DB, roomid int64) (int, error) {
 }
 
 func AddRoomUser(db *gorm.DB, roomid int64, userid int64) error {
-	err := db.Create(&model.RoomUserid{RoomID: roomid, UserID: int64(userid)}).Error
+	err := db.Create(&model.RoomUserid{RoomID: roomid, UserID: userid}).Error
 	if err != nil {
+		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
+			if sqlerr.Number == 1062 {
+				return nil
+			}
+		}
 		log.Println("faild to add room user", err)
 		return err
 	}
@@ -221,7 +227,7 @@ func AddRoomUser(db *gorm.DB, roomid int64, userid int64) error {
 }
 
 func DelRoomUser(db *gorm.DB, roomid int64, userid int64) error {
-	err := db.Where("room_id = ? and user_id = ?", roomid, int64(userid)).Delete(&model.RoomUserid{}).Error
+	err := db.Where("room_id = ? and user_id = ?", roomid, userid).Delete(&model.RoomUserid{}).Error
 	if err != nil {
 		log.Println("faild to del room user", err)
 		return err
@@ -252,6 +258,11 @@ func RoomComet(db *gorm.DB, roomid int64) ([]string, error) {
 func AddRoomComet(db *gorm.DB, roomid int64, comet string) error {
 	err := db.Create(&model.RoomComet{RoomID: roomid, CometAddr: comet}).Error
 	if err != nil {
+		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
+			if sqlerr.Number == 1062 {
+				return nil
+			}
+		}
 		log.Println("faild to add room comet", err)
 		return err
 	}

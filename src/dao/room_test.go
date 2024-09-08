@@ -1,6 +1,10 @@
 package dao_test
 
 import (
+	osql "database/sql"
+	"errors"
+	"laneIM/proto/msg"
+	"laneIM/src/config"
 	"laneIM/src/dao"
 	"laneIM/src/dao/sql"
 	"laneIM/src/model"
@@ -73,6 +77,32 @@ import (
 // 初始化1005房间
 // 四个用户进行广播
 
+func TestGetUserOnline(t *testing.T) {
+	db := sql.DB()
+	rdb := pkg.NewRedisClient([]string{"127.0.0.1:7001"})
+	rt, cometAddr, err := dao.UserOnline(rdb.Client, db, 21)
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println("query redis and sql", rt, "comet:", cometAddr)
+}
+
+func TestSetUserOnline(t *testing.T) {
+	db := sql.DB()
+	err := sql.SetUserOnline(db, 21, "localhost")
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSetUserOffline(t *testing.T) {
+	db := sql.DB()
+	err := sql.SetUseroffline(db, 21)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestRedisAndSqlAllRoomid(t *testing.T) {
 	db := sql.DB()
 	rdb := pkg.NewRedisClient([]string{"127.0.0.1:7001"})
@@ -87,7 +117,7 @@ func TestAddRoomUser(t *testing.T) {
 	db := sql.DB()
 	err := sql.AddRoomUser(db, 1006, 21)
 	if err != nil {
-		t.Error()
+		t.Error(err)
 	}
 }
 
@@ -95,32 +125,103 @@ func TestDelRoomUser(t *testing.T) {
 	db := sql.DB()
 	err := sql.DelRoomUser(db, 1006, 21)
 	if err != nil {
-		t.Error()
+		t.Error(err)
 	}
 }
 
-func TestSqlRoomAddAndDelete(t *testing.T) {
+func TestInitRoomAndUser(t *testing.T) {
+	// r := pkg.NewRedisClient([]string{"127.0.0.1:7001", "127.0.0.1:7003", "127.0.0.1:7006"})
+	e := pkg.NewEtcd(config.Etcd{Addr: []string{"127.0.0.1:2379"}})
+	e.SetAddr("redis:1", "127.0.0.1:7001")
+	e.SetAddr("redis:2", "127.0.0.1:7003")
+	e.SetAddr("redis:3", "127.0.0.1:7006")
 	db := sql.DB()
 	model.Init(db)
-	err := sql.RoomNew(db, 1006, 21, "127.0.0.1:50051")
-	if err != nil {
-		t.Error(err)
-	}
-	roomids, err := sql.AllRoomid(db)
-	if err != nil {
-		t.Error(err)
-	}
-	log.Println("query sql roomid:", roomids)
-	_, err = sql.RoomDel(db, 1006)
-	if err != nil {
-		t.Error(err)
-	}
-	roomids, err = sql.AllRoomid(db)
+	userid := []int64{21, 22, 23, 24}
+	roomid := []int64{1005, 1005, 1005, 1005}
+	online := []bool{true, true, true, false}
+	server := []string{"127.0.0.1:50050", "127.0.0.1:50051", "127.0.0.1:50050", "127.0.0.1:50051"}
 
+	user := msg.UserInfo{}
+	log.Println("写入user")
+	for i := range len(userid) {
+		user.Reset()
+		user.Roomid = make(map[int64]bool)
+		user.Server = make(map[string]bool)
+		user.Userid = userid[i]
+		user.Roomid[roomid[i]] = true
+		user.Online = online[i]
+		user.Server[server[i]] = true
+
+		err := sql.DelUser(db, user.Userid)
+		if err != nil && !errors.Is(err, osql.ErrNoRows) {
+			t.Error(err)
+		}
+		err = sql.NewUser(db, user.Userid)
+		if err != nil {
+			t.Error(err)
+		}
+		err = sql.SetUserOnline(db, user.Userid, server[i])
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	log.Println("查看user")
+	getUserId, err := sql.AllUserid(db)
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println("query sql roomid after delete:", roomids)
+	log.Println(getUserId)
+
+	testroom := msg.RoomInfo{
+		Roomid: 1005,
+	}
+	err = sql.DelRoom(db, testroom.Roomid)
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println("创建room")
+	err = sql.NewRoom(db, testroom.Roomid, userid[0], server[0])
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println("给room添加user")
+	log.Println("给user添加room")
+	for i, id := range userid {
+		err = sql.AddRoomUser(db, testroom.Roomid, id)
+		if err != nil {
+			t.Error(err)
+		}
+		err = sql.AddRoomComet(db, testroom.Roomid, server[i])
+		if err != nil {
+			t.Error(err)
+		}
+		err = sql.AddUserRoom(db, id, testroom.Roomid)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	log.Println("查看user")
+	getUserId, err = sql.RoomUserid(db, testroom.Roomid)
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println(getUserId)
+	log.Println("查看comet")
+	cometAddr, err := sql.RoomComet(db, testroom.Roomid)
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println(cometAddr)
+
+	log.Println("查询user的roomid")
+	userRoomid, err := sql.UserRoom(db, userid[0])
+	if err != nil {
+		t.Error(err)
+	}
+	log.Println(userRoomid)
+
 }
 
 // func TestInitRoomAndUser(t *testing.T) {

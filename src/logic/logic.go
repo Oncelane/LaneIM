@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	pb "laneIM/proto/logic"
-	"laneIM/src/common"
 	"laneIM/src/config"
 	"laneIM/src/dao"
+	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
 	"log"
 	"net"
@@ -15,6 +15,7 @@ import (
 	"github.com/IBM/sarama"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"gorm.io/gorm"
 )
 
 type UuidGenerator struct {
@@ -34,6 +35,7 @@ type Logic struct {
 	conf  config.Logic
 	etcd  *pkg.EtcdClient
 	redis *pkg.RedisClient
+	db    *gorm.DB
 	kafka *pkg.KafkaProducer
 	grpc  *grpc.Server
 	uuid  *UuidGenerator
@@ -45,6 +47,7 @@ func NewLogic(conf config.Logic) *Logic {
 		etcd: pkg.NewEtcd(conf.Etcd),
 		conf: conf,
 		uuid: &UuidGenerator{},
+		db:   sql.DB(),
 	}
 
 	// init redis
@@ -110,7 +113,7 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, error) {
 	uuid := s.uuid.Generator()
 	log.Println("new user id:", uuid)
-	err := dao.UserNew(s.redis.Client, common.Int64(uuid))
+	err := sql.NewUser(s.db, uuid)
 	if err != nil {
 		log.Println("faild to new user", err)
 		return nil, err
@@ -123,15 +126,15 @@ func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, 
 }
 
 func (s *Logic) DelUser(_ context.Context, in *pb.DelUserReq) (*pb.NoResp, error) {
-	count, err := dao.UserDel(s.redis.Client, common.Int64(in.Userid))
-	if err != nil || count == 0 {
+	err := sql.DelUser(s.db, in.Userid)
+	if err != nil {
 		log.Println("faild to del user:", s.uuid, err)
 	}
 	return nil, nil
 }
 
 func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, error) {
-	err := dao.UserOnline(s.redis.Client, common.Int64(in.Userid), in.Server)
+	err := sql.SetUserOnline(s.db, in.Userid, in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)
 	}
@@ -139,7 +142,7 @@ func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, e
 }
 
 func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp, error) {
-	err := dao.UserOffline(s.redis.Client, common.Int64(in.Userid), in.Server)
+	err := sql.SetUseroffline(s.db, in.Userid)
 	if err != nil {
 		log.Println("faild to new user", err)
 	}
@@ -147,7 +150,7 @@ func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp,
 }
 
 func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, error) {
-	err := dao.RoomJoinUser(s.redis.Client, common.Int64(in.Roomid), common.Int64(in.Userid))
+	err := sql.AddUserRoom(s.db, in.Userid, in.Roomid)
 	if err != nil {
 		log.Printf("faild user %d to join room:%d\n", in.Userid, in.Roomid)
 	}
@@ -155,7 +158,7 @@ func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, err
 }
 
 func (s *Logic) QuitRoom(_ context.Context, in *pb.QuitRoomReq) (*pb.NoResp, error) {
-	err := dao.RoomQuitUser(s.redis.Client, common.Int64(in.Roomid), common.Int64(in.Userid))
+	err := sql.DelUserRoom(s.db, in.Userid, in.Roomid)
 	if err != nil {
 		log.Printf("faild user %d to quit room:%d\n", in.Roomid, in.Userid)
 	}
@@ -167,12 +170,13 @@ func (s *Logic) QueryRoom(_ context.Context, in *pb.QueryRoomReq) (*pb.QueryRoom
 		Roomids: make([]*pb.QueryRoomResp_RoomSlice, 0),
 	}
 	for _, userid := range in.Userid {
-		rawRoomids, err := dao.UserQueryRoomid(s.redis.Client, common.Int64(userid))
+		roomids, err := dao.UserRoom(s.redis.Client, s.db, userid)
+		log.Printf("logic dao query user%d have room%v\n", userid, roomids)
 		if err != nil {
 			return nil, err
 		}
 		out.Roomids = append(out.Roomids, &pb.QueryRoomResp_RoomSlice{
-			Roomid: rawRoomids,
+			Roomid: roomids,
 		})
 
 	}

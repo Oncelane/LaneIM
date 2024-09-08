@@ -13,9 +13,10 @@ import (
 func AllRoomid(rdb *redis.ClusterClient, db *gorm.DB) ([]int64, error) {
 	rt, err := rds.AllRoomid(rdb)
 	if err != nil {
-		return rt, err
-	}
-	if len(rt) != 0 {
+		if err != redis.Nil {
+			return rt, err
+		}
+	} else {
 		return rt, nil
 	}
 	log.Println("触发sql查询")
@@ -34,9 +35,10 @@ func AllRoomid(rdb *redis.ClusterClient, db *gorm.DB) ([]int64, error) {
 func RoomUserid(rdb *redis.ClusterClient, db *gorm.DB, roomid int64) ([]int64, error) {
 	rt, err := rds.RoomUserid(rdb, roomid)
 	if err != nil {
-		return rt, err
-	}
-	if len(rt) != 0 {
+		if err != redis.Nil {
+			return rt, err
+		}
+	} else {
 		return rt, nil
 	}
 	log.Println("触发sql查询")
@@ -59,9 +61,10 @@ func RoomUserid(rdb *redis.ClusterClient, db *gorm.DB, roomid int64) ([]int64, e
 func RoomComet(rdb *redis.ClusterClient, db *gorm.DB, roomid int64) ([]string, error) {
 	rt, err := rds.RoomComet(rdb, roomid)
 	if err != nil {
-		return rt, err
-	}
-	if len(rt) != 0 {
+		if err != redis.Nil {
+			return rt, err
+		}
+	} else {
 		return rt, nil
 	}
 	log.Println("触发sql查询")

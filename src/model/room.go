@@ -26,8 +26,7 @@ func Init(db *gorm.DB) {
 
 // RoomMgr 模型
 type RoomMgr struct {
-	ID     uint  `gorm:"primary_key;auto_increment"`
-	RoomID int64 `gorm:"unique;not null"`
+	RoomID int64 `gorm:"primaryKey;"`
 }
 
 // RoomOnline 模型
@@ -38,12 +37,14 @@ type RoomOnline struct {
 
 // RoomComet 模型
 type RoomComet struct {
-	RoomID    int64  `gorm:"primaryKey"`
-	CometAddr string `gorm:"type:varchar(255);not null"`
+	ID        uint   `gorm:"primaryKey;"`
+	RoomID    int64  `gorm:"not null"`
+	CometAddr string `gorm:"type:varchar(255);not null;unique"`
 }
 
 // RoomUserid 模型
 type RoomUserid struct {
-	RoomID int64 `gorm:"primaryKey"`
-	UserID int64 `gorm:"primaryKey"`
+	ID     uint  `gorm:"primaryKey;"`
+	RoomID int64 `gorm:"not null"`
+	UserID int64 `gorm:"unique;not null"`
 }

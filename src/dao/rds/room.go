@@ -3,6 +3,7 @@ package rds
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/go-redis/redis"
 
@@ -14,6 +15,9 @@ import (
 // room:mgr
 func AllRoomid(rdb *redis.ClusterClient) ([]int64, error) {
 	roomStr, err := rdb.SMembers("room:mgr").Result()
+	if len(roomStr) == 0 {
+		return nil, redis.Nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -37,6 +41,7 @@ func SetNEAllRoomid(rdb *redis.ClusterClient, roomids []int64) error {
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -48,11 +53,7 @@ func SetNEAllRoomid(rdb *redis.ClusterClient, roomids []int64) error {
 
 func EXAllRoomid(rdb *redis.ClusterClient) (bool, error) {
 	key := "room:mgr"
-	exists, err := rdb.Exists(key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists != 0, nil
+	return EXKey(rdb, key)
 }
 
 func SetEXAllRoomid(rdb *redis.ClusterClient, roomids []int64) error {
@@ -72,6 +73,7 @@ func SetEXAllRoomid(rdb *redis.ClusterClient, roomids []int64) error {
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -111,12 +113,7 @@ func DelAllRoomid(rdb *redis.ClusterClient) error {
 // room:online
 func EXRoomOnline(rdb *redis.ClusterClient, roomid int64) (bool, error) {
 	key := fmt.Sprintf("room:online:%s", lane.Int64ToString(roomid))
-	exists, err := rdb.Exists(key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists != 0, nil
-
+	return EXKey(rdb, key)
 }
 
 func SetEXRoomOnlie(rdb *redis.ClusterClient, roomid int64, onlineCount int) error {
@@ -131,7 +128,11 @@ func SetEXRoomOnlie(rdb *redis.ClusterClient, roomid int64, onlineCount int) err
 
 		// 如果键存在，则执行写入操作
 		if exists != 0 {
-			return rdb.Set(key, onlineCount, 0).Err()
+			pipe := tx.Pipeline()
+			pipe.Set(key, onlineCount, 0).Err()
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
+			return err
 		}
 		return nil
 	}, key)
@@ -150,7 +151,11 @@ func SetNERoomOnlie(rdb *redis.ClusterClient, roomid int64, onlineCount int) err
 
 		// 如果键不存在，则执行写入操作
 		if exists == 0 {
-			return rdb.Set(key, onlineCount, 0).Err()
+			pipe := tx.Pipeline()
+			pipe.Set(key, onlineCount, 0).Err()
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
+			return err
 		}
 		return nil
 	}, key)
@@ -169,6 +174,9 @@ func DelRoomOnline(rdb *redis.ClusterClient, roomid int64) error {
 // room:user
 func RoomUserid(rdb *redis.ClusterClient, roomid int64) ([]int64, error) {
 	userStr, err := rdb.SMembers(fmt.Sprintf("room:userid:%s", lane.Int64ToString(roomid))).Result()
+	if len(userStr) == 0 {
+		return nil, redis.Nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -185,12 +193,7 @@ func RoomCount(rdb *redis.ClusterClient, roomid int64) (int64, error) {
 
 func EXRoomUser(rdb *redis.ClusterClient, roomid int64) (bool, error) {
 	key := fmt.Sprintf("room:userid:%s", lane.Int64ToString(roomid))
-	exists, err := rdb.Exists(key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists != 0, nil
-
+	return EXKey(rdb, key)
 }
 
 func SetEXRoomUser(rdb *redis.ClusterClient, roomid int64, userids []int64) error {
@@ -210,6 +213,7 @@ func SetEXRoomUser(rdb *redis.ClusterClient, roomid int64, userids []int64) erro
 			for _, member := range userids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -236,6 +240,7 @@ func SetNERoomUser(rdb *redis.ClusterClient, roomid int64, userids []int64) erro
 			for _, member := range userids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -262,6 +267,7 @@ func SetNERoomUserNotExist(rdb *redis.ClusterClient, roomid int64, userids []int
 			for _, member := range userids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -292,6 +298,9 @@ func DelRoomAllUser(rdb *redis.ClusterClient, roomid int64) error {
 // room:comet
 func RoomComet(rdb *redis.ClusterClient, roomid int64) ([]string, error) {
 	cometStr, err := rdb.SMembers(fmt.Sprintf("room:comet:%s", lane.Int64ToString(roomid))).Result()
+	if len(cometStr) == 0 {
+		return nil, redis.Nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -309,11 +318,7 @@ func RoomComet(rdb *redis.ClusterClient, roomid int64) ([]string, error) {
 
 func EXRoomComet(rdb *redis.ClusterClient, roomid int64) (bool, error) {
 	key := fmt.Sprintf("room:comet:%s", lane.Int64ToString(roomid))
-	exists, err := rdb.Exists(key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists != 0, nil
+	return EXKey(rdb, key)
 }
 
 func SetEXRoomComet(rdb *redis.ClusterClient, roomid int64, comets []string) error {
@@ -333,6 +338,7 @@ func SetEXRoomComet(rdb *redis.ClusterClient, roomid int64, comets []string) err
 			for _, member := range comets {
 				pipe.SAdd(key, member)
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -359,6 +365,7 @@ func SetNERoomComet(rdb *redis.ClusterClient, roomid int64, comets []string) err
 			for _, member := range comets {
 				pipe.SAdd(key, member)
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}

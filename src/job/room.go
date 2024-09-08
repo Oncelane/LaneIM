@@ -7,6 +7,8 @@ import (
 	"laneIM/src/pkg"
 	"log"
 	"sync"
+
+	"gorm.io/gorm"
 )
 
 // 得有一个结构存储 userid->comet
@@ -31,13 +33,29 @@ func (j *Job) Push(message *comet.RoomReq) {
 // 	}
 // }
 
-func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
-	servers := 
-	info, err :=
+func (r *Room) UpdateFromRedis(rds *pkg.RedisClient, db *gorm.DB) {
+	serversMap := make(map[string]bool)
+	servers, err := dao.RoomComet(rds.Client, db, r.roomid)
 	if err != nil {
-		log.Println("filed to update room:", r.roomid)
+		log.Printf("faild to read room:%d 's comets\n", err)
+	}
+	for _, member := range servers {
+		serversMap[member] = true
+	}
+	useridMap := make(map[int64]bool)
+	usersid, err := dao.RoomUserid(rds.Client, db, r.roomid)
+	if err != nil {
+		log.Printf("faild to read room:%d 's suerids\n", err)
+	}
+	for _, member := range usersid {
+		// TODO:默认在线状态
+		useridMap[member] = true
 	}
 	r.rw.Lock()
-	r.info = info
+	r.info = &msg.RoomInfo{
+		Roomid: r.roomid,
+		Server: serversMap,
+		Users:  useridMap,
+	}
 	r.rw.Unlock()
 }

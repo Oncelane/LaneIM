@@ -5,8 +5,6 @@ import (
 	"log"
 
 	"gorm.io/gorm"
-
-	lane "laneIM/src/common"
 )
 
 //--------------User------------
@@ -27,8 +25,8 @@ func SetAllUserid(db *gorm.DB, userids []int64) error {
 	DelAllUserid(db)
 
 	// 插入新的记录
-	for _, userID := range userids {
-		userMgr := model.UserMgr{UserID: int64(userID)}
+	for _, userid := range userids {
+		userMgr := model.UserMgr{UserID: userid}
 		if err := db.Create(&userMgr).Error; err != nil {
 			return err
 		}
@@ -36,16 +34,16 @@ func SetAllUserid(db *gorm.DB, userids []int64) error {
 	return nil
 }
 
-func AddUserid(db *gorm.DB, userid lane.Int64) error {
-	userMgr := model.UserMgr{UserID: int64(userid)}
+func NewUserid(db *gorm.DB, userid int64) error {
+	userMgr := model.UserMgr{UserID: userid}
 	if err := db.Create(&userMgr).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func DelUserid(db *gorm.DB, userid lane.Int64) error {
-	userMgr := model.UserMgr{UserID: int64(userid)}
+func DelUserid(db *gorm.DB, userid int64) error {
+	userMgr := model.UserMgr{UserID: userid}
 	if err := db.Where("user_id = ?", userid).Delete(&userMgr).Error; err != nil {
 		return err
 	}
@@ -60,18 +58,29 @@ func DelAllUserid(db *gorm.DB) error {
 }
 
 // user:online
-func SetUserOnlie(db *gorm.DB, userid lane.Int64, cometAddr string) error {
-	err := db.Save(&model.UserOnline{UserID: int64(userid), Online: true}).Error
+
+func UserOnlie(db *gorm.DB, userid int64) (bool, string, error) {
+	// 查询所有行的 ID
+	var exist bool
+	if err := db.Model(&model.UserOnline{}).Where("user_id = ?", userid).Select("online").First(&exist).Error; err != nil {
+		return false, "", err
+	}
+	cometAddr, err := UserComet(db, userid)
+	return exist, cometAddr, err
+}
+
+func SetUserOnline(db *gorm.DB, userid int64, cometAddr string) error {
+	err := db.Save(&model.UserOnline{UserID: userid, Online: true}).Error
 	if err != nil {
 		log.Fatalf("could not set user online: %v", err)
 		return err
 	}
-	AddUserComet(db, userid, cometAddr)
+	SetUserComet(db, userid, cometAddr)
 	return nil
 }
 
-func SetUserofflie(db *gorm.DB, userid lane.Int64) error {
-	err := db.Save(&model.UserOnline{UserID: int64(userid), Online: false}).Error
+func SetUseroffline(db *gorm.DB, userid int64) error {
+	err := db.Save(&model.UserOnline{UserID: userid, Online: false}).Error
 	if err != nil {
 		log.Fatalf("could not set user online: %v", err)
 		return err
@@ -79,8 +88,8 @@ func SetUserofflie(db *gorm.DB, userid lane.Int64) error {
 	return nil
 }
 
-func DelUserOnline(db *gorm.DB, userid lane.Int64) error {
-	err := db.Where("user_id = ?", int64(userid)).Delete(&model.UserOnline{}).Error
+func DelUserOnline(db *gorm.DB, userid int64) error {
+	err := db.Where("user_id = ?", userid).Delete(&model.UserOnline{}).Error
 	if err != nil {
 		log.Fatalf("could not set user offline: %v", err)
 		return err
@@ -89,28 +98,28 @@ func DelUserOnline(db *gorm.DB, userid lane.Int64) error {
 }
 
 // user:room
-func UserRoomid(db *gorm.DB, userid lane.Int64) ([]int64, error) {
+func UserRoom(db *gorm.DB, userid int64) ([]int64, error) {
 	// 查询所有行的 ID
 	var roomids []int64
-	err := db.Model(&model.UserRoom{}).Where("user_id = ?", int64(userid)).Pluck("room_id", &roomids).Error
+	err := db.Model(&model.UserRoom{}).Where("user_id = ?", userid).Pluck("room_id", &roomids).Error
 	if err != nil {
 		log.Println("faild to query user roomid", err)
 	}
 	return roomids, nil
 }
 
-func UserRoomCount(db *gorm.DB, userid lane.Int64) (int, error) {
+func UserRoomCount(db *gorm.DB, userid int64) (int, error) {
 	// 查询所有行的 ID
 	var roomids []int64
-	err := db.Model(&model.UserRoom{}).Where("user_id = ?", int64(userid)).Pluck("room_id", &roomids).Error
+	err := db.Model(&model.UserRoom{}).Where("user_id = ?", userid).Pluck("room_id", &roomids).Error
 	if err != nil {
 		log.Println("faild to query user roomid", err)
 	}
 	return len(roomids), nil
 }
 
-func AddUserRoom(db *gorm.DB, userid lane.Int64, roomid lane.Int64) error {
-	err := db.Create(&model.UserRoom{UserID: int64(userid), RoomID: int64(roomid)}).Error
+func AddUserRoom(db *gorm.DB, userid int64, roomid int64) error {
+	err := db.Create(&model.UserRoom{UserID: userid, RoomID: int64(roomid)}).Error
 	if err != nil {
 		log.Println("faild to add user user", err)
 		return err
@@ -118,8 +127,8 @@ func AddUserRoom(db *gorm.DB, userid lane.Int64, roomid lane.Int64) error {
 	return nil
 }
 
-func DelUserRoom(db *gorm.DB, userid lane.Int64, roomid lane.Int64) error {
-	err := db.Where("user_id = ? and room_id = ?", int64(userid), int64(roomid)).Delete(&model.UserRoom{}).Error
+func DelUserRoom(db *gorm.DB, userid int64, roomid int64) error {
+	err := db.Where("user_id = ? and room_id = ?", userid, int64(roomid)).Delete(&model.UserRoom{}).Error
 	if err != nil {
 		log.Println("faild to del user user", err)
 		return err
@@ -127,7 +136,7 @@ func DelUserRoom(db *gorm.DB, userid lane.Int64, roomid lane.Int64) error {
 	return nil
 }
 
-func DelUserAllRoom(db *gorm.DB, userid lane.Int64) error {
+func DelUserAllRoom(db *gorm.DB, userid int64) error {
 	err := db.Where("user_id = ?", userid).Delete(&model.UserRoom{}).Error
 	if err != nil {
 		log.Println("faild to del all user user", err)
@@ -137,18 +146,18 @@ func DelUserAllRoom(db *gorm.DB, userid lane.Int64) error {
 }
 
 // user:comet
-func UserComet(db *gorm.DB, userid lane.Int64) ([]string, error) {
+func UserComet(db *gorm.DB, userid int64) (string, error) {
 	// 查询所有行的 ID
-	var cometAddrs []string
-	err := db.Model(&model.UserComet{}).Pluck("comet_addr", &cometAddrs).Error
+	var cometAddr string
+	err := db.Model(&model.UserComet{}).Where("user_id = ?", userid).Select("comet_addr").First(&cometAddr).Error
 	if err != nil {
 		log.Println("faild to query user comet", err)
 	}
-	return cometAddrs, nil
+	return cometAddr, nil
 }
 
-func AddUserComet(db *gorm.DB, userid lane.Int64, comet string) error {
-	err := db.Create(&model.UserComet{UserID: int64(userid), CometAddr: comet}).Error
+func SetUserComet(db *gorm.DB, userid int64, comet string) error {
+	err := db.Save(&model.UserComet{UserID: userid, CometAddr: comet}).Error
 	if err != nil {
 		log.Println("faild to add user comet", err)
 		return err
@@ -157,8 +166,8 @@ func AddUserComet(db *gorm.DB, userid lane.Int64, comet string) error {
 
 }
 
-func DelUserComet(db *gorm.DB, userid lane.Int64, comet string) error {
-	err := db.Where("user_id = ? AND comet = ?", int64(userid), comet).Delete(&model.UserComet{}).Error
+func DelUserComet(db *gorm.DB, userid int64, comet string) error {
+	err := db.Where("user_id = ? AND comet = ?", userid, comet).Delete(&model.UserComet{}).Error
 	if err != nil {
 		log.Println("faild to del user comet", err)
 		return err
@@ -166,8 +175,8 @@ func DelUserComet(db *gorm.DB, userid lane.Int64, comet string) error {
 	return nil
 }
 
-func DelUserAllComet(db *gorm.DB, userid lane.Int64) error {
-	err := db.Where("user_id = ?", int64(userid)).Delete(&model.UserComet{}).Error
+func DelUserAllComet(db *gorm.DB, userid int64) error {
+	err := db.Where("user_id = ?", userid).Delete(&model.UserComet{}).Error
 	if err != nil {
 		log.Println("faild to del user comet", err)
 		return err
@@ -175,14 +184,14 @@ func DelUserAllComet(db *gorm.DB, userid lane.Int64) error {
 	return nil
 }
 
-func NewUser(db *gorm.DB, userid lane.Int64, roomid lane.Int64, serverAddr string) error {
-	AddUserid(db, userid)
-	SetUserOnlie(db, userid, serverAddr)
-	AddUserRoom(db, userid, roomid)
+func NewUser(db *gorm.DB, userid int64) error {
+	NewUserid(db, userid)
+	// SetUserOnlie(db, userid, serverAddr)
+	// AddUserRoom(db, userid, roomid)
 	return nil
 }
 
-func DelUser(db *gorm.DB, userid lane.Int64) error {
+func DelUser(db *gorm.DB, userid int64) error {
 	DelUserid(db, userid)
 	DelUserOnline(db, userid)
 	DelUserAllComet(db, userid)

@@ -3,19 +3,90 @@ package rds
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/go-redis/redis"
 
 	lane "laneIM/src/common"
 )
 
+func EXKey(rdb *redis.ClusterClient, key string) (bool, error) {
+	exists, err := rdb.Exists(key).Result()
+	if err != nil {
+		return false, err
+	}
+	return exists != 0, nil
+}
+
 // user:mgr
+
 func AllUserid(rdb *redis.ClusterClient) ([]int64, error) {
 	userStr, err := rdb.SMembers("user:mgr").Result()
+	if len(userStr) == 0 {
+		return nil, redis.Nil
+	}
 	if err != nil {
 		return nil, err
 	}
 	return lane.RedisStrsToInt64(userStr)
+}
+
+func EXAllUserid(rdb *redis.ClusterClient) (bool, error) {
+	return EXKey(rdb, "user:mgr")
+}
+
+func SetEXAllUserid(rdb *redis.ClusterClient, userids []int64) error {
+
+	key := "user:mgr"
+	// 监视键的变化
+	err := rdb.Watch(func(tx *redis.Tx) error {
+		// 检查键是否存在
+		exists, err := tx.Exists(key).Result()
+		if err != nil {
+			return err
+		}
+
+		// 如果键存在，则执行写入操作
+		if exists != 0 {
+			pipe := tx.Pipeline()
+			pipe.Del(key)
+			for _, member := range userids {
+				pipe.SAdd(key, lane.Int64ToString(member))
+			}
+			_, err := pipe.Exec()
+			return err
+		}
+		return nil
+	}, key)
+
+	return err
+}
+
+func SetNEAllUserid(rdb *redis.ClusterClient, userids []int64) error {
+
+	key := "user:mgr"
+	// 监视键的变化
+	err := rdb.Watch(func(tx *redis.Tx) error {
+		// 检查键是否存在
+		exists, err := tx.Exists(key).Result()
+		if err != nil {
+			return err
+		}
+
+		// 如果键不存在，则执行写入操作
+		if exists == 0 {
+			pipe := tx.Pipeline()
+			pipe.Del(key)
+			for _, member := range userids {
+				pipe.SAdd(key, lane.Int64ToString(member))
+			}
+			_, err := pipe.Exec()
+			return err
+		}
+		return nil
+	}, key)
+
+	return err
 }
 
 // func UserNew(rdb *redis.ClusterClient, userid int64) error {
@@ -64,11 +135,7 @@ func UserOnline(rdb *redis.ClusterClient, userid int64) (bool, string, error) {
 
 func EXUserOnline(rdb *redis.ClusterClient, userid int64) (bool, error) {
 	key := fmt.Sprintf("user:online:%s", lane.Int64ToString(userid))
-	exists, err := rdb.Exists(key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists != 0, nil
+	return EXKey(rdb, key)
 }
 
 func SetEXUserOnline(rdb *redis.ClusterClient, userid int64, comet string) error {
@@ -84,7 +151,11 @@ func SetEXUserOnline(rdb *redis.ClusterClient, userid int64, comet string) error
 
 		// 如果键存在，则执行写入操作
 		if exists != 0 {
-			return rdb.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 1, 0).Err()
+			pipe := tx.Pipeline()
+			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 1, 0).Err()
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
+			return err
 		}
 		return nil
 	}, key)
@@ -106,7 +177,11 @@ func SetNEUserOnline(rdb *redis.ClusterClient, userid int64, comet string) error
 
 		// 如果键不存在，则执行写入操作
 		if exists == 0 {
-			return rdb.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 1, 0).Err()
+			pipe := tx.Pipeline()
+			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 1, 0).Err()
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
+			return err
 		}
 		return nil
 	}, key)
@@ -130,7 +205,11 @@ func SetEXUserOffline(rdb *redis.ClusterClient, userid int64, comet string) erro
 
 		// 如果键存在，则执行写入操作
 		if exists != 0 {
-			return rdb.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 0, 0).Err()
+			pipe := tx.Pipeline()
+			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 0, 0).Err()
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
+			return err
 		}
 		return nil
 	}, key)
@@ -152,7 +231,11 @@ func SetNEUserOffline(rdb *redis.ClusterClient, userid int64, comet string) erro
 
 		// 如果键不存在，则执行写入操作
 		if exists == 0 {
-			return rdb.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 0, 0).Err()
+			pipe := tx.Pipeline()
+			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 0, 0).Err()
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
+			return err
 		}
 		return nil
 	}, key)
@@ -174,6 +257,9 @@ func DelUserOnline(rdb *redis.ClusterClient, userid int64, comet string) error {
 // user:room
 func UserRoom(rdb *redis.ClusterClient, userid int64) ([]int64, error) {
 	roomStr, err := rdb.SMembers(fmt.Sprintf("user:room:%s", lane.Int64ToString(userid))).Result()
+	if len(roomStr) == 0 {
+		return nil, redis.Nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -182,11 +268,7 @@ func UserRoom(rdb *redis.ClusterClient, userid int64) ([]int64, error) {
 
 func EXUserRoom(rdb *redis.ClusterClient, userid int64) (bool, error) {
 	key := fmt.Sprintf("user:room:%s", lane.Int64ToString(userid))
-	exists, err := rdb.Exists(key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists != 0, nil
+	return EXKey(rdb, key)
 }
 
 func SetEXUserRoom(rdb *redis.ClusterClient, userid int64, roomids []int64) error {
@@ -206,6 +288,7 @@ func SetEXUserRoom(rdb *redis.ClusterClient, userid int64, roomids []int64) erro
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -232,6 +315,7 @@ func SetNEUserRoom(rdb *redis.ClusterClient, userid int64, roomids []int64) erro
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
+			pipe.Expire(key, time.Second*3)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -279,11 +363,7 @@ func UserComet(rdb *redis.ClusterClient, userid int64) (string, error) {
 
 func EXUserComet(rdb *redis.ClusterClient, userid int64) (bool, error) {
 	key := fmt.Sprintf("user:comet:%s", lane.Int64ToString(userid))
-	exists, err := rdb.Exists(key).Result()
-	if err != nil {
-		return false, err
-	}
-	return exists != 0, nil
+	return EXKey(rdb, key)
 }
 
 func SetEXUserComet(rdb *redis.ClusterClient, userid int64, comet string) error {
@@ -299,7 +379,10 @@ func SetEXUserComet(rdb *redis.ClusterClient, userid int64, comet string) error 
 
 		// 如果键存在，则执行写入操作
 		if exists != 0 {
-			_, err = rdb.Set(key, comet, 0).Result()
+			pipe := tx.Pipeline()
+			pipe.Set(key, comet, 0)
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
 			return err
 		}
 		return nil
@@ -321,7 +404,10 @@ func SetNEUserComet(rdb *redis.ClusterClient, userid int64, comet string) error 
 
 		// 如果键不存在，则执行写入操作
 		if exists == 0 {
-			_, err = rdb.Set(key, comet, 0).Result()
+			pipe := tx.Pipeline()
+			pipe.Set(key, comet, 0)
+			pipe.Expire(key, time.Second*3)
+			_, err := pipe.Exec()
 			return err
 		}
 		return nil

@@ -53,3 +53,9 @@ func (m *Bucket) DelChannel(roomid int64, c *Channel) {
 		room.DelChannel(c)
 	}
 }
+
+func (m *Bucket) DelChannelAll(c *Channel) {
+	for _, room := range m.rooms {
+		room.DelChannel(c)
+	}
+}

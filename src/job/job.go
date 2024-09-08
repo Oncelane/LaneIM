@@ -3,18 +3,21 @@ package job
 import (
 	"context"
 	"laneIM/src/config"
+	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
+	"gorm.io/gorm"
 )
 
 // singleton
 type Job struct {
 	etcd          *pkg.EtcdClient
 	redis         *pkg.RedisClient
+	db            *gorm.DB
 	kafkaComsumer sarama.ConsumerGroup
 	conf          config.Job
 	mu            sync.RWMutex
@@ -34,6 +37,7 @@ func NewJob(conf config.Job) *Job {
 		kafkaComsumer: pkg.NewKafkaGroupComsumer(conf.KafkaComsumer),
 		conf:          conf,
 		comets:        make(map[string]*CometClient),
+		db:            sql.DB(),
 	}
 
 	j.NewBucket()

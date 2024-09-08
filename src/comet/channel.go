@@ -43,13 +43,14 @@ func (c *Comet) recvRoutine(ch *Channel) {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
 				log.Println("faild to get ws message")
-				ch.Close()
+				c.DelChannel(ch)
 				return
 			}
 			log.Println("websocket close", ch.id)
-			ch.Close()
+			c.DelChannel(ch)
 			return
 		}
+		log.Println("message.Path", message.Path)
 		f := c.funcRout.Find(message.Path)
 		if f == nil {
 			log.Println("wrong method")
@@ -83,5 +84,6 @@ func (c *Channel) Reply(data []byte, seq int64, path string) {
 
 func (c *Channel) Close() {
 	c.done = true
+	close(c.sendCh)
 	c.conn.Close()
 }

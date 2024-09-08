@@ -124,8 +124,6 @@ func (c *Canal) printEntry(entrys []pbe.Entry) {
 			}
 			rediskey := strings.ReplaceAll(header.GetTableName(), "_", ":")[:len(header.GetTableName())-1]
 			fmt.Printf("redis key: %s\n", rediskey)
-			c.HandleRowData(rowChange, eventType, strings.Split(rediskey, ":"))
-
 			for _, rowData := range rowChange.GetRowDatas() {
 				if eventType == pbe.EventType_DELETE {
 					printColumn(rowData.GetBeforeColumns())
@@ -138,6 +136,8 @@ func (c *Canal) printEntry(entrys []pbe.Entry) {
 					printColumn(rowData.GetAfterColumns())
 				}
 			}
+			c.HandleRowData(rowChange, eventType, strings.Split(rediskey, ":"))
+
 		}
 	}
 }
@@ -146,10 +146,12 @@ func (c *Canal) HandleRowData(rowChange *pbe.RowChange, event pbe.EventType, red
 	for _, col := range rowChange.GetRowDatas() {
 		switch event {
 		// case pbe.EventType_CREATE:
-		// case pbe.EventType_UPDATE:
+		case pbe.EventType_UPDATE:
+			c.HandleInsert(col.GetBeforeColumns(), redisKey)
 		case pbe.EventType_INSERT:
 			c.HandleInsert(col.GetAfterColumns(), redisKey)
-		// case pbe.EventType_DELETE:
+		case pbe.EventType_DELETE:
+			c.HandleInsert(col.GetBeforeColumns(), redisKey)
 		default:
 			log.Println("忽略", event)
 		}
@@ -161,12 +163,6 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey []string) {
 	case "room":
 		switch redisKey[1] {
 		case "mgr":
-			// rawRoomid, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
-			// if err != nil {
-			// 	log.Println("fomat err")
-			// 	return
-			// }
-			// roomid := common.Int64(rawRoomid)
 
 			// check exist
 			exist, err := rds.EXAllRoomid(c.redis.Client)
@@ -273,7 +269,113 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey []string) {
 			log.Println("sync room:comet", roomid)
 		}
 	case "user":
+		switch redisKey[1] {
+		case "mgr":
 
+			// check exist
+			exist, err := rds.EXAllUserid(c.redis.Client)
+			if err != nil {
+				log.Println("faild to sync user:mgr", err)
+			}
+			if !exist {
+				return
+			}
+
+			// sql
+			userids, err := sql.AllUserid(c.db)
+			if err != nil {
+				log.Println("faild to sql user")
+			}
+
+			// updata setex
+			err = rds.SetEXAllUserid(c.redis.Client, userids)
+			if err != nil {
+				log.Println("faild to sync user:mgr", err)
+			}
+			log.Println("sync user:mgr")
+
+		case "online":
+			roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("fomat err")
+				return
+			}
+
+			// check exist
+			exist, err := rds.EXRoomOnline(c.redis.Client, roomid)
+			if err != nil {
+				log.Println("faild to check ", err)
+				return
+			}
+			if !exist {
+				return
+			}
+
+			//sql
+			count, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("faild to decode onlinecount", col[1].GetValue(), err)
+			}
+			err = rds.SetEXRoomOnlie(c.redis.Client, roomid, int(count))
+			if err != nil {
+				log.Println("faild to sync room:online", err)
+			}
+			log.Println("success", roomid)
+		case "room":
+			userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("fomat err")
+				return
+			}
+			// check exist
+			exist, err := rds.EXUserRoom(c.redis.Client, userid)
+			if err != nil {
+				log.Println("faild to sync user:room", err)
+			}
+			if !exist {
+				return
+			}
+
+			// sql
+			roomids, err := sql.UserRoom(c.db, userid)
+			if err != nil {
+				log.Println("faild to sql user:room")
+			}
+
+			// updata setex
+			err = rds.SetEXUserRoom(c.redis.Client, userid, roomids)
+			if err != nil {
+				log.Println("faild to sync room:mgr", err)
+			}
+			log.Println("sync user:room", userid)
+		case "comet":
+			userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("fomat err")
+				return
+			}
+			// check exist
+			exist, err := rds.EXUserComet(c.redis.Client, userid)
+			if err != nil {
+				log.Println("faild to sync user:comet", err)
+			}
+			if !exist {
+				return
+			}
+
+			// sql
+			cometAddr, err := sql.UserComet(c.db, userid)
+			if err != nil {
+				log.Println("faild to sql user")
+			}
+
+			// updata setex
+			err = rds.SetEXUserComet(c.redis.Client, userid, cometAddr)
+			if err != nil {
+				log.Println("faild to sync user:comet", err)
+			}
+			log.Println("sync user:comet", userid)
+		}
 	}
 }
 
