@@ -1,6 +1,8 @@
 package sql
 
 import (
+	"fmt"
+	"laneIM/src/config"
 	"laneIM/src/model"
 	"log"
 
@@ -9,8 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func DB() *gorm.DB {
-	dsn := "debian-sys-maint:QTLVb6BaeeaJsFMT@tcp(127.0.0.1:3306)/laneIM?charset=utf8mb4&parseTime=True&loc=Local"
+func DB(conf config.Mysql) *gorm.DB {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", conf.Username, conf.Password, conf.Addr, conf.DataBase)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)

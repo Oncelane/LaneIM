@@ -8,6 +8,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/allegro/bigcache"
 	"gorm.io/gorm"
 )
 
@@ -33,19 +34,21 @@ func (j *Job) Push(message *comet.RoomReq) {
 // 	}
 // }
 
-func (r *Room) UpdateFromRedis(rds *pkg.RedisClient, db *gorm.DB) {
+func (r *Room) UpdateFromRedis(cache *bigcache.BigCache, rds *pkg.RedisClient, db *gorm.DB) error {
 	serversMap := make(map[string]bool)
-	servers, err := dao.RoomComet(rds.Client, db, r.roomid)
+	servers, err := dao.RoomComet(cache, rds.Client, db, r.roomid)
 	if err != nil {
 		log.Printf("faild to read room:%d 's comets\n", err)
+		return err
 	}
 	for _, member := range servers {
 		serversMap[member] = true
 	}
 	useridMap := make(map[int64]bool)
-	usersid, err := dao.RoomUserid(rds.Client, db, r.roomid)
+	usersid, err := dao.RoomUserid(cache, rds.Client, db, r.roomid)
 	if err != nil {
 		log.Printf("faild to read room:%d 's suerids\n", err)
+		return err
 	}
 	for _, member := range usersid {
 		// TODO:默认在线状态
@@ -58,4 +61,5 @@ func (r *Room) UpdateFromRedis(rds *pkg.RedisClient, db *gorm.DB) {
 		Users:  useridMap,
 	}
 	r.rw.Unlock()
+	return nil
 }

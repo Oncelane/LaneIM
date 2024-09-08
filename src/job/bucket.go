@@ -52,7 +52,7 @@ func (b *Bucket) NewRoom(roomid int64) *Room {
 		roomid: roomid,
 	}
 	log.Println("create new room:", roomid)
-	newRoom.UpdateFromRedis(b.job.redis, b.job.db)
+	newRoom.UpdateFromRedis(b.job.cache, b.job.redis, b.job.db)
 	log.Println("sync room from redis:", roomid, "comets:", newRoom.info.Server)
 	b.rooms[roomid] = newRoom
 

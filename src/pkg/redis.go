@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"laneIM/src/config"
 	"log"
 
 	"github.com/go-redis/redis"
@@ -11,14 +12,14 @@ type RedisClient struct {
 	Client *redis.ClusterClient
 }
 
-func NewRedisClient(addrs []string) *RedisClient {
+func NewRedisClient(conf config.Redis) *RedisClient {
 	rdb := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs: addrs, // Redis 节点地址
+		Addrs: conf.Addr, // Redis 节点地址
 		// 如果你的集群需要身份验证，请提供密码
 		// Password: "yourpassword",
 	})
 	c := &RedisClient{
-		Addrs:  addrs,
+		Addrs:  conf.Addr,
 		Client: rdb,
 	}
 	// 测试连接

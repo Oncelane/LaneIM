@@ -11,9 +11,9 @@ import (
 )
 
 func main() {
-	conf := config.Comet{Type: "comet"}
-	config.Init(&conf)
-	log.Printf("[%s] server start by env:%+v", conf.GetType()+conf.GetName(), conf)
+	conf := config.Comet{}
+	config.Init("comet", &conf)
+	log.Printf("comet server start by env:%+v", conf)
 	c := comet.NewSerivceComet(conf)
 
 	// 启动websocket服务

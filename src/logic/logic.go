@@ -47,13 +47,15 @@ func NewLogic(conf config.Logic) *Logic {
 		etcd: pkg.NewEtcd(conf.Etcd),
 		conf: conf,
 		uuid: &UuidGenerator{},
-		db:   sql.DB(),
 	}
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	s.db = sql.DB(mysqlConfig)
 
 	// init redis
 	redisAddrs := s.etcd.GetAddr("redis")
 	log.Println("获取到的redis地址：", redisAddrs)
-	redis := pkg.NewRedisClient(redisAddrs)
+	redis := pkg.NewRedisClient(config.Redis{Addr: redisAddrs})
 	s.redis = redis
 
 	// init kafka producer

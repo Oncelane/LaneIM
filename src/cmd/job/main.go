@@ -3,14 +3,16 @@ package main
 import (
 	"laneIM/src/config"
 	"laneIM/src/job"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func main() {
-	conf := config.Job{Type: "job"}
-	config.Init(&conf)
+	conf := config.Job{}
+	config.Init("job", &conf)
+	log.Printf("job server start by env:%+v", conf)
 	j := job.NewJob(conf)
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)

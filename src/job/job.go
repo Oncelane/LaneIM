@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/allegro/bigcache"
 	"gorm.io/gorm"
 )
 
@@ -23,6 +24,7 @@ type Job struct {
 	mu            sync.RWMutex
 	buckets       []*Bucket
 	comets        map[string]*CometClient
+	cache         *bigcache.BigCache
 }
 
 func NewJob(conf config.Job) *Job {
@@ -31,14 +33,21 @@ func NewJob(conf config.Job) *Job {
 	// connect to redis
 	addrs := e.GetAddr("redis")
 	log.Printf("job starting...\n get redis addrs: %v", addrs)
+
 	j := &Job{
 		etcd:          e,
-		redis:         pkg.NewRedisClient(addrs),
+		redis:         pkg.NewRedisClient(conf.Redis),
 		kafkaComsumer: pkg.NewKafkaGroupComsumer(conf.KafkaComsumer),
 		conf:          conf,
 		comets:        make(map[string]*CometClient),
-		db:            sql.DB(),
 	}
+	cacheConfig := bigcache.DefaultConfig(time.Minute) // 缓存项默认过期时间为1分钟
+	cache, _ := bigcache.NewBigCache(cacheConfig)
+	j.cache = cache
+
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	j.db = sql.DB(mysqlConfig)
 
 	j.NewBucket()
 

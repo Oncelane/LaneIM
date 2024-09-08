@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"laneIM/src/config"
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
@@ -19,16 +20,18 @@ import (
 )
 
 type Canal struct {
-	connector *client.SimpleCanalConnector
-	msgCh     chan *protocol.Message
-	redis     *pkg.RedisClient
-	db        *gorm.DB
+	connector     *client.SimpleCanalConnector
+	msgCh         chan *protocol.Message
+	redis         *pkg.RedisClient
+	db            *gorm.DB
+	kafkaProducer *pkg.KafkaProducer
+	conf          config.Canal
 }
 
-func NewCanal() *Canal {
-	connector := client.NewSimpleCanalConnector("127.0.0.1", 11111,
-		"canal", "canal", "laneIM",
-		60000, 60*60*1000)
+func NewCanal(conf config.Canal) *Canal {
+	connector := client.NewSimpleCanalConnector(conf.CanalAddress, conf.CanalPort,
+		conf.CanalName, conf.CanalPassword, conf.CanalDestination,
+		conf.SoTimeOut, conf.IdleTimeOut)
 
 	err := connector.Connect()
 	if err != nil {
@@ -36,13 +39,17 @@ func NewCanal() *Canal {
 		os.Exit(1)
 	}
 	// connector.RollBack(-1)
-	connector.Subscribe(".*\\..*")
+	connector.Subscribe(conf.Subscribe)
 	c := &Canal{
-		connector: connector,
-		msgCh:     make(chan *protocol.Message, 128),
-		redis:     pkg.NewRedisClient([]string{"127.0.0.1:7001"}),
-		db:        sql.DB(),
+		connector:     connector,
+		msgCh:         make(chan *protocol.Message, conf.MsgChSize),
+		redis:         pkg.NewRedisClient(conf.Redis),
+		kafkaProducer: pkg.NewKafkaProducer(conf.KafkaProducer),
+		conf:          conf,
 	}
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	c.db = sql.DB(mysqlConfig)
 	log.Println("start canal")
 	return c
 
@@ -100,7 +107,9 @@ func main() {
 	//  3.  canal下的以canal打头的表：canal\\.canal.*
 	//  4.  canal schema下的一张表：canal\\.test1
 	//  5.  多个规则组合使用：canal\\..*,mysql.test1,mysql.test2 (逗号分隔)
-	canal := NewCanal()
+	conf := config.Canal{}
+	config.Init("canal", &conf)
+	canal := NewCanal(conf)
 	go canal.RunCanal()
 	go canal.RunReceive()
 	select {}

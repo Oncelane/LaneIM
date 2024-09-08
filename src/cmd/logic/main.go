@@ -3,6 +3,7 @@ package main
 import (
 	"laneIM/src/config"
 	"laneIM/src/logic"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,8 +12,9 @@ import (
 var conf config.Logic
 
 func main() {
-	conf = config.Logic{Type: "logic"}
-	config.Init(&conf)
+	conf = config.Logic{}
+	config.Init("logic", &conf)
+	log.Printf("logic server start by env:%+v", conf)
 	l := logic.NewLogic(conf)
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)

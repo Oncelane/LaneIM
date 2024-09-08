@@ -6,11 +6,13 @@ import (
 	"laneIM/proto/msg"
 	"laneIM/src/config"
 	"laneIM/src/dao"
+	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/sql"
 	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
 	"testing"
+	"time"
 )
 
 // func TestRoom(t *testing.T) {
@@ -78,8 +80,10 @@ import (
 // 四个用户进行广播
 
 func TestGetUserOnline(t *testing.T) {
-	db := sql.DB()
-	rdb := pkg.NewRedisClient([]string{"127.0.0.1:7001"})
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	db := sql.DB(mysqlConfig)
+	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001"}})
 	rt, cometAddr, err := dao.UserOnline(rdb.Client, db, 21)
 	if err != nil {
 		t.Error(err)
@@ -88,7 +92,9 @@ func TestGetUserOnline(t *testing.T) {
 }
 
 func TestSetUserOnline(t *testing.T) {
-	db := sql.DB()
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	db := sql.DB(mysqlConfig)
 	err := sql.SetUserOnline(db, 21, "localhost")
 	if err != nil {
 		t.Error(err)
@@ -96,7 +102,9 @@ func TestSetUserOnline(t *testing.T) {
 }
 
 func TestSetUserOffline(t *testing.T) {
-	db := sql.DB()
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	db := sql.DB(mysqlConfig)
 	err := sql.SetUseroffline(db, 21)
 	if err != nil {
 		t.Error(err)
@@ -104,9 +112,12 @@ func TestSetUserOffline(t *testing.T) {
 }
 
 func TestRedisAndSqlAllRoomid(t *testing.T) {
-	db := sql.DB()
-	rdb := pkg.NewRedisClient([]string{"127.0.0.1:7001"})
-	rt, err := dao.RoomUserid(rdb.Client, db, 1006)
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	db := sql.DB(mysqlConfig)
+	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001"}})
+	cache := localCache.Cache(time.Second * 3)
+	rt, err := dao.RoomUserid(cache, rdb.Client, db, 1005)
 	if err != nil {
 		t.Error(err)
 	}
@@ -114,7 +125,9 @@ func TestRedisAndSqlAllRoomid(t *testing.T) {
 }
 
 func TestAddRoomUser(t *testing.T) {
-	db := sql.DB()
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	db := sql.DB(mysqlConfig)
 	err := sql.AddRoomUser(db, 1006, 21)
 	if err != nil {
 		t.Error(err)
@@ -122,7 +135,9 @@ func TestAddRoomUser(t *testing.T) {
 }
 
 func TestDelRoomUser(t *testing.T) {
-	db := sql.DB()
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	db := sql.DB(mysqlConfig)
 	err := sql.DelRoomUser(db, 1006, 21)
 	if err != nil {
 		t.Error(err)
@@ -135,7 +150,9 @@ func TestInitRoomAndUser(t *testing.T) {
 	e.SetAddr("redis:1", "127.0.0.1:7001")
 	e.SetAddr("redis:2", "127.0.0.1:7003")
 	e.SetAddr("redis:3", "127.0.0.1:7006")
-	db := sql.DB()
+	mysqlConfig := config.Mysql{}
+	mysqlConfig.Default()
+	db := sql.DB(mysqlConfig)
 	model.Init(db)
 	userid := []int64{21, 22, 23, 24}
 	roomid := []int64{1005, 1005, 1005, 1005}
