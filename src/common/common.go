@@ -1,6 +1,9 @@
 package common
 
-import "strconv"
+import (
+	"log"
+	"strconv"
+)
 
 type Int64 int64
 
@@ -13,4 +16,28 @@ func (i *Int64) PasrseString(s string) error {
 	*i = Int64(t)
 	return err
 
+}
+
+func RedisStrsToInt64(strs []string) ([]int64, error) {
+	ret := make([]int64, len(strs))
+	var tmp Int64
+	for i, str := range strs {
+		tmp.PasrseString(str)
+		ret[i] = int64(tmp)
+	}
+	return ret, nil
+}
+
+func Int64ToString(in int64) string {
+	return strconv.FormatInt(in, 36)
+}
+
+func StringTo64(in string) int64 {
+
+	out, err := strconv.ParseInt(in, 36, 64)
+	if err != nil {
+		log.Printf("wrong string%s to int64:%v\n", in, err)
+		return 404
+	}
+	return out
 }

@@ -32,7 +32,8 @@ func (j *Job) Push(message *comet.RoomReq) {
 // }
 
 func (r *Room) UpdateFromRedis(client *pkg.RedisClient) {
-	info, err := dao.UpdateRoom(client.Client, r.roomid)
+	servers := 
+	info, err :=
 	if err != nil {
 		log.Println("filed to update room:", r.roomid)
 	}

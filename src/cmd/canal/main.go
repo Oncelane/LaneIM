@@ -2,8 +2,12 @@ package main
 
 import (
 	"fmt"
+	"laneIM/src/dao/rds"
+	"laneIM/src/dao/sql"
+	"laneIM/src/pkg"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,26 +15,37 @@ import (
 	"github.com/withlin/canal-go/protocol"
 	pbe "github.com/withlin/canal-go/protocol/entry"
 	"google.golang.org/protobuf/proto"
+	"gorm.io/gorm"
 )
 
 type Canal struct {
 	connector *client.SimpleCanalConnector
 	msgCh     chan *protocol.Message
+	redis     *pkg.RedisClient
+	db        *gorm.DB
 }
 
 func NewCanal() *Canal {
 	connector := client.NewSimpleCanalConnector("127.0.0.1", 11111,
 		"canal", "canal", "laneIM",
 		60000, 60*60*1000)
+
 	err := connector.Connect()
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
-	return &Canal{
+	// connector.RollBack(-1)
+	connector.Subscribe(".*\\..*")
+	c := &Canal{
 		connector: connector,
 		msgCh:     make(chan *protocol.Message, 128),
+		redis:     pkg.NewRedisClient([]string{"127.0.0.1:7001"}),
+		db:        sql.DB(),
 	}
+	log.Println("start canal")
+	return c
+
 }
 
 func (c *Canal) RunCanal() {
@@ -55,8 +70,7 @@ func (c *Canal) RunCanal() {
 
 func (c *Canal) RunReceive() {
 	for message := range c.msgCh {
-		log.Println("todo: write to redis")
-		printEntry(message.Entries)
+		c.printEntry(message.Entries)
 	}
 }
 
@@ -92,8 +106,7 @@ func main() {
 	select {}
 }
 
-func printEntry(entrys []pbe.Entry) {
-
+func (c *Canal) printEntry(entrys []pbe.Entry) {
 	for i := range entrys {
 		if entrys[i].GetEntryType() == pbe.EntryType_TRANSACTIONBEGIN || entrys[i].GetEntryType() == pbe.EntryType_TRANSACTIONEND {
 			continue
@@ -106,10 +119,12 @@ func printEntry(entrys []pbe.Entry) {
 			eventType := rowChange.GetEventType()
 			header := entrys[i].GetHeader()
 			fmt.Printf("================> binlog[%s : %d],name[%s,%s], eventType: %s\n", header.GetLogfileName(), header.GetLogfileOffset(), header.GetSchemaName(), header.GetTableName(), header.GetEventType())
-
+			if len(header.GetTableName()) == 0 {
+				continue
+			}
 			rediskey := strings.ReplaceAll(header.GetTableName(), "_", ":")[:len(header.GetTableName())-1]
-
 			fmt.Printf("redis key: %s\n", rediskey)
+			c.HandleRowData(rowChange, eventType, strings.Split(rediskey, ":"))
 
 			for _, rowData := range rowChange.GetRowDatas() {
 				if eventType == pbe.EventType_DELETE {
@@ -124,6 +139,141 @@ func printEntry(entrys []pbe.Entry) {
 				}
 			}
 		}
+	}
+}
+
+func (c *Canal) HandleRowData(rowChange *pbe.RowChange, event pbe.EventType, redisKey []string) {
+	for _, col := range rowChange.GetRowDatas() {
+		switch event {
+		// case pbe.EventType_CREATE:
+		// case pbe.EventType_UPDATE:
+		case pbe.EventType_INSERT:
+			c.HandleInsert(col.GetAfterColumns(), redisKey)
+		// case pbe.EventType_DELETE:
+		default:
+			log.Println("忽略", event)
+		}
+	}
+}
+
+func (c *Canal) HandleInsert(col []*pbe.Column, redisKey []string) {
+	switch redisKey[0] {
+	case "room":
+		switch redisKey[1] {
+		case "mgr":
+			// rawRoomid, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
+			// if err != nil {
+			// 	log.Println("fomat err")
+			// 	return
+			// }
+			// roomid := common.Int64(rawRoomid)
+
+			// check exist
+			exist, err := rds.EXAllRoomid(c.redis.Client)
+			if err != nil {
+				log.Println("faild to sync room:mgr", err)
+			}
+			if !exist {
+				return
+			}
+
+			// sql
+			roomids, err := sql.AllRoomid(c.db)
+			if err != nil {
+				log.Println("faild to sql roomid")
+			}
+
+			// updata setex
+			err = rds.SetEXAllRoomid(c.redis.Client, roomids)
+			if err != nil {
+				log.Println("faild to sync room:mgr", err)
+			}
+			log.Println("sync room:mgr")
+
+		case "online":
+			roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("fomat err")
+				return
+			}
+
+			// check exist
+			exist, err := rds.EXRoomOnline(c.redis.Client, roomid)
+			if err != nil {
+				log.Println("faild to check ", err)
+				return
+			}
+			if !exist {
+				return
+			}
+
+			//sql
+			count, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("faild to decode onlinecount", col[1].GetValue(), err)
+			}
+			err = rds.SetEXRoomOnlie(c.redis.Client, roomid, int(count))
+			if err != nil {
+				log.Println("faild to sync room:online", err)
+			}
+			log.Println("success", roomid)
+		case "userid":
+			roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("fomat err")
+				return
+			}
+			// check exist
+			exist, err := rds.EXRoomUser(c.redis.Client, roomid)
+			if err != nil {
+				log.Println("faild to sync room:mgr", err)
+			}
+			if !exist {
+				return
+			}
+
+			// sql
+			userids, err := sql.RoomUserid(c.db, roomid)
+			if err != nil {
+				log.Println("faild to sql roomid")
+			}
+
+			// updata setex
+			err = rds.SetEXRoomUser(c.redis.Client, roomid, userids)
+			if err != nil {
+				log.Println("faild to sync room:mgr", err)
+			}
+			log.Println("sync room:user", roomid)
+		case "comet":
+			roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("fomat err")
+				return
+			}
+			// check exist
+			exist, err := rds.EXRoomComet(c.redis.Client, roomid)
+			if err != nil {
+				log.Println("faild to sync room:mgr", err)
+			}
+			if !exist {
+				return
+			}
+
+			// sql
+			comets, err := sql.RoomComet(c.db, roomid)
+			if err != nil {
+				log.Println("faild to sql roomid")
+			}
+
+			// updata setex
+			err = rds.SetEXRoomComet(c.redis.Client, roomid, comets)
+			if err != nil {
+				log.Println("faild to sync room:mgr", err)
+			}
+			log.Println("sync room:comet", roomid)
+		}
+	case "user":
+
 	}
 }
 
