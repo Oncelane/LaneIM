@@ -109,6 +109,7 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 	ret.funcRout.Use("queryRoom", ret.HandleRoom)
 	ret.funcRout.Use("auth", ret.HandleAuth)
 	ret.funcRout.Use("newUser", ret.HandleNewUser)
+	ret.funcRout.Use("newRoom", ret.HandleNewRoom)
 	ret.funcRout.Use("joinRoom", ret.HandleJoinRoom)
 	ret.funcRout.Use("online", ret.HandleOnline)
 

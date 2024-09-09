@@ -19,7 +19,7 @@ cometroutinesize: 32
 mysql:
   type: ""
   name: "0"
-  username: root
-  password: 123456
-  addr: 120.78.234.30:3306
+  username: debian-sys-maint
+  password: QTLVb6BaeeaJsFMT
+  addr: 127.0.0.1:3306
   database: laneIM

@@ -17,6 +17,7 @@ type Client struct {
 	Roomids      []int64
 	MsgCh        chan *string
 	ReceiveCount int
+	Room         []int64
 }
 
 // var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
@@ -94,7 +95,7 @@ func (c *Client) Auth(str string) {
 	}
 	tokenDate, err := proto.Marshal(token)
 	if err != nil {
-		//log.Println("faild to encode token")
+		log.Println("faild to encode token")
 	}
 	err = c.conn.WriteMsg(&msg.Msg{
 		Path: "auth",
@@ -102,7 +103,7 @@ func (c *Client) Auth(str string) {
 		Data: tokenDate,
 	})
 	if err != nil {
-		//log.Println("发送消息错误:", err)
+		log.Println("发送消息错误:", err)
 	}
 }
 
@@ -114,7 +115,7 @@ func (c *Client) SendRoomMsg(message *string) {
 	}
 	data, err := proto.Marshal(sendRoomReq)
 	if err != nil {
-		//log.Println("faild to proto marshal", err)
+		log.Println("faild to proto marshal", err)
 	}
 	//log.Println("发送房间消息")
 	err = c.conn.WriteMsg(&msg.Msg{
@@ -123,7 +124,7 @@ func (c *Client) SendRoomMsg(message *string) {
 		Data: data,
 	})
 	if err != nil {
-		//log.Println("send err", err)
+		log.Println("send err", err)
 	}
 }
 
@@ -133,7 +134,7 @@ func (c *Client) QueryRoom() {
 	}
 	data, err := proto.Marshal(cRoomidReq)
 	if err != nil {
-		//log.Println("faild to marhal")
+		log.Println("faild to marhal")
 		return
 	}
 
@@ -143,7 +144,7 @@ func (c *Client) QueryRoom() {
 		Data: data,
 	})
 	if err != nil {
-		//log.Println("send err:", err)
+		log.Println("send err:", err)
 	}
 }
 
@@ -158,7 +159,24 @@ func (c *Client) NewUser() {
 		Data: data,
 	})
 	if err != nil {
-		//log.Println("send err:", err)
+		log.Println("send err:", err)
+	}
+}
+
+func (c *Client) NewRoom() {
+	data, err := proto.Marshal(&msg.CNewRoomReq{
+		Userid: c.Userid,
+	})
+	if err != nil {
+		log.Panicln("faild to encode")
+	}
+	err = c.conn.WriteMsg(&msg.Msg{
+		Path: "newRoom",
+		Seq:  2,
+		Data: data,
+	})
+	if err != nil {
+		log.Println("send err:", err)
 	}
 }
 
@@ -176,7 +194,7 @@ func (c *Client) JoinRoom(roomid int64) {
 		Data: data,
 	})
 	if err != nil {
-		//log.Println("send err:", err)
+		log.Println("send err:", err)
 	}
 	c.Roomids = append(c.Roomids, roomid)
 }
@@ -194,13 +212,12 @@ func (c *Client) Online() {
 		Data: data,
 	})
 	if err != nil {
-		//log.Println("send err:", err)
+		log.Println("send err:", err)
 	}
 }
 
 func (c *Client) Send() {
 	for msg := range c.MsgCh {
-		//log.Println("out ch")
 		c.SendRoomMsg(msg)
 	}
 }
@@ -209,7 +226,7 @@ func (c *Client) Receive() {
 	for {
 		message, err := c.conn.ReadMsg()
 		if err != nil {
-			//log.Println("comet error:", err)
+			log.Println("comet error:", err)
 			return
 		}
 		// //log.Printf("comet reply: %s", message.String())
@@ -218,10 +235,22 @@ func (c *Client) Receive() {
 			rt := &msg.CNewUserResp{}
 			err := proto.Unmarshal(message.Data, rt)
 			if err != nil {
-				//log.Println("faild proto", message.Path, err)
+				log.Println("faild proto", message.Path, err)
 				continue
 			}
 			c.Userid = rt.Userid
+			//log.Println("newUser:", c.Userid)
+			if c.Mgr != nil {
+				c.Mgr.Wait.Done()
+			}
+		case "newRoom":
+			rt := &msg.CNewRoomResp{}
+			err := proto.Unmarshal(message.Data, rt)
+			if err != nil {
+				log.Println("faild proto", message.Path, err)
+				continue
+			}
+			c.Room = append(c.Room, rt.Roomid)
 			//log.Println("newUser:", c.Userid)
 			if c.Mgr != nil {
 				c.Mgr.Wait.Done()
@@ -245,7 +274,7 @@ func (c *Client) Receive() {
 			roomResp := &msg.CRoomidResp{}
 			err := proto.Unmarshal(message.Data, roomResp)
 			if err != nil {
-				//log.Println("faild proto", message.Path, err)
+				log.Println("faild proto", message.Path, err)
 				continue
 			}
 			c.Roomids = roomResp.Roomid

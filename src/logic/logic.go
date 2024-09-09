@@ -132,6 +132,20 @@ func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, 
 	return resp, nil
 }
 
+func (s *Logic) NewRoom(_ context.Context, in *pb.NewRoomReq) (*pb.NewRoomResp, error) {
+	uuid := s.uuid.Generator()
+	// log.Println("new user id:", uuid)
+	err := sql.NewRoom(s.db, uuid, in.Userid, in.CometAddr)
+	if err != nil {
+		log.Println("faild to new user", err)
+		return nil, err
+	}
+	resp := &pb.NewRoomResp{
+		Roomid: uuid,
+	}
+	return resp, nil
+}
+
 func (s *Logic) DelUser(_ context.Context, in *pb.DelUserReq) (*pb.NoResp, error) {
 	err := sql.DelUser(s.db, in.Userid)
 	if err != nil {
@@ -146,7 +160,6 @@ func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, e
 		log.Println("faild to new user", err)
 		return nil, err
 	}
-	// log.Println("in.Userid=, in.Server=", in.Userid, in.Server)
 	err = sql.AddRoomCometWithUserid(s.db, in.Userid, in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)

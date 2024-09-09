@@ -41,7 +41,7 @@ func SetNEAllRoomid(rdb *redis.ClusterClient, roomids []int64) error {
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -73,7 +73,7 @@ func SetEXAllRoomid(rdb *redis.ClusterClient, roomids []int64) error {
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -130,7 +130,7 @@ func SetEXRoomOnlie(rdb *redis.ClusterClient, roomid int64, onlineCount int) err
 		if exists != 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(key, onlineCount, 0).Err()
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -153,7 +153,7 @@ func SetNERoomOnlie(rdb *redis.ClusterClient, roomid int64, onlineCount int) err
 		if exists == 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(key, onlineCount, 0).Err()
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -213,7 +213,7 @@ func SetEXRoomUser(rdb *redis.ClusterClient, roomid int64, userids []int64) erro
 			for _, member := range userids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -240,7 +240,7 @@ func SetNERoomUser(rdb *redis.ClusterClient, roomid int64, userids []int64) erro
 			for _, member := range userids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -267,7 +267,7 @@ func SetNERoomUserNotExist(rdb *redis.ClusterClient, roomid int64, userids []int
 			for _, member := range userids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -329,7 +329,7 @@ func SetEXRoomComet(rdb *redis.ClusterClient, roomid int64, comets []string) err
 			for _, member := range comets {
 				pipe.SAdd(key, member)
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -356,7 +356,7 @@ func SetNERoomComet(rdb *redis.ClusterClient, roomid int64, comets []string) err
 			for _, member := range comets {
 				pipe.SAdd(key, member)
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}

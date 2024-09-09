@@ -228,7 +228,7 @@ func RoomCount(db *gorm.DB, roomid int64) (int, error) {
 }
 
 func AddRoomUser(db *gorm.DB, roomid int64, userid int64) error {
-	err := db.Create(&model.RoomUserid{RoomID: roomid, UserID: userid}).Error
+	err := db.Save(&model.RoomUserid{RoomID: roomid, UserID: userid}).Error
 	if err != nil {
 		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
 			if sqlerr.Number == 1062 {
@@ -285,20 +285,37 @@ func AddRoomComet(db *gorm.DB, roomid int64, comet string) error {
 
 }
 
+// func AddRoomCometWithUserid(db *gorm.DB, userid int64, cometAddr string) error {
+// 	var roomIDs []int64
+// 	err := db.Model(&model.RoomUserid{}).
+// 		Select("room_id").
+// 		Where("user_id = ?", userid).
+// 		Pluck("room_id", &roomIDs).Error
+// 	if err != nil {
+// 		// 处理查询错误
+// 		log.Println("failed to query room IDs")
+// 		return err
+// 	}
+// 	// db.Model(&)
+// 	return nil
+// }
+
 func AddRoomCometWithUserid(db *gorm.DB, userid int64, cometAddr string) error {
 
 	tx := db.Begin()
 
 	// 插入网关地址到所有包含用户的房间
 	err := tx.Exec(`
-INSERT INTO room_comets (room_id, comet_addr)
-SELECT r.room_id, ?
-FROM room_userids r
-LEFT JOIN room_comets c
-ON r.room_id = c.room_id AND c.comet_addr = ?
-WHERE r.user_id = ?
-AND c.comet_addr IS NULL
-`, cometAddr, cometAddr, userid).Error
+INSERT INTO
+    room_comets (room_id, comet_addr)
+SELECT rm.room_id, ?
+FROM room_mgrs rm
+    JOIN room_userids ru ON rm.room_id = ru.room_id
+WHERE
+    ru.user_id = ?
+ON DUPLICATE KEY UPDATE
+    comet_addr = VALUES(comet_addr);
+`, cometAddr, userid).Error
 
 	if err != nil {
 		tx.Rollback()
@@ -310,7 +327,6 @@ AND c.comet_addr IS NULL
 	}
 	return nil
 }
-
 func DelRoomComet(db *gorm.DB, roomid int64, comet string) error {
 	err := db.Where("room_id = ? AND comet = ?", roomid, comet).Delete(&model.RoomComet{}).Error
 	if err != nil {

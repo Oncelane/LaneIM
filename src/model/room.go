@@ -26,23 +26,23 @@ func Init(db *gorm.DB) {
 
 // RoomMgr 模型
 type RoomMgr struct {
-	RoomID int64 `gorm:"primaryKey;"`
+	RoomID int64 `gorm:"primary_key;"`
 }
 
 // RoomOnline 模型
 type RoomOnline struct {
-	RoomID      int64 `gorm:"primaryKey"`
+	RoomID      int64 `gorm:"primary_key"`
 	OnlineCount int   `gorm:"not null"`
 }
 
 // RoomComet 模型
 type RoomComet struct {
-	RoomID    int64  `gorm:"primaryKey"`
-	CometAddr string `gorm:"primaryKey;type:varchar(255);not null"`
+	RoomID    int64  `gorm:"primary_key"`
+	CometAddr string `gorm:"type:varchar(255);"`
 }
 
 // RoomUserid 模型
 type RoomUserid struct {
-	RoomID int64 `gorm:"primaryKey"`
-	UserID int64 `gorm:"primaryKey"`
+	RoomID int64
+	UserID int64 `gorm:"primary_key"`
 }

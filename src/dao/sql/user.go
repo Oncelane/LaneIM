@@ -37,7 +37,14 @@ func SetAllUserid(db *gorm.DB, userids []int64) error {
 
 func NewUserid(db *gorm.DB, userid int64) error {
 	userMgr := model.UserMgr{UserID: userid}
-	if err := db.Create(&userMgr).Error; err != nil {
+	err := db.Create(&userMgr).Error
+	if err != nil {
+		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
+			if sqlerr.Number == 1062 {
+				return nil
+			}
+		}
+		log.Println("faild to add room user", err)
 		return err
 	}
 	return nil
@@ -71,7 +78,7 @@ func UserOnlie(db *gorm.DB, userid int64) (bool, string, error) {
 }
 
 func SetUserOnline(db *gorm.DB, userid int64, cometAddr string) error {
-	err := db.Save(&model.UserOnline{UserID: userid, Online: true}).Error
+	err := db.Model(&model.UserOnline{}).Where("user_id = ?", userid).Update("online", true).Error
 	if err != nil {
 		log.Fatalf("could not set user online: %v", err)
 		return err
@@ -81,7 +88,7 @@ func SetUserOnline(db *gorm.DB, userid int64, cometAddr string) error {
 }
 
 func SetUseroffline(db *gorm.DB, userid int64) error {
-	err := db.Save(&model.UserOnline{UserID: userid, Online: false}).Error
+	err := db.Model(&model.UserOnline{}).Select("user_id = ?", userid).Update("online", false).Error
 	if err != nil {
 		log.Fatalf("could not set user online: %v", err)
 		return err
@@ -120,7 +127,7 @@ func UserRoomCount(db *gorm.DB, userid int64) (int, error) {
 }
 
 func AddUserRoom(db *gorm.DB, userid int64, roomid int64) error {
-	err := db.Create(&model.UserRoom{UserID: userid, RoomID: roomid}).Error
+	err := db.Save(&model.UserRoom{UserID: userid, RoomID: roomid}).Error
 	if err != nil {
 		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
 			if sqlerr.Number == 1062 {

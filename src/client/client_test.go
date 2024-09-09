@@ -8,12 +8,12 @@ import (
 )
 
 func TestManyUser(t *testing.T) {
-	num := 1000
+	num := 10000
 	var cometAddr []string = []string{"ws://127.0.0.1:40050/ws"}
 	// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	g := client.NewClientGroup(num)
 
-	{
+	{ // new user
 		g.Wait.Add(num)
 		for i, c := range g.Clients {
 			go func(i int, c *client.Client) {
@@ -26,17 +26,28 @@ func TestManyUser(t *testing.T) {
 		g.Wait.Wait()
 		log.Printf("all %d connetc and auth", num)
 	}
-	{
+
+	{ // new room
+		g.Wait.Add(1)
+		go func() {
+			g.Clients[0].NewRoom()
+		}()
+		g.Wait.Wait()
+		log.Println("new roomid:", g.Clients[0].Room[0])
+	}
+
+	{ // join room
 		g.Wait.Add(num)
 		for i, c := range g.Clients {
 			go func(i int, c *client.Client) {
-				c.JoinRoom(1005)
+				c.JoinRoom(g.Clients[0].Room[0])
 			}(i, c)
 		}
 		g.Wait.Wait()
 		log.Printf("all %d join room", num)
 	}
-	{
+
+	{ // set online
 		g.Wait.Add(num)
 		for i, c := range g.Clients {
 			go func(i int, c *client.Client) {
@@ -50,6 +61,8 @@ func TestManyUser(t *testing.T) {
 	msg := "hello"
 	g.Send(&msg)
 	timeStart := time.Now()
+
+	ch := make(chan struct{})
 	go func() {
 		for {
 
@@ -60,9 +73,11 @@ func TestManyUser(t *testing.T) {
 			time.Sleep(time.Millisecond)
 			if sum == num*num {
 				log.Println("receve message count:", sum, "spand time", time.Since(timeStart))
+				ch <- struct{}{}
 				break
 			}
 		}
 	}()
-	select {}
+	<-ch
+	log.Println("end")
 }

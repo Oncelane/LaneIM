@@ -60,6 +60,12 @@ message NewUserReq {}
 
 message NewUserResp { int64 userid = 1; }
 
+message NewRoomReq {
+  int64 userid = 1;
+  string cometAddr = 2;
+}
+
+message NewRoomResp { int64 roomid = 1; }
 message DelUserReq { int64 userid = 1; }
 
 message AuthReq {
@@ -78,6 +84,8 @@ service logic {
 
   rpc NewUser(NewUserReq) returns (NewUserResp);
   rpc DelUser(DelUserReq) returns (NoResp);
+
+  rpc NewRoom(NewRoomReq) returns (NewRoomResp);
 
   rpc JoinRoom(JoinRoomReq) returns (NoResp);
   rpc QuitRoom(QuitRoomReq) returns (NoResp);

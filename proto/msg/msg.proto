@@ -59,6 +59,9 @@ message CNewUserReq {}
 
 message CNewUserResp { int64 userid = 1; }
 
+message CNewRoomReq { int64 userid = 1; }
+message CNewRoomResp { int64 roomid = 1; }
+
 message CJoinRoomReq {
   int64 userid = 1;
   int64 roomid = 2;

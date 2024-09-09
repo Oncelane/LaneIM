@@ -116,7 +116,7 @@ func TestRedisAndSqlAllRoomid(t *testing.T) {
 	mysqlConfig.Default()
 	db := sql.DB(mysqlConfig)
 	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001"}})
-	cache := localCache.Cache(time.Second * 3)
+	cache := localCache.Cache(time.Second * 30)
 	rt, err := dao.RoomUserid(cache, rdb.Client, db, 1005)
 	if err != nil {
 		t.Error(err)

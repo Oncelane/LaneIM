@@ -170,7 +170,7 @@ func (c *Mysql) Default() {
 	*c = Mysql{
 		Name:     "0",
 		Username: "debian-sys-maint",
-		Password: "FJho5xokpFqZygL5",
+		Password: "QTLVb6BaeeaJsFMT",
 		Addr:     "127.0.0.1:3306",
 		DataBase: "laneIM",
 	}

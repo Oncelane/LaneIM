@@ -153,7 +153,7 @@ func SetEXUserOnline(rdb *redis.ClusterClient, userid int64, comet string) error
 		if exists != 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 1, 0).Err()
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -179,7 +179,7 @@ func SetNEUserOnline(rdb *redis.ClusterClient, userid int64, comet string) error
 		if exists == 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 1, 0).Err()
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -207,7 +207,7 @@ func SetEXUserOffline(rdb *redis.ClusterClient, userid int64, comet string) erro
 		if exists != 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 0, 0).Err()
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -233,7 +233,7 @@ func SetNEUserOffline(rdb *redis.ClusterClient, userid int64, comet string) erro
 		if exists == 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(fmt.Sprintf("user:online:%s", lane.Int64ToString(userid)), 0, 0).Err()
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -288,7 +288,7 @@ func SetEXUserRoom(rdb *redis.ClusterClient, userid int64, roomids []int64) erro
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -315,7 +315,7 @@ func SetNEUserRoom(rdb *redis.ClusterClient, userid int64, roomids []int64) erro
 			for _, member := range roomids {
 				pipe.SAdd(key, lane.Int64ToString(member))
 			}
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -363,7 +363,7 @@ func SetEXUserComet(rdb *redis.ClusterClient, userid int64, comet string) error 
 		if exists != 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(key, comet, 0)
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
@@ -388,7 +388,7 @@ func SetNEUserComet(rdb *redis.ClusterClient, userid int64, comet string) error 
 		if exists == 0 {
 			pipe := tx.Pipeline()
 			pipe.Set(key, comet, 0)
-			pipe.Expire(key, time.Second*3)
+			pipe.Expire(key, time.Second*30)
 			_, err := pipe.Exec()
 			return err
 		}
