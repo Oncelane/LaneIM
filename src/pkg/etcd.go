@@ -230,7 +230,7 @@ type UserRoom struct {
 func (e *EtcdClient) atomicUpdate(key, old, new string) error {
 	rt, err := conc.NewSTM(e.etcd, func(s conc.STM) error {
 		tmp := s.Get(key)
-		log.Printf("key[%v], old[%v], new[%v], tmp[%v]\n", key, old, new, tmp)
+		// log.Printf("key[%v], old[%v], new[%v], tmp[%v]\n", key, old, new, tmp)
 		if tmp == old || tmp == "" {
 			s.Put(key, new)
 			return nil

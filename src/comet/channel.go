@@ -50,7 +50,7 @@ func (c *Comet) recvRoutine(ch *Channel) {
 			c.DelChannel(ch)
 			return
 		}
-		log.Println("message.Path", message.Path)
+		// log.Println("message.Path", message.Path)
 		f := c.funcRout.Find(message.Path)
 		if f == nil {
 			log.Println("wrong method")
@@ -65,7 +65,6 @@ func (c *Comet) recvRoutine(ch *Channel) {
 
 func (c *Comet) sendRoutine(ch *Channel) {
 	for message := range ch.sendCh {
-		log.Println("reply to client:", ch.id)
 		err := ch.conn.WriteMsg(message)
 		if err != nil {
 			// TODO

@@ -40,7 +40,7 @@ var upGrader = websocket.Upgrader{
 
 func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 建立websocket链接
-	log.Println("receive ws connect")
+	// log.Println("receive ws connect")
 	ws, err := upGrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("upGrader fail", err)
@@ -53,23 +53,5 @@ func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.chmu.Lock()
 	c.channels[ch.id] = ch
 	c.chmu.Unlock()
-
-	// 查询 userid  所处 room
-
-	// roomReq := &logic.QueryRoomReq{
-	// 	Userid: []int64{ch.id},
-	// }
-	// roomResp, err := c.pickLogic().Client.QueryRoom(context.Background(), roomReq)
-	// if err != nil {
-	// 	log.Println("faild to query userid", ch.id, "'s roomid")
-	// 	return
-	// }
-	// // comet初始化已加入的room
-	// if len(roomResp.Roomids) != 0 {
-	// 	for _, roomid := range roomResp.Roomids[0].Roomid {
-	// 		c.Bucket(ch.id).PutChannel(roomid, ch)
-	// 		log.Println("userid:", ch.id, "in room", roomid)
-	// 	}
-	// }
 	c.serveIO(ch)
 }

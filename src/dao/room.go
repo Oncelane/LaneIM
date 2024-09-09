@@ -1,8 +1,6 @@
 package dao
 
 import (
-	"log"
-
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
@@ -21,7 +19,7 @@ func AllRoomid(rdb *redis.ClusterClient, db *gorm.DB) ([]int64, error) {
 	} else {
 		return rt, nil
 	}
-	log.Println("触发sql查询")
+	// log.Println("触发sql查询")
 	rt, err = sql.AllRoomid(db)
 	if err != nil {
 		return rt, err
@@ -29,7 +27,7 @@ func AllRoomid(rdb *redis.ClusterClient, db *gorm.DB) ([]int64, error) {
 	if len(rt) == 0 {
 		return rt, nil
 	}
-	log.Println("同步到redis")
+	// log.Println("同步到redis")
 	rds.SetNEAllRoomid(rdb, rt)
 	return rt, nil
 }
@@ -39,18 +37,18 @@ func RoomUserid(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *gorm.DB,
 	if err == nil {
 		return rt, err
 	}
-	log.Println("触发redis查询")
+	// log.Println("触发redis查询")
 	rt, err = rds.RoomUserid(rdb, roomid)
 	if err != nil {
 		if err != redis.Nil {
 			return rt, err
 		}
 	} else {
-		log.Println("同步到本地cache")
+		// log.Println("同步到本地cache")
 		localCache.SetRoomUserid(cache, roomid, rt)
 		return rt, nil
 	}
-	log.Println("触发sql查询")
+	// log.Println("触发sql查询")
 	rt, err = sql.RoomUserid(db, roomid)
 	if err != nil {
 		return rt, err
@@ -58,7 +56,7 @@ func RoomUserid(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *gorm.DB,
 	if len(rt) == 0 {
 		return rt, nil
 	}
-	log.Println("同步到redis")
+	// log.Println("同步到redis")
 
 	err = rds.SetNERoomUser(rdb, roomid, rt)
 	if err != nil {
@@ -72,18 +70,18 @@ func RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *gorm.DB, 
 	if err == nil {
 		return rt, err
 	}
-	log.Println("触发redis查询")
+	// log.Println("触发redis查询")
 	rt, err = rds.RoomComet(rdb, roomid)
 	if err != nil {
 		if err != redis.Nil {
 			return rt, err
 		}
 	} else {
-		log.Println("同步到本地cache")
+		// log.Println("同步到本地cache")
 		localCache.SetRoomComet(cache, roomid, rt)
 		return rt, nil
 	}
-	log.Println("触发sql查询")
+	// log.Println("触发sql查询")
 	rt, err = sql.RoomComet(db, roomid)
 	if err != nil {
 		return rt, err
@@ -91,7 +89,7 @@ func RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *gorm.DB, 
 	if len(rt) == 0 {
 		return rt, nil
 	}
-	log.Println("同步到redis")
+	// log.Println("同步到redis")
 	rds.SetNERoomComet(rdb, roomid, rt)
 	return rt, nil
 }

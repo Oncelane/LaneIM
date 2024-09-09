@@ -307,15 +307,6 @@ func RoomComet(rdb *redis.ClusterClient, roomid int64) ([]string, error) {
 	return cometStr, err
 }
 
-// func AddRoomComet(rdb *redis.ClusterClient, roomid lane.Int64, comet string) error {
-// 	_, err := rdb.SAdd(fmt.Sprintf("room:comet:%s", roomid.String()), comet).Result()
-// 	if err != nil {
-// 		log.Println("faild to add room comet", err)
-// 		return err
-// 	}
-// 	return nil
-// }
-
 func EXRoomComet(rdb *redis.ClusterClient, roomid int64) (bool, error) {
 	key := fmt.Sprintf("room:comet:%s", lane.Int64ToString(roomid))
 	return EXKey(rdb, key)
@@ -375,15 +366,6 @@ func SetNERoomComet(rdb *redis.ClusterClient, roomid int64, comets []string) err
 	return err
 }
 
-// func DelRoomComet(rdb *redis.ClusterClient, roomid lane.Int64, comet string) error {
-// 	_, err := rdb.SRem(fmt.Sprintf("room:comet:%s", roomid.String()), comet).Result()
-// 	if err != nil {
-// 		log.Println("faild to del room comet", err)
-// 		return err
-// 	}
-// 	return nil
-// }
-
 func DelRoomAllComet(rdb *redis.ClusterClient, roomid int64) error {
 	_, err := rdb.Del(fmt.Sprintf("room:comet:%s", lane.Int64ToString(roomid))).Result()
 	if err != nil {
@@ -392,18 +374,3 @@ func DelRoomAllComet(rdb *redis.ClusterClient, roomid int64) error {
 	}
 	return nil
 }
-
-// func NewRoom(rdb *redis.ClusterClient, roomid lane.Int64, userid lane.Int64, serverAddr string) error {
-// 	AddRoomid(rdb, roomid)
-// 	SetRoomOnlie(rdb, roomid, 1)
-// 	AddRoomUser(rdb, roomid, userid)
-// 	return nil
-// }
-
-// func DelRoom(rdb *redis.ClusterClient, roomid lane.Int64) error {
-// 	DelRoomid(rdb, roomid)
-// 	DelRoomOnline(rdb, roomid)
-// 	DelRoomAllComet(rdb, roomid)
-// 	DelRoomAllUser(rdb, roomid)
-// 	return nil
-// }

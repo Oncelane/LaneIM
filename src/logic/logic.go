@@ -7,6 +7,7 @@ import (
 	"laneIM/src/config"
 	"laneIM/src/dao"
 	"laneIM/src/dao/sql"
+	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"log"
 	"net"
@@ -55,6 +56,7 @@ func NewLogic(conf config.Logic) *Logic {
 	s.uuid = NewUuidGenerator(int64(conf.Id))
 
 	s.db = sql.DB(conf.Mysql)
+	model.Init(s.db)
 
 	// init redis
 	redisAddrs := s.etcd.GetAddr("redis")
@@ -110,7 +112,7 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 		if err != nil {
 			log.Println("faild to send kafka:", err)
 		}
-		log.Println("success send message:", in.String())
+		// log.Println("success send message:", in.String())
 
 	}
 	return nil, nil
@@ -118,7 +120,7 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 
 func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, error) {
 	uuid := s.uuid.Generator()
-	log.Println("new user id:", uuid)
+	// log.Println("new user id:", uuid)
 	err := sql.NewUser(s.db, uuid)
 	if err != nil {
 		log.Println("faild to new user", err)
@@ -144,7 +146,7 @@ func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, e
 		log.Println("faild to new user", err)
 		return nil, err
 	}
-
+	// log.Println("in.Userid=, in.Server=", in.Userid, in.Server)
 	err = sql.AddRoomCometWithUserid(s.db, in.Userid, in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)
@@ -167,7 +169,7 @@ func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, err
 		log.Printf("faild user %d to join room:%d\n", in.Userid, in.Roomid)
 		return nil, err
 	}
-	err = sql.AddRoomUser(s.db, in.Roomid, in.Roomid)
+	err = sql.AddRoomUser(s.db, in.Roomid, in.Userid)
 	if err != nil {
 		log.Println("faild room to add user:", err)
 		return nil, err
@@ -189,7 +191,7 @@ func (s *Logic) QueryRoom(_ context.Context, in *pb.QueryRoomReq) (*pb.QueryRoom
 	}
 	for _, userid := range in.Userid {
 		roomids, err := dao.UserRoom(s.redis.Client, s.db, userid)
-		log.Printf("logic dao query user%d have room%v\n", userid, roomids)
+		// log.Printf("logic dao query user%d have room%v\n", userid, roomids)
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +209,7 @@ func (s *Logic) QueryServer(context.Context, *pb.QueryServerReq) (*pb.QueryServe
 }
 
 func (s *Logic) Auth(_ context.Context, in *pb.AuthReq) (*pb.AuthResp, error) {
-	log.Println("auth pass:", in.Userid)
+	// log.Println("auth pass:", in.Userid)
 	out := &pb.AuthResp{Pass: true}
 	return out, nil
 }

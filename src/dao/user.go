@@ -1,8 +1,6 @@
 package dao
 
 import (
-	"log"
-
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
 
@@ -19,12 +17,12 @@ func AllUserid(rdb *redis.ClusterClient, db *gorm.DB) ([]int64, error) {
 	} else {
 		return rt, nil
 	}
-	log.Println("触发sql查询")
+	//log.Println("触发sql查询")
 	rt, err = sql.AllUserid(db)
 	if err != nil {
 		return rt, err
 	}
-	log.Println("同步到redis")
+	//log.Println("同步到redis")
 	rds.SetNEAllUserid(rdb, rt)
 	return rt, nil
 }
@@ -38,12 +36,12 @@ func UserRoom(rdb *redis.ClusterClient, db *gorm.DB, userid int64) ([]int64, err
 	} else {
 		return rt, nil
 	}
-	log.Println("触发sql查询")
+	//log.Println("触发sql查询")
 	rt, err = sql.UserRoom(db, userid)
 	if err != nil {
 		return rt, err
 	}
-	log.Println("同步到redis")
+	//log.Println("同步到redis")
 	err = rds.SetNEUserRoom(rdb, userid, rt)
 	if err != nil {
 		return rt, err
@@ -60,7 +58,7 @@ func UserComet(rdb *redis.ClusterClient, db *gorm.DB, userid int64) (string, err
 	} else {
 		return rt, nil
 	}
-	log.Println("触发sql查询")
+	//log.Println("触发sql查询")
 	rt, err = sql.UserComet(db, userid)
 	if err != nil {
 		return rt, err
@@ -78,7 +76,7 @@ func UserOnline(rdb *redis.ClusterClient, db *gorm.DB, userid int64) (bool, stri
 	} else {
 		return rt, cometAddr, nil
 	}
-	log.Println("触发sql查询")
+	//log.Println("触发sql查询")
 	rt, cometAddr, err = sql.UserOnlie(db, userid)
 	if err != nil {
 		return rt, cometAddr, err

@@ -45,7 +45,7 @@ func (b *Bucket) NewRoom(roomid int64) *Room {
 	b.rw.Lock()
 	defer b.rw.Unlock()
 	if r, exist := b.rooms[roomid]; exist {
-		log.Println("room:", roomid, "already exist,can not new")
+		// log.Println("room:", roomid, "already exist,can not new")
 		return r
 	}
 	newRoom := &Room{
@@ -53,7 +53,7 @@ func (b *Bucket) NewRoom(roomid int64) *Room {
 	}
 	log.Println("create new room:", roomid)
 	newRoom.UpdateFromRedis(b.job.cache, b.job.redis, b.job.db)
-	log.Println("sync room from redis:", roomid, "comets:", newRoom.info.Server)
+	// log.Println("sync room from redis:", roomid, "comets:", newRoom.info.Server)
 	b.rooms[roomid] = newRoom
 
 	return newRoom
@@ -77,7 +77,7 @@ func (g *Bucket) Room(m *comet.RoomReq) {
 	for cometAddr := range room.info.Server {
 		if _, exist := g.job.comets[cometAddr]; exist {
 			// 通过bucket的routine进行实际IO
-			log.Printf("message to roomid:%d comet:%v", room.roomid, cometAddr)
+			// log.Printf("message to roomid:%d comet:%v", room.roomid, cometAddr)
 			g.job.comets[cometAddr].roomCh <- m
 		} else {
 			log.Println("error job doesn't have this comet:", cometAddr)

@@ -325,24 +325,6 @@ func SetNEUserRoom(rdb *redis.ClusterClient, userid int64, roomids []int64) erro
 	return err
 }
 
-// func AddUserRoom(rdb *redis.ClusterClient, userid int64, room int64) error {
-// 	_, err := rdb.SAdd(fmt.Sprintf("user:room:%s", lane.Int64ToString(userid)), room.String()).Result()
-// 	if err != nil {
-// 		log.Println("faild to add user room", err)
-// 		return err
-// 	}
-// 	return nil
-// }
-
-// func DelUserRoom(rdb *redis.ClusterClient, userid int64, room int64) error {
-// 	_, err := rdb.SRem(fmt.Sprintf("user:room:%s", lane.Int64ToString(userid)), room.String()).Result()
-// 	if err != nil {
-// 		log.Println("faild to del user room", err)
-// 		return err
-// 	}
-// 	return nil
-// }
-
 func DelUserAllRoom(rdb *redis.ClusterClient, userid int64) error {
 	_, err := rdb.Del(fmt.Sprintf("user:room:%s", lane.Int64ToString(userid))).Result()
 	if err != nil {

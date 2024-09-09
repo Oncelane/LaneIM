@@ -45,7 +45,7 @@ func (l *Logic) Close() {
 	l.Online = false
 	l.Client = nil
 	l.conn.Close()
-	log.Println("remove logic", l.Addr)
+	//log.Println("remove logic", l.Addr)
 }
 
 type Comet struct {
@@ -108,10 +108,12 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 	ret.funcRout.Use("sendRoom", ret.HandleSendRoom)
 	ret.funcRout.Use("queryRoom", ret.HandleRoom)
 	ret.funcRout.Use("auth", ret.HandleAuth)
+	ret.funcRout.Use("newUser", ret.HandleNewUser)
+	ret.funcRout.Use("joinRoom", ret.HandleJoinRoom)
+	ret.funcRout.Use("online", ret.HandleOnline)
 
 	// regieter etcd
 	ret.etcd.SetAddr("grpc:comet:"+conf.Name, conf.Addr)
-	log.Println("pass")
 	return ret
 }
 
@@ -135,7 +137,7 @@ func (c *Comet) WatchLogic() {
 			}
 
 			// not exist
-			log.Println("etcd discovery logic:", addr)
+			//log.Println("etcd discovery logic:", addr)
 			c.mu.Lock()
 			c.logics[addr] = NewLogic(addr)
 			c.mu.Unlock()
@@ -171,7 +173,7 @@ func (c *Comet) pickLogic() *Logic {
 			return v
 		}
 		c.mu.RUnlock()
-		log.Println("non discovery logic")
+		// log.Println("non discovery logic")
 		time.Sleep(time.Second)
 	}
 }
@@ -208,7 +210,6 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 }
 
 func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
-	log.Println("comet send room")
 	c.Bucket(in.Roomid).GetRoom(in.Roomid).Send(&msg.Msg{
 		Path: "roomMsg",
 		Data: in.Data,

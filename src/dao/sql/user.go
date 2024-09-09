@@ -4,6 +4,7 @@ import (
 	"laneIM/src/model"
 	"log"
 
+	mysql2 "github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -119,16 +120,21 @@ func UserRoomCount(db *gorm.DB, userid int64) (int, error) {
 }
 
 func AddUserRoom(db *gorm.DB, userid int64, roomid int64) error {
-	err := db.Create(&model.UserRoom{UserID: userid, RoomID: int64(roomid)}).Error
+	err := db.Create(&model.UserRoom{UserID: userid, RoomID: roomid}).Error
 	if err != nil {
-		log.Println("faild to add user user", err)
+		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
+			if sqlerr.Number == 1062 {
+				return nil
+			}
+		}
+		log.Println("faild to add room user", err)
 		return err
 	}
 	return nil
 }
 
 func DelUserRoom(db *gorm.DB, userid int64, roomid int64) error {
-	err := db.Where("user_id = ? and room_id = ?", userid, int64(roomid)).Delete(&model.UserRoom{}).Error
+	err := db.Where("user_id = ? and room_id = ?", userid, roomid).Delete(&model.UserRoom{}).Error
 	if err != nil {
 		log.Println("faild to del user user", err)
 		return err
