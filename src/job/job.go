@@ -45,9 +45,7 @@ func NewJob(conf config.Job) *Job {
 	cache, _ := bigcache.NewBigCache(cacheConfig)
 	j.cache = cache
 
-	mysqlConfig := config.Mysql{}
-	mysqlConfig.Default()
-	j.db = sql.DB(mysqlConfig)
+	j.db = sql.DB(conf.Mysql)
 
 	j.NewBucket()
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"laneIM/src/config"
 	"laneIM/src/dao/rds"
@@ -47,9 +48,7 @@ func NewCanal(conf config.Canal) *Canal {
 		kafkaProducer: pkg.NewKafkaProducer(conf.KafkaProducer),
 		conf:          conf,
 	}
-	mysqlConfig := config.Mysql{}
-	mysqlConfig.Default()
-	c.db = sql.DB(mysqlConfig)
+	c.db = sql.DB(conf.Mysql)
 	log.Println("start canal")
 	return c
 
@@ -81,6 +80,10 @@ func (c *Canal) RunReceive() {
 	}
 }
 
+var (
+	ConfigPath = flag.String("c", "config.yml", "path fo config.yml folder")
+)
+
 func main() {
 
 	// 192.168.199.17 替换成你的canal server的地址
@@ -107,8 +110,9 @@ func main() {
 	//  3.  canal下的以canal打头的表：canal\\.canal.*
 	//  4.  canal schema下的一张表：canal\\.test1
 	//  5.  多个规则组合使用：canal\\..*,mysql.test1,mysql.test2 (逗号分隔)
+	flag.Parse()
 	conf := config.Canal{}
-	config.Init("canal", &conf)
+	config.Init(*ConfigPath, &conf)
 	canal := NewCanal(conf)
 	go canal.RunCanal()
 	go canal.RunReceive()

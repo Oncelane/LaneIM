@@ -37,14 +37,12 @@ type RoomOnline struct {
 
 // RoomComet 模型
 type RoomComet struct {
-	ID        uint   `gorm:"primaryKey;"`
-	RoomID    int64  `gorm:"not null"`
-	CometAddr string `gorm:"type:varchar(255);not null;unique"`
+	RoomID    int64  `gorm:"primaryKey"`
+	CometAddr string `gorm:"primaryKey;type:varchar(255);not null"`
 }
 
 // RoomUserid 模型
 type RoomUserid struct {
-	ID     uint  `gorm:"primaryKey;"`
-	RoomID int64 `gorm:"not null"`
-	UserID int64 `gorm:"unique;not null"`
+	RoomID int64 `gorm:"primaryKey"`
+	UserID int64 `gorm:"primaryKey"`
 }

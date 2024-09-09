@@ -1,8 +1,7 @@
 addr: 127.0.0.1:50050
 name: "0"
-type: comet
 etcd:
-  addr:
-    - 127.0.0.1:2379
+    addr:
+        - 127.0.0.1:2379
 websocketaddr: 127.0.0.1:40050
 bucketsize: 32

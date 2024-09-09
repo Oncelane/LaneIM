@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"laneIM/src/config"
 	"laneIM/src/logic"
 	"log"
@@ -9,11 +10,14 @@ import (
 	"syscall"
 )
 
-var conf config.Logic
+var (
+	ConfigPath = flag.String("c", "config.yml", "path fo config.yml folder")
+)
 
 func main() {
-	conf = config.Logic{}
-	config.Init("logic", &conf)
+	flag.Parse()
+	conf := config.Logic{}
+	config.Init(*ConfigPath, &conf)
 	log.Printf("logic server start by env:%+v", conf)
 	l := logic.NewLogic(conf)
 	// 等待信号

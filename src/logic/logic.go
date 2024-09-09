@@ -10,25 +10,30 @@ import (
 	"laneIM/src/pkg"
 	"log"
 	"net"
-	"sync"
 
 	"github.com/IBM/sarama"
+	"github.com/bwmarrin/snowflake"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"gorm.io/gorm"
 )
 
 type UuidGenerator struct {
-	mu   sync.Mutex
-	uuid int64
+	node *snowflake.Node
+}
+
+func NewUuidGenerator(name int64) *UuidGenerator {
+	node, err := snowflake.NewNode(name)
+	if err != nil {
+		log.Panicln("faild to create snowflake node")
+	}
+	return &UuidGenerator{
+		node: node,
+	}
 }
 
 func (u *UuidGenerator) Generator() (rt int64) {
-	u.mu.Lock()
-	rt = u.uuid
-	u.uuid++
-	u.mu.Unlock()
-	return
+	return u.node.Generate().Int64()
 }
 
 type Logic struct {
@@ -46,11 +51,10 @@ func NewLogic(conf config.Logic) *Logic {
 	s := &Logic{
 		etcd: pkg.NewEtcd(conf.Etcd),
 		conf: conf,
-		uuid: &UuidGenerator{},
 	}
-	mysqlConfig := config.Mysql{}
-	mysqlConfig.Default()
-	s.db = sql.DB(mysqlConfig)
+	s.uuid = NewUuidGenerator(int64(conf.Id))
+
+	s.db = sql.DB(conf.Mysql)
 
 	// init redis
 	redisAddrs := s.etcd.GetAddr("redis")
@@ -120,7 +124,6 @@ func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, 
 		log.Println("faild to new user", err)
 		return nil, err
 	}
-
 	resp := &pb.NewUserResp{
 		Userid: uuid,
 	}
@@ -139,6 +142,13 @@ func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, e
 	err := sql.SetUserOnline(s.db, in.Userid, in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)
+		return nil, err
+	}
+
+	err = sql.AddRoomCometWithUserid(s.db, in.Userid, in.Server)
+	if err != nil {
+		log.Println("faild to new user", err)
+		return nil, err
 	}
 	return nil, nil
 }
@@ -155,6 +165,12 @@ func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, err
 	err := sql.AddUserRoom(s.db, in.Userid, in.Roomid)
 	if err != nil {
 		log.Printf("faild user %d to join room:%d\n", in.Userid, in.Roomid)
+		return nil, err
+	}
+	err = sql.AddRoomUser(s.db, in.Roomid, in.Roomid)
+	if err != nil {
+		log.Println("faild room to add user:", err)
+		return nil, err
 	}
 	return nil, err
 }

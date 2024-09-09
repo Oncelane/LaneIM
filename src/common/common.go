@@ -1,6 +1,7 @@
 package common
 
 import (
+	"hash/fnv"
 	"log"
 	"strconv"
 )
@@ -40,4 +41,10 @@ func StringTo64(in string) int64 {
 		return 404
 	}
 	return out
+}
+
+func HashStringTo64(str string) int64 {
+	h := fnv.New64a()
+	h.Write([]byte(str))
+	return int64(h.Sum64() >> 1)
 }

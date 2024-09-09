@@ -13,6 +13,7 @@ import (
 
 func DB(conf config.Mysql) *gorm.DB {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", conf.Username, conf.Password, conf.Addr, conf.DataBase)
+	log.Println(dsn)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
@@ -270,6 +271,32 @@ func AddRoomComet(db *gorm.DB, roomid int64, comet string) error {
 	}
 	return err
 
+}
+
+func AddRoomCometWithUserid(db *gorm.DB, userid int64, cometAddr string) error {
+
+	tx := db.Begin()
+
+	// 插入网关地址到所有包含用户的房间
+	err := tx.Exec(`
+INSERT INTO room_comets (room_id, comet_addr)
+SELECT r.room_id, ?
+FROM room_userids r
+LEFT JOIN room_comets c
+ON r.room_id = c.room_id AND c.comet_addr = ?
+WHERE r.user_id = ?
+AND c.comet_addr IS NULL
+`, cometAddr, cometAddr, userid).Error
+
+	if err != nil {
+		tx.Rollback()
+		// 处理错误
+		log.Println("faild to add comet to all room")
+		return err
+	} else {
+		tx.Commit()
+	}
+	return nil
 }
 
 func DelRoomComet(db *gorm.DB, roomid int64, comet string) error {

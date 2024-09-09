@@ -20,9 +20,12 @@ type Canal struct {
 	MsgChSize        int
 	KafkaProducer    KafkaProducer
 	Redis            Redis
+	Mysql            Mysql
 }
 
 func (c *Canal) Default() {
+	mysqlC := Mysql{}
+	mysqlC.Default()
 	*c = Canal{
 		CanalAddress:     "127.0.0.1",
 		CanalPort:        11111,
@@ -39,14 +42,17 @@ func (c *Canal) Default() {
 		Redis: Redis{
 			Addr: []string{"127.0.0.1" + ":7001", "127.0.0.1" + ":7002", "127.0.0.1" + ":7003"},
 		},
+		Mysql: mysqlC,
 	}
 }
 
 type Logic struct {
+	Id            int
 	Addr          string
 	Name          string
 	KafkaProducer KafkaProducer
 	Etcd          Etcd
+	Mysql         Mysql
 }
 
 func (c *Logic) Default() {
@@ -54,7 +60,10 @@ func (c *Logic) Default() {
 	if err != nil {
 		log.Panicln("faild to get outbound ip:", err)
 	}
+	mysqlC := Mysql{}
+	mysqlC.Default()
 	*c = Logic{
+		Id:   0,
 		Addr: ip + ":50060",
 		Name: "0",
 		KafkaProducer: KafkaProducer{
@@ -63,13 +72,13 @@ func (c *Logic) Default() {
 		Etcd: Etcd{
 			Addr: []string{ip + ":2379"},
 		},
+		Mysql: mysqlC,
 	}
 }
 
 type Comet struct {
 	Addr          string
 	Name          string
-	Type          string
 	Etcd          Etcd
 	WebsocketAddr string
 
@@ -84,7 +93,6 @@ func (c *Comet) Default() {
 	*c = Comet{
 		Addr: ip + ":50050",
 		Name: "0",
-		Type: "comet",
 		Etcd: Etcd{
 			Addr: []string{ip + ":2379"},
 		},
@@ -101,6 +109,7 @@ type Job struct {
 	Redis            Redis
 	BucketSize       int
 	CometRoutineSize int
+	Mysql            Mysql
 }
 
 func (c *Job) Default() {
@@ -108,6 +117,8 @@ func (c *Job) Default() {
 	if err != nil {
 		log.Panicln("faild to get outbound ip:", err)
 	}
+	mysqlC := Mysql{}
+	mysqlC.Default()
 	*c = Job{
 		Addr: ip + ":50070",
 		Name: "0",
@@ -124,6 +135,7 @@ func (c *Job) Default() {
 		},
 		BucketSize:       32,
 		CometRoutineSize: 32,
+		Mysql:            mysqlC,
 	}
 }
 
@@ -158,7 +170,7 @@ func (c *Mysql) Default() {
 	*c = Mysql{
 		Name:     "0",
 		Username: "debian-sys-maint",
-		Password: "QTLVb6BaeeaJsFMT",
+		Password: "FJho5xokpFqZygL5",
 		Addr:     "127.0.0.1:3306",
 		DataBase: "laneIM",
 	}
@@ -180,39 +192,39 @@ func ReadRemote(conf LaneConfig) {
 
 }
 
-func Init(Type string, conf LaneConfig) {
-	_, err := os.Stat(Type + ".yml")
+func Init(Path string, conf LaneConfig) {
+	_, err := os.Stat(Path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			conf.Default()
-			WriteLocal(Type, conf)
+			WriteLocal(Path, conf)
 			log.Println("please check for the config.yml if needed to be modified, then run again")
 			os.Exit(1)
 		} else {
 			log.Panicln("wrong err:", err)
 		}
 	}
-	ReadLocal(Type, conf)
+	ReadLocal(Path, conf)
 }
 
-func WriteLocal(Type string, conf LaneConfig) error {
+func WriteLocal(Path string, conf LaneConfig) error {
 	out, err := yaml.Marshal(conf)
 	if err != nil {
-		log.Panicln("failed to marshal config", Type, ":", err)
+		log.Panicln("failed to marshal config", Path, ":", err)
 		return err
 	}
 
-	err = os.WriteFile(Type+".yml", out, 0644)
+	err = os.WriteFile(Path, out, 0644)
 	if err != nil {
-		log.Panicln("failed to write ", Type, err)
+		log.Panicln("failed to write ", Path, err)
 		return err
 	}
 	return nil
 }
 
-func ReadLocal(Type string, conf LaneConfig) error {
-	log.Println("read from ", Type+".yml")
-	data, err := os.ReadFile(Type + ".yml")
+func ReadLocal(Path string, conf LaneConfig) error {
+	log.Println("read from ", Path)
+	data, err := os.ReadFile(Path)
 	if err != nil {
 		log.Panicln("config.yaml does not exist")
 	}

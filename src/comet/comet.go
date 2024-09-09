@@ -202,9 +202,11 @@ func (c *Comet) LogictSendMsg(message *logic.SendMsgReq) error {
 func (c *Comet) Single(context.Context, *comet.SingleReq) (*comet.NoResp, error) {
 	return nil, nil
 }
+
 func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, error) {
 	return nil, nil
 }
+
 func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
 	log.Println("comet send room")
 	c.Bucket(in.Roomid).GetRoom(in.Roomid).Send(&msg.Msg{

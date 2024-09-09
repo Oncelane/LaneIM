@@ -1,0 +1,16 @@
+addr: 127.0.0.1:50060
+name: "0"
+id: 0
+kafkaproducer:
+  addr:
+    - 127.0.0.1:9092
+etcd:
+  addr:
+    - 127.0.0.1:2379
+mysql:
+  type: ""
+  name: "0"
+  username: debian-sys-maint
+  password: FJho5xokpFqZygL5
+  addr: 127.0.0.1:3306
+  database: laneIM

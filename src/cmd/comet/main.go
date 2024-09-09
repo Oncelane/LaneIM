@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"laneIM/src/comet"
 	"laneIM/src/config"
 	"log"
@@ -10,9 +11,15 @@ import (
 	"syscall"
 )
 
+var (
+	ConfigPath = flag.String("c", "config.yml", "path fo config.yml folder")
+)
+
 func main() {
+	flag.Parse()
 	conf := config.Comet{}
-	config.Init("comet", &conf)
+	config.Init(*ConfigPath, &conf)
+
 	log.Printf("comet server start by env:%+v", conf)
 	c := comet.NewSerivceComet(conf)
 

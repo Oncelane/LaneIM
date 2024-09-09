@@ -4,51 +4,43 @@ GOBUILD=$(GOCMD) build
 GOTEST=$(GOCMD) test
 
 # Default number of clusters
-Njob ?= 2
-Ncomet ?= 2
+Njob ?= 1
+Ncomet ?= 1
 
 # Build all jobs
 all: test build
 
 # Build job directories and binaries
-build-job-group:
-	mkdir -p bin
-	for i in $(shell seq 1 $(Njob)); do \
-		rm -rf bin/job$$i; \
-		mkdir -p bin/job$$i; \
-		cp src/cmd/job/job.yml bin/job$$i/job.yml; \
-		$(GOBUILD) -o bin/job$$i/job ./src/cmd/job/main.go; \
-	done
+build-job:
+	mkdir -p bin/job; \
+	rm -rf bin/job/job; \
+	$(GOBUILD) -o bin/job/job ./src/cmd/job/main.go; \
 
 # Run all jobs
-run-job-group:
+run-job:
 	for i in $(shell seq 1 $(Njob)); do \
 		echo "Running job$$i..."; \
-		(cd bin/job$$i && ./job) & \
+		(cd bin/job && ./job -c ../../config/job$$i/config.yml) & \
 	done
 
-stop-job-group:
+stop-job:
 	pkill -f ./job
 
 
 
-build-comet-group:
-	mkdir -p bin
-	for i in $(shell seq 1 $(Ncomet)); do \
-		rm -rf bin/comet$$i; \
-		mkdir -p bin/comet$$i; \
-		cp src/cmd/comet/comet.yml bin/comet$$i/comet.yml; \
-		$(GOBUILD) -o bin/comet$$i/comet ./src/cmd/comet/main.go; \
-	done
+build-comet:
+	mkdir -p bin/comet; \
+	rm -rf bin/comet/comet; \
+	$(GOBUILD) -o bin/comet/comet ./src/cmd/comet/main.go; \
 
 # Run all comets
-run-comet-group:
+run-comet:
 	for i in $(shell seq 1 $(Ncomet)); do \
 		echo "Running comet$$i..."; \
-		(cd bin/comet$$i && ./comet) & \
+		(cd bin/comet && ./comet -c ../../config/comet$$i/config.yml) & \
 	done
 
-stop-comet-group:
+stop-comet:
 	pkill -f ./comet
 
 

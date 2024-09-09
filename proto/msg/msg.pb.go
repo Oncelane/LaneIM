@@ -20,6 +20,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// protoc --go_out=.. --go-grpc_out=..
+// --go-grpc_opt=require_unimplemented_servers=false -I. -Iproto
+// proto/msg/msg.proto proto/comet/comet.proto proto/logic/logic.proto
 type Msg struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -626,6 +629,389 @@ func (x *CometInfo) GetRooms() []int64 {
 	return nil
 }
 
+type CNewUserReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *CNewUserReq) Reset() {
+	*x = CNewUserReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CNewUserReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CNewUserReq) ProtoMessage() {}
+
+func (x *CNewUserReq) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CNewUserReq.ProtoReflect.Descriptor instead.
+func (*CNewUserReq) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{11}
+}
+
+type CNewUserResp struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Userid int64 `protobuf:"varint,1,opt,name=userid,proto3" json:"userid,omitempty"`
+}
+
+func (x *CNewUserResp) Reset() {
+	*x = CNewUserResp{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CNewUserResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CNewUserResp) ProtoMessage() {}
+
+func (x *CNewUserResp) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CNewUserResp.ProtoReflect.Descriptor instead.
+func (*CNewUserResp) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CNewUserResp) GetUserid() int64 {
+	if x != nil {
+		return x.Userid
+	}
+	return 0
+}
+
+type CJoinRoomReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Userid int64 `protobuf:"varint,1,opt,name=userid,proto3" json:"userid,omitempty"`
+	Roomid int64 `protobuf:"varint,2,opt,name=roomid,proto3" json:"roomid,omitempty"`
+}
+
+func (x *CJoinRoomReq) Reset() {
+	*x = CJoinRoomReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CJoinRoomReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CJoinRoomReq) ProtoMessage() {}
+
+func (x *CJoinRoomReq) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CJoinRoomReq.ProtoReflect.Descriptor instead.
+func (*CJoinRoomReq) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *CJoinRoomReq) GetUserid() int64 {
+	if x != nil {
+		return x.Userid
+	}
+	return 0
+}
+
+func (x *CJoinRoomReq) GetRoomid() int64 {
+	if x != nil {
+		return x.Roomid
+	}
+	return 0
+}
+
+type CJoinRoomResp struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ack bool `protobuf:"varint,1,opt,name=ack,proto3" json:"ack,omitempty"`
+}
+
+func (x *CJoinRoomResp) Reset() {
+	*x = CJoinRoomResp{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CJoinRoomResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CJoinRoomResp) ProtoMessage() {}
+
+func (x *CJoinRoomResp) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CJoinRoomResp.ProtoReflect.Descriptor instead.
+func (*CJoinRoomResp) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CJoinRoomResp) GetAck() bool {
+	if x != nil {
+		return x.Ack
+	}
+	return false
+}
+
+type CQuitRoomReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Userid int64 `protobuf:"varint,1,opt,name=userid,proto3" json:"userid,omitempty"`
+	Roomid int64 `protobuf:"varint,2,opt,name=roomid,proto3" json:"roomid,omitempty"`
+}
+
+func (x *CQuitRoomReq) Reset() {
+	*x = CQuitRoomReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CQuitRoomReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CQuitRoomReq) ProtoMessage() {}
+
+func (x *CQuitRoomReq) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CQuitRoomReq.ProtoReflect.Descriptor instead.
+func (*CQuitRoomReq) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CQuitRoomReq) GetUserid() int64 {
+	if x != nil {
+		return x.Userid
+	}
+	return 0
+}
+
+func (x *CQuitRoomReq) GetRoomid() int64 {
+	if x != nil {
+		return x.Roomid
+	}
+	return 0
+}
+
+type CQuitRoomResp struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ack bool `protobuf:"varint,1,opt,name=ack,proto3" json:"ack,omitempty"`
+}
+
+func (x *CQuitRoomResp) Reset() {
+	*x = CQuitRoomResp{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CQuitRoomResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CQuitRoomResp) ProtoMessage() {}
+
+func (x *CQuitRoomResp) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CQuitRoomResp.ProtoReflect.Descriptor instead.
+func (*CQuitRoomResp) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CQuitRoomResp) GetAck() bool {
+	if x != nil {
+		return x.Ack
+	}
+	return false
+}
+
+type COnlineReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Userid int64 `protobuf:"varint,1,opt,name=userid,proto3" json:"userid,omitempty"`
+}
+
+func (x *COnlineReq) Reset() {
+	*x = COnlineReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[17]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *COnlineReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*COnlineReq) ProtoMessage() {}
+
+func (x *COnlineReq) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[17]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use COnlineReq.ProtoReflect.Descriptor instead.
+func (*COnlineReq) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *COnlineReq) GetUserid() int64 {
+	if x != nil {
+		return x.Userid
+	}
+	return 0
+}
+
+type COnlineResp struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ack bool `protobuf:"varint,1,opt,name=ack,proto3" json:"ack,omitempty"`
+}
+
+func (x *COnlineResp) Reset() {
+	*x = COnlineResp{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_msg_msg_proto_msgTypes[18]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *COnlineResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*COnlineResp) ProtoMessage() {}
+
+func (x *COnlineResp) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_msg_msg_proto_msgTypes[18]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use COnlineResp.ProtoReflect.Descriptor instead.
+func (*COnlineResp) Descriptor() ([]byte, []int) {
+	return file_proto_msg_msg_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *COnlineResp) GetAck() bool {
+	if x != nil {
+		return x.Ack
+	}
+	return false
+}
+
 var File_proto_msg_msg_proto protoreflect.FileDescriptor
 
 var file_proto_msg_msg_proto_rawDesc = []byte{
@@ -694,9 +1080,29 @@ var file_proto_msg_msg_proto_rawDesc = []byte{
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x75, 0x73, 0x65, 0x72, 0x69, 0x64, 0x22, 0x21,
 	0x0a, 0x09, 0x43, 0x6f, 0x6d, 0x65, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x14, 0x0a, 0x05, 0x72,
 	0x6f, 0x6f, 0x6d, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x03, 0x52, 0x05, 0x72, 0x6f, 0x6f, 0x6d,
-	0x73, 0x42, 0x16, 0x5a, 0x14, 0x6c, 0x61, 0x6e, 0x65, 0x49, 0x4d, 0x2f, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x2f, 0x6d, 0x73, 0x67, 0x3b, 0x6d, 0x73, 0x67, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x73, 0x22, 0x0d, 0x0a, 0x0b, 0x43, 0x4e, 0x65, 0x77, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x71,
+	0x22, 0x26, 0x0a, 0x0c, 0x43, 0x4e, 0x65, 0x77, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70,
+	0x12, 0x16, 0x0a, 0x06, 0x75, 0x73, 0x65, 0x72, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03,
+	0x52, 0x06, 0x75, 0x73, 0x65, 0x72, 0x69, 0x64, 0x22, 0x3e, 0x0a, 0x0c, 0x43, 0x4a, 0x6f, 0x69,
+	0x6e, 0x52, 0x6f, 0x6f, 0x6d, 0x52, 0x65, 0x71, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x73, 0x65, 0x72,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x75, 0x73, 0x65, 0x72, 0x69, 0x64,
+	0x12, 0x16, 0x0a, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03,
+	0x52, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x69, 0x64, 0x22, 0x21, 0x0a, 0x0d, 0x43, 0x4a, 0x6f, 0x69,
+	0x6e, 0x52, 0x6f, 0x6f, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x12, 0x10, 0x0a, 0x03, 0x61, 0x63, 0x6b,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x03, 0x61, 0x63, 0x6b, 0x22, 0x3e, 0x0a, 0x0c, 0x43,
+	0x51, 0x75, 0x69, 0x74, 0x52, 0x6f, 0x6f, 0x6d, 0x52, 0x65, 0x71, 0x12, 0x16, 0x0a, 0x06, 0x75,
+	0x73, 0x65, 0x72, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x75, 0x73, 0x65,
+	0x72, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x69, 0x64, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x03, 0x52, 0x06, 0x72, 0x6f, 0x6f, 0x6d, 0x69, 0x64, 0x22, 0x21, 0x0a, 0x0d, 0x43,
+	0x51, 0x75, 0x69, 0x74, 0x52, 0x6f, 0x6f, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x12, 0x10, 0x0a, 0x03,
+	0x61, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x03, 0x61, 0x63, 0x6b, 0x22, 0x24,
+	0x0a, 0x0a, 0x43, 0x4f, 0x6e, 0x6c, 0x69, 0x6e, 0x65, 0x52, 0x65, 0x71, 0x12, 0x16, 0x0a, 0x06,
+	0x75, 0x73, 0x65, 0x72, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x06, 0x75, 0x73,
+	0x65, 0x72, 0x69, 0x64, 0x22, 0x1f, 0x0a, 0x0b, 0x43, 0x4f, 0x6e, 0x6c, 0x69, 0x6e, 0x65, 0x52,
+	0x65, 0x73, 0x70, 0x12, 0x10, 0x0a, 0x03, 0x61, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x03, 0x61, 0x63, 0x6b, 0x42, 0x16, 0x5a, 0x14, 0x6c, 0x61, 0x6e, 0x65, 0x49, 0x4d, 0x2f,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x6d, 0x73, 0x67, 0x3b, 0x6d, 0x73, 0x67, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -711,7 +1117,7 @@ func file_proto_msg_msg_proto_rawDescGZIP() []byte {
 	return file_proto_msg_msg_proto_rawDescData
 }
 
-var file_proto_msg_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_proto_msg_msg_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_proto_msg_msg_proto_goTypes = []any{
 	(*Msg)(nil),           // 0: lane.msg.Msg
 	(*UserInfo)(nil),      // 1: lane.msg.UserInfo
@@ -724,16 +1130,24 @@ var file_proto_msg_msg_proto_goTypes = []any{
 	(*CSendRoomResp)(nil), // 8: lane.msg.CSendRoomResp
 	(*COfflineReq)(nil),   // 9: lane.msg.COfflineReq
 	(*CometInfo)(nil),     // 10: lane.msg.CometInfo
-	nil,                   // 11: lane.msg.UserInfo.RoomidEntry
-	nil,                   // 12: lane.msg.UserInfo.ServerEntry
-	nil,                   // 13: lane.msg.RoomInfo.ServerEntry
-	nil,                   // 14: lane.msg.RoomInfo.UsersEntry
+	(*CNewUserReq)(nil),   // 11: lane.msg.CNewUserReq
+	(*CNewUserResp)(nil),  // 12: lane.msg.CNewUserResp
+	(*CJoinRoomReq)(nil),  // 13: lane.msg.CJoinRoomReq
+	(*CJoinRoomResp)(nil), // 14: lane.msg.CJoinRoomResp
+	(*CQuitRoomReq)(nil),  // 15: lane.msg.CQuitRoomReq
+	(*CQuitRoomResp)(nil), // 16: lane.msg.CQuitRoomResp
+	(*COnlineReq)(nil),    // 17: lane.msg.COnlineReq
+	(*COnlineResp)(nil),   // 18: lane.msg.COnlineResp
+	nil,                   // 19: lane.msg.UserInfo.RoomidEntry
+	nil,                   // 20: lane.msg.UserInfo.ServerEntry
+	nil,                   // 21: lane.msg.RoomInfo.ServerEntry
+	nil,                   // 22: lane.msg.RoomInfo.UsersEntry
 }
 var file_proto_msg_msg_proto_depIdxs = []int32{
-	11, // 0: lane.msg.UserInfo.roomid:type_name -> lane.msg.UserInfo.RoomidEntry
-	12, // 1: lane.msg.UserInfo.server:type_name -> lane.msg.UserInfo.ServerEntry
-	13, // 2: lane.msg.RoomInfo.server:type_name -> lane.msg.RoomInfo.ServerEntry
-	14, // 3: lane.msg.RoomInfo.users:type_name -> lane.msg.RoomInfo.UsersEntry
+	19, // 0: lane.msg.UserInfo.roomid:type_name -> lane.msg.UserInfo.RoomidEntry
+	20, // 1: lane.msg.UserInfo.server:type_name -> lane.msg.UserInfo.ServerEntry
+	21, // 2: lane.msg.RoomInfo.server:type_name -> lane.msg.RoomInfo.ServerEntry
+	22, // 3: lane.msg.RoomInfo.users:type_name -> lane.msg.RoomInfo.UsersEntry
 	4,  // [4:4] is the sub-list for method output_type
 	4,  // [4:4] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
@@ -879,6 +1293,102 @@ func file_proto_msg_msg_proto_init() {
 				return nil
 			}
 		}
+		file_proto_msg_msg_proto_msgTypes[11].Exporter = func(v any, i int) any {
+			switch v := v.(*CNewUserReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_msg_msg_proto_msgTypes[12].Exporter = func(v any, i int) any {
+			switch v := v.(*CNewUserResp); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_msg_msg_proto_msgTypes[13].Exporter = func(v any, i int) any {
+			switch v := v.(*CJoinRoomReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_msg_msg_proto_msgTypes[14].Exporter = func(v any, i int) any {
+			switch v := v.(*CJoinRoomResp); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_msg_msg_proto_msgTypes[15].Exporter = func(v any, i int) any {
+			switch v := v.(*CQuitRoomReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_msg_msg_proto_msgTypes[16].Exporter = func(v any, i int) any {
+			switch v := v.(*CQuitRoomResp); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_msg_msg_proto_msgTypes[17].Exporter = func(v any, i int) any {
+			switch v := v.(*COnlineReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_msg_msg_proto_msgTypes[18].Exporter = func(v any, i int) any {
+			switch v := v.(*COnlineResp); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -886,7 +1396,7 @@ func file_proto_msg_msg_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_msg_msg_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

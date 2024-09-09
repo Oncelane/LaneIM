@@ -54,3 +54,22 @@ message CSendRoomResp { bool ack = 1; }
 message COfflineReq { int64 userid = 1; }
 
 message CometInfo { repeated int64 rooms = 1; }
+
+message CNewUserReq {}
+
+message CNewUserResp { int64 userid = 1; }
+
+message CJoinRoomReq {
+  int64 userid = 1;
+  int64 roomid = 2;
+}
+message CJoinRoomResp { bool ack = 1; }
+
+message CQuitRoomReq {
+  int64 userid = 1;
+  int64 roomid = 2;
+}
+message CQuitRoomResp { bool ack = 1; }
+
+message COnlineReq { int64 userid = 1; }
+message COnlineResp { bool ack = 1; }

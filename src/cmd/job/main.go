@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"laneIM/src/config"
 	"laneIM/src/job"
 	"log"
@@ -9,9 +10,14 @@ import (
 	"syscall"
 )
 
+var (
+	ConfigPath = flag.String("c", "config.yml", "path fo config.yml folder")
+)
+
 func main() {
+	flag.Parse()
 	conf := config.Job{}
-	config.Init("job", &conf)
+	config.Init(*ConfigPath, &conf)
 	log.Printf("job server start by env:%+v", conf)
 	j := job.NewJob(conf)
 	// 等待信号

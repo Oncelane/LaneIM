@@ -94,7 +94,7 @@ func (c *Comet) HandleSendRoom(m *msg.Msg, ch *Channel) {
 	cSendRoomReq := &msg.CSendRoomReq{}
 	err := proto.Unmarshal(m.Data, cSendRoomReq)
 	if err != nil {
-		log.Println("faild to decode json", err)
+		log.Println("faild to decode proto", err)
 		return
 	}
 
@@ -109,5 +109,97 @@ func (c *Comet) HandleSendRoom(m *msg.Msg, ch *Channel) {
 		log.Println("faild to send logic", err)
 		return
 	}
+	ch.Reply([]byte("ack"), m.Seq, m.Path)
+}
+
+func (c *Comet) HandleNewUser(m *msg.Msg, ch *Channel) {
+	cNewUserReq := &msg.CNewUserReq{}
+	err := proto.Unmarshal(m.Data, cNewUserReq)
+	if err != nil {
+		log.Println("faild to decode proto", err)
+		return
+	}
+
+	rt, err := c.pickLogic().Client.NewUser(context.Background(), &logic.NewUserReq{})
+	if err != nil {
+		log.Println("faild to send logic", err)
+		return
+	}
+	reply, err := proto.Marshal(&msg.CNewUserResp{
+		Userid: rt.Userid,
+	})
+	if err != nil {
+		log.Println("faild to encode proto")
+		return
+	}
+	ch.Reply(reply, m.Seq, m.Path)
+}
+
+func (c *Comet) HandleJoinRoom(m *msg.Msg, ch *Channel) {
+	cJoinRoomReq := &msg.CJoinRoomReq{}
+	err := proto.Unmarshal(m.Data, cJoinRoomReq)
+	if err != nil {
+		log.Println("faild to decode proto", err)
+		return
+	}
+
+	_, err = c.pickLogic().Client.JoinRoom(context.Background(), &logic.JoinRoomReq{
+		Userid: cJoinRoomReq.Userid,
+		Roomid: cJoinRoomReq.Roomid,
+	})
+	if err != nil {
+		log.Println("faild to send logic", err)
+		return
+	}
+	// reply, err := proto.Marshal(&msg.CJoinRoomResp{
+	// 	Ack: true,
+	// })
+	// if err != nil {
+	// 	log.Println("faild to encode proto")
+	// 	return
+	// }
+	ch.Reply([]byte("ack"), m.Seq, m.Path)
+}
+
+func (c *Comet) HandleOnline(m *msg.Msg, ch *Channel) {
+	COnlineReq := &msg.COnlineReq{}
+	err := proto.Unmarshal(m.Data, COnlineReq)
+	if err != nil {
+		log.Println("faild to decode proto", err)
+		return
+	}
+
+	_, err = c.pickLogic().Client.SetOnline(context.Background(), &logic.SetOnlineReq{
+		Userid: COnlineReq.Userid,
+		Server: c.conf.Addr,
+	})
+	if err != nil {
+		log.Println("faild to send logic", err)
+		return
+	}
+	// reply, err := proto.Marshal(&msg.CJoinRoomResp{
+	// 	Ack: true,
+	// })
+	// if err != nil {
+	// 	log.Println("faild to encode proto")
+	// 	return
+	// }
+
+	{ // putchannel
+		rt, err := c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
+			Userid: []int64{COnlineReq.Userid},
+		})
+		if err != nil {
+			log.Println("faild to query logic room", err)
+			return
+		}
+		if len(rt.Roomids) != 0 {
+			for _, roomid := range rt.Roomids[0].Roomid {
+				c.Bucket(roomid).PutChannel(roomid, ch)
+				log.Println("userid:", ch.id, "in room", roomid)
+			}
+		}
+	}
+
 	ch.Reply([]byte("ack"), m.Seq, m.Path)
 }
