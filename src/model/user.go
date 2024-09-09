@@ -9,7 +9,7 @@ type UserMgr struct {
 // UserComet 模型
 type UserComet struct {
 	UserID    int64  `gorm:"primaryKey"`
-	CometAddr string `gorm:"type:varchar(255);not null"`
+	CometAddr string `gorm:"primaryKey;type:varchar(255);not null"`
 }
 
 // UserRoom 模型

@@ -14,9 +14,21 @@ import (
 func DB(conf config.Mysql) *gorm.DB {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", conf.Username, conf.Password, conf.Addr, conf.DataBase)
 	log.Println(dsn)
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		DisableAutomaticPing:   true,
+		SkipDefaultTransaction: true, // 关闭默认事务
+	})
+	if err != nil {
+		log.Fatalln("faild to get db")
+		return nil
+	}
+	sqldb, err := db.DB()
+	sqldb.SetMaxOpenConns(100)
+	sqldb.SetMaxIdleConns(50)
+
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
+		return nil
 	}
 	return db
 }

@@ -131,24 +131,24 @@ func (c *Canal) printEntry(entrys []pbe.Entry) {
 		if rowChange != nil {
 			eventType := rowChange.GetEventType()
 			header := entrys[i].GetHeader()
-			fmt.Printf("================> binlog[%s : %d],name[%s,%s], eventType: %s\n", header.GetLogfileName(), header.GetLogfileOffset(), header.GetSchemaName(), header.GetTableName(), header.GetEventType())
+			// log.Printf("================> binlog[%s : %d],name[%s,%s], eventType: %s\n", header.GetLogfileName(), header.GetLogfileOffset(), header.GetSchemaName(), header.GetTableName(), header.GetEventType())
 			if len(header.GetTableName()) == 0 {
 				continue
 			}
 			rediskey := strings.ReplaceAll(header.GetTableName(), "_", ":")[:len(header.GetTableName())-1]
-			fmt.Printf("redis key: %s\n", rediskey)
-			for _, rowData := range rowChange.GetRowDatas() {
-				if eventType == pbe.EventType_DELETE {
-					printColumn(rowData.GetBeforeColumns())
-				} else if eventType == pbe.EventType_INSERT {
-					printColumn(rowData.GetAfterColumns())
-				} else {
-					fmt.Println("-------> before")
-					printColumn(rowData.GetBeforeColumns())
-					fmt.Println("-------> after")
-					printColumn(rowData.GetAfterColumns())
-				}
-			}
+			// log.Printf("redis key: %s\n", rediskey)
+			// for _, rowData := range rowChange.GetRowDatas() {
+			// 	if eventType == pbe.EventType_DELETE {
+			// 		printColumn(rowData.GetBeforeColumns())
+			// 	} else if eventType == pbe.EventType_INSERT {
+			// 		printColumn(rowData.GetAfterColumns())
+			// 	} else {
+			// 		fmt.Println("-------> before")
+			// 		printColumn(rowData.GetBeforeColumns())
+			// 		fmt.Println("-------> after")
+			// 		printColumn(rowData.GetAfterColumns())
+			// 	}
+			// }
 			c.HandleRowData(rowChange, eventType, strings.Split(rediskey, ":"))
 
 		}
