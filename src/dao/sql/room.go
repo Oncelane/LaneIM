@@ -1,7 +1,6 @@
 package sql
 
 import (
-	"errors"
 	"fmt"
 	"laneIM/src/config"
 	"laneIM/src/model"
@@ -85,6 +84,16 @@ func (d *SqlDB) DelRoom(roomid int64) (int64, error) {
 //--------------Room------------
 
 // room:mgr
+func (d *SqlDB) RoomMgr(roomid int64) (*model.RoomMgr, error) {
+	room := model.RoomMgr{}
+	err := d.DB.Preload("Users").Preload("Comets").First(&room, roomid).Error
+	if err != nil {
+		log.Println("faild to sql roomMgr")
+		return nil, err
+	}
+	return &room, nil
+}
+
 func (d *SqlDB) AllRoomid() ([]int64, error) {
 	// 查询所有行的 ID
 	var roomids []int64
@@ -224,16 +233,20 @@ func (d *SqlDB) DelRoomAllUser(roomid int64) error {
 func (d *SqlDB) RoomComet(roomid int64) ([]string, error) {
 	// 查询所有行的 ID
 	room := model.RoomMgr{}
-	var cometAddrs []string
 	err := d.DB.Preload("Comets").First(&room, roomid).Error
 	if err != nil {
 		log.Println("faild to query room comet", err)
 	}
-	return cometAddrs, nil
+	log.Println("room:", room)
+	rt := make([]string, len(room.Comets))
+	for i, u := range room.Comets {
+		rt[i] = u.CometAddr
+	}
+	return rt, nil
 }
 
 func (d *SqlDB) AddRoomComet(roomid int64, comet string) error {
-	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Comets").Append(&model.RoomComet{CometAddr: comet})
+	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Comets").Append(&model.CometMgr{CometAddr: comet})
 	if err != nil {
 		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
 			if sqlerr.Number == 1062 {
@@ -248,56 +261,34 @@ func (d *SqlDB) AddRoomComet(roomid int64, comet string) error {
 }
 
 func (d *SqlDB) AddRoomCometWithUserid(userid int64, cometAddr string) error {
-
-	// 开始事务
-	tx := d.DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-
-	// 查询所有包含该用户的房间
-	var rooms []model.RoomMgr
-	if err := tx.Joins("JOIN room_users ON room_id = room_users.room_mgr_room_id").
-		Where("room_users.user_mgr_user_id = ?", userid).
-		Find(&rooms).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 遍历所有房间，插入或更新网关地址
-	for _, room := range rooms {
-		// 检查是否已存在该网关地址的记录
-		var existingRoomComet model.RoomComet
-		err := tx.Where("room_id = ? AND comet_addr = ?", room.RoomID, cometAddr).First(&existingRoomComet).Error
-
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			// 查询出错
-			tx.Rollback()
-			return err
-		}
-
-		if err == gorm.ErrRecordNotFound {
-			// 如果记录不存在，则插入新记录
-			if err := tx.Create(&model.RoomComet{
-				RoomID:    room.RoomID,
-				CometAddr: cometAddr,
-			}).Error; err != nil {
-				tx.Rollback()
-				return err
+	query := `
+INSERT IGNORE INTO
+    room_comets (
+        room_mgr_room_id,
+        comet_mgr_comet_addr
+    )
+SELECT room_mgr_room_id, ?
+FROM room_users
+    JOIN room_mgrs ON room_users.room_mgr_room_id = room_mgrs.room_id
+WHERE
+    room_users.user_mgr_user_id = ?
+`
+	err := d.DB.Exec(query, cometAddr, userid).Error
+	if err != nil {
+		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
+			if sqlerr.Number == 1062 {
+				return nil
 			}
 		}
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
+		log.Println("faild to add comet to room", err)
 		return err
 	}
-
 	return nil
+
 }
 
 func (d *SqlDB) DelRoomComet(roomid int64, comet string) error {
-	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Comets").Delete(&model.RoomComet{CometAddr: comet})
+	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Comets").Delete(&model.CometMgr{CometAddr: comet})
 	if err != nil {
 		log.Println("faild to del room comet", err)
 		return err

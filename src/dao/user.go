@@ -21,38 +21,38 @@ func NewDao(conf config.BatchWriter) *Dao {
 	}
 }
 
-func (d *Dao) AllUserid(rdb *redis.ClusterClient, db *sql.SqlDB) ([]int64, error) {
-	key := "alluser"
-	rt, err := d.msergeWriter.Do(key, func() (any, error) {
-		rt, err := rds.AllUserid(rdb)
-		if err != nil {
-			if err != redis.Nil {
-				return rt, err
-			}
-		} else {
-			return rt, nil
-		}
-		//log.Println("触发sql查询")
-		rt, err = db.AllUserid()
-		if err != nil {
-			return rt, err
-		}
-		//log.Println("同步到redis")
-		rds.SetNEAllUserid(rdb, rt)
-		return rt, nil
-	})
-	if r, ok := rt.([]int64); ok {
-		return r, err
-	} else {
-		return nil, fmt.Errorf("batchwriter faild")
-	}
+// func (d *Dao) AllUserid(rdb *redis.ClusterClient, db *sql.SqlDB) ([]int64, error) {
+// 	key := "alluser"
+// 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
+// 		rt, err := rds.UserMgr(rdb)
+// 		if err != nil {
+// 			if err != redis.Nil {
+// 				return rt, err
+// 			}
+// 		} else {
+// 			return rt, nil
+// 		}
+// 		//log.Println("触发sql查询")
+// 		rt, err = db.AllUserid()
+// 		if err != nil {
+// 			return rt, err
+// 		}
+// 		//log.Println("同步到redis")
+// 		rds.SetNEAllUserid(rdb, rt)
+// 		return rt, nil
+// 	})
+// 	if r, ok := rt.([]int64); ok {
+// 		return r, err
+// 	} else {
+// 		return nil, fmt.Errorf("batchwriter faild")
+// 	}
 
-}
+// }
 
 func (d *Dao) UserRoom(rdb *redis.ClusterClient, db *sql.SqlDB, userid int64) ([]int64, error) {
 	key := "user:room:" + strconv.FormatInt(userid, 36)
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
-		rt, err := rds.UserRoom(rdb, userid)
+		rt, err := rds.UserMgrRoom(rdb, userid)
 		if err != nil {
 			if err != redis.Nil {
 				return rt, err

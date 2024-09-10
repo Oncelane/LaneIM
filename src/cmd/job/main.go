@@ -15,6 +15,7 @@ var (
 )
 
 func main() {
+
 	flag.Parse()
 	conf := config.Job{}
 	config.Init(*ConfigPath, &conf)

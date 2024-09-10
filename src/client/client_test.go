@@ -8,7 +8,7 @@ import (
 )
 
 func TestManyUser(t *testing.T) {
-	num := 4
+	num := 10
 	var cometAddr []string = []string{"ws://127.0.0.1:40050/ws"}
 	// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	g := client.NewClientGroup(num)

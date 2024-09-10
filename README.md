@@ -272,9 +272,9 @@ canal.instance.tsdb.enable=true
 
 # username/password
 canal.instance.dbUsername=debian-sys-maint
-canal.instance.dbPassword=FJho5xokpFqZygL5
+canal.instance.dbPassword=QTLVb6BaeeaJsFMT
 # debian-sys-maint
-# FJho5xokpFqZygL5
+# QTLVb6BaeeaJsFMT
 canal.instance.connectionCharset = UTF-8
 # enable druid Decrypt database password
 canal.instance.enableDruid=false
@@ -315,53 +315,36 @@ bash bin/startup.sh
 
 in redis
 
-room:mgr set int64
+RoomMgr: 使用一个Redis哈希（hash）来存储RoomMgr的基本信息。可以设置字段如RoomID、OnlineCount。用户和Comet的信息可以存储为集合。
 
-user:mgr set int64
+Key: room:{RoomID}
+Fields: OnlineCount
+Members: users_set（存储UserID集合）、comets_set（存储CometAddr集合）
 
-room:online:%id int
+UserMgr: 使用一个Redis哈希来存储UserMgr的基本信息和它所关联的房间。可以设置字段如CometAddr和Online。房间的信息可以存储为集合。
 
-room:comet:%id set string
+Key: user:{UserID}
+Fields: CometAddr, Online
+Members: rooms_set（存储RoomID集合）
 
-room:userid:%id set int64
+CometMgr: 使用一个Redis哈希来存储CometMgr的基本信息和它所关联的房间。房间的信息可以存储为集合。
 
-user:comet:%id string
+Key: comet:{CometAddr}
+Fields: 无需额外字段
+Members: rooms_set（存储RoomID集合）
+示例操作:
+``` sh
+#设置RoomMgr信息：
+HMSET room:{RoomID} OnlineCount 10
+SADD room:{RoomID}:users_set {UserID}
+SADD room:{RoomID}:comets_set {CometAddr}
 
-user:room:%id set string
+# 设置UserMgr信息：
+HMSET user:{UserID} CometAddr {CometAddr} Online true
+SADD user:{UserID}:rooms_set {RoomID}
 
-user:online:%id bool
-
-```
-Allroomid
-
-room{
-   new
-   del
-
-   joinUserid
-   quitUserid
-   queryUserid
-
-   putComet
-   delComet
-   queryComet
-
-   countUserid
-}
-
-Alluserid
-
-user{
-   new
-   del
-
-   online
-   offline
-   queryOnline
-
-   joinRoomid
-   quitRoomid
-}
+#设置CometMgr信息：
+SADD comet:{CometAddr}:rooms_set {RoomID}
 ```
 
 # next

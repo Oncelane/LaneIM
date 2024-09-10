@@ -173,11 +173,17 @@ func (c *Mysql) Default() {
 	*c = Mysql{
 		Name:        "0",
 		Username:    "debian-sys-maint",
-		Password:    "FJho5xokpFqZygL5",
+		Password:    "QTLVb6BaeeaJsFMT",
 		Addr:        "127.0.0.1:3306",
 		DataBase:    "laneIM",
 		BatchWriter: batch,
 	}
+}
+
+func DefaultMysql() Mysql {
+	mysqlC := Mysql{}
+	mysqlC.Default()
+	return mysqlC
 }
 
 type BatchWriter struct {

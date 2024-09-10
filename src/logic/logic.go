@@ -11,6 +11,8 @@ import (
 	"laneIM/src/pkg"
 	"log"
 	"net"
+	"sync"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/bwmarrin/snowflake"
@@ -45,14 +47,19 @@ type Logic struct {
 	grpc  *grpc.Server
 	uuid  *UuidGenerator
 	daoo  *dao.Dao
+
+	//only to sync comet infomation to mysql
+	cometMu sync.RWMutex
+	comets  map[string]struct{}
 }
 
 // new and register
 func NewLogic(conf config.Logic) *Logic {
 	s := &Logic{
-		etcd: pkg.NewEtcd(conf.Etcd),
-		conf: conf,
-		daoo: dao.NewDao(conf.Mysql.BatchWriter),
+		etcd:   pkg.NewEtcd(conf.Etcd),
+		conf:   conf,
+		daoo:   dao.NewDao(conf.Mysql.BatchWriter),
+		comets: make(map[string]struct{}),
 	}
 	s.uuid = NewUuidGenerator(int64(conf.Id))
 
@@ -83,6 +90,7 @@ func NewLogic(conf config.Logic) *Logic {
 		}
 	}()
 	// register etcd
+	go s.WatchComet()
 	s.etcd.SetAddr("grpc:logic:"+s.conf.Name, s.conf.Addr)
 	return s
 }
@@ -91,6 +99,42 @@ func (l *Logic) Close() {
 	log.Println("logic exit:", l.conf.Addr)
 	l.etcd.DelAddr("grpc:logic:"+l.conf.Name, l.conf.Addr)
 	l.grpc.Stop()
+}
+
+func (l *Logic) WatchComet() {
+	for {
+		addrs := l.etcd.GetAddr("grpc:comet")
+		remoteAddrs := make(map[string]struct{})
+		for _, addr := range addrs {
+			remoteAddrs[addr] = struct{}{}
+			if _, exist := l.comets[addr]; exist {
+				continue
+			}
+
+			l.comets[addr] = struct{}{}
+			// discovery comet
+			err := l.db.AddComet(addr)
+			if err != nil {
+				continue
+			}
+			log.Println("discovery comet:", addr)
+		}
+		for addr := range l.comets {
+			if _, exist := remoteAddrs[addr]; !exist {
+				l.cometMu.Lock()
+				delete(l.comets, addr)
+				l.cometMu.Unlock()
+				//discovery missing comet
+				err := l.db.DelComet(addr)
+				if err != nil {
+					continue
+				}
+				log.Println("remove comet:", addr)
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
 }
 
 var _ pb.LogicServer = new(Logic)

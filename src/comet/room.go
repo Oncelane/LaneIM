@@ -23,9 +23,8 @@ func (m *Bucket) NewRoom(roomid int64) *Room {
 	newRoom := &Room{
 		id: roomid,
 	}
-	log.Printf("%p new room:%d before:%p", m, roomid, m.rooms[roomid])
+	log.Println("new room:", roomid)
 	m.rooms[roomid] = newRoom
-	log.Printf("%p new room:%d after:%p", m, roomid, m.rooms[roomid])
 	return newRoom
 
 }

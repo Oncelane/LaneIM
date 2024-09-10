@@ -13,7 +13,7 @@ func TestAddRoomUseridComet(t *testing.T) {
 	s := config.Mysql{}
 	s.Default()
 	db := sql.NewDB(s)
-	log.Println(db.RoomComet(1833434241438842880))
+	log.Println(db.RoomComet(1833469140778614784))
 }
 
 var addr = []string{"127.0.0.1:50051", "127.0.0.1:50050"}

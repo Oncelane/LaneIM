@@ -12,7 +12,9 @@ func Init(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&RoomMgr{},
 		&UserMgr{},
-		&RoomComet{},
+		&CometMgr{},
+		// &RoomComet{},
+		// &RoomUser{},
 	)
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
@@ -21,20 +23,20 @@ func Init(db *gorm.DB) {
 
 // RoomMgr 模型
 type RoomMgr struct {
-	RoomID      int64       `gorm:"primary_key"`
-	Users       []UserMgr   `gorm:"many2many:room_users;"`
-	Comets      []RoomComet `gorm:"many2many:room_comets;"`
-	OnlineCount int         `gorm:"not null"`
+	RoomID      int64      `gorm:"primary_key"`
+	Users       []UserMgr  `gorm:"many2many:room_users;"`
+	Comets      []CometMgr `gorm:"many2many:room_comets;"`
+	OnlineCount int        `gorm:"not null"`
 }
 
-// RoomComet 模型
-type RoomComet struct {
-	RoomID    int64  `gorm:"primary_key"`
-	CometAddr string `gorm:"primary_key;type:varchar(255)"`
-}
+// // RoomComet 模型
+// type RoomComet struct {
+// 	RoomID    int64  `gorm:"primary_key"`
+// 	CometAddr string `gorm:"primary_key;type:varchar(255)"`
+// }
 
-// RoomUserid 模型
-type RoomUser struct {
-	RoomID int64 `gorm:"primary_key"`
-	UserID int64 `gorm:"primary_key"`
-}
+// // RoomUserid 模型
+// type RoomUser struct {
+// 	RoomID int64 `gorm:"primary_key"`
+// 	UserID int64 `gorm:"primary_key"`
+// }

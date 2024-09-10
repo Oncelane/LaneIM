@@ -36,9 +36,7 @@ func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, cl
 		switch protoMsg.Path {
 		case "sendRoom":
 			// 可能的初始化room，获取room所处的comets
-			room := consumer.job.Bucket(protoMsg.Roomid).GetRoom(protoMsg.Roomid)
 			// for addr := range room.info.Server {
-			log.Printf("message to roomid:%d hava comet:%v", room.roomid, room.info.Server)
 			// 检查是否实际连接上了comet
 			consumer.job.Push(&comet.RoomReq{
 				Roomid: protoMsg.Roomid,
