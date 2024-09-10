@@ -16,7 +16,6 @@ import (
 	"github.com/bwmarrin/snowflake"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
-	"gorm.io/gorm"
 )
 
 type UuidGenerator struct {
@@ -41,10 +40,11 @@ type Logic struct {
 	conf  config.Logic
 	etcd  *pkg.EtcdClient
 	redis *pkg.RedisClient
-	db    *gorm.DB
+	db    *sql.SqlDB
 	kafka *pkg.KafkaProducer
 	grpc  *grpc.Server
 	uuid  *UuidGenerator
+	daoo  *dao.Dao
 }
 
 // new and register
@@ -52,11 +52,12 @@ func NewLogic(conf config.Logic) *Logic {
 	s := &Logic{
 		etcd: pkg.NewEtcd(conf.Etcd),
 		conf: conf,
+		daoo: dao.NewDao(conf.Mysql.BatchWriter),
 	}
 	s.uuid = NewUuidGenerator(int64(conf.Id))
 
-	s.db = sql.DB(conf.Mysql)
-	model.Init(s.db)
+	s.db = sql.NewDB(conf.Mysql)
+	model.Init(s.db.DB)
 
 	// init redis
 	redisAddrs := s.etcd.GetAddr("redis")
@@ -121,7 +122,7 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, error) {
 	uuid := s.uuid.Generator()
 	// log.Println("new user id:", uuid)
-	err := sql.NewUser(s.db, uuid)
+	err := s.db.NewUser(uuid)
 	if err != nil {
 		log.Println("faild to new user", err)
 		return nil, err
@@ -135,7 +136,7 @@ func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, 
 func (s *Logic) NewRoom(_ context.Context, in *pb.NewRoomReq) (*pb.NewRoomResp, error) {
 	uuid := s.uuid.Generator()
 	// log.Println("new user id:", uuid)
-	err := sql.NewRoom(s.db, uuid, in.Userid, in.CometAddr)
+	err := s.db.NewRoom(uuid, in.Userid, in.CometAddr)
 	if err != nil {
 		log.Println("faild to new user", err)
 		return nil, err
@@ -147,7 +148,7 @@ func (s *Logic) NewRoom(_ context.Context, in *pb.NewRoomReq) (*pb.NewRoomResp, 
 }
 
 func (s *Logic) DelUser(_ context.Context, in *pb.DelUserReq) (*pb.NoResp, error) {
-	err := sql.DelUser(s.db, in.Userid)
+	err := s.db.DelUser(in.Userid)
 	if err != nil {
 		log.Println("faild to del user:", s.uuid, err)
 	}
@@ -155,12 +156,12 @@ func (s *Logic) DelUser(_ context.Context, in *pb.DelUserReq) (*pb.NoResp, error
 }
 
 func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, error) {
-	err := sql.SetUserOnline(s.db, in.Userid, in.Server)
+	err := s.db.SetUserOnline(in.Userid, in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)
 		return nil, err
 	}
-	err = sql.AddRoomCometWithUserid(s.db, in.Userid, in.Server)
+	err = s.db.AddRoomCometWithUserid(in.Userid, in.Server)
 	if err != nil {
 		log.Println("faild to new user", err)
 		return nil, err
@@ -169,7 +170,7 @@ func (s *Logic) SetOnline(_ context.Context, in *pb.SetOnlineReq) (*pb.NoResp, e
 }
 
 func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp, error) {
-	err := sql.SetUseroffline(s.db, in.Userid)
+	err := s.db.SetUseroffline(in.Userid)
 	if err != nil {
 		log.Println("faild to new user", err)
 	}
@@ -177,12 +178,12 @@ func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp,
 }
 
 func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, error) {
-	err := sql.AddUserRoom(s.db, in.Userid, in.Roomid)
+	err := s.db.AddUserRoom(in.Userid, in.Roomid)
 	if err != nil {
 		log.Printf("faild user %d to join room:%d\n", in.Userid, in.Roomid)
 		return nil, err
 	}
-	err = sql.AddRoomUser(s.db, in.Roomid, in.Userid)
+	err = s.db.AddRoomUser(in.Roomid, in.Userid)
 	if err != nil {
 		log.Println("faild room to add user:", err)
 		return nil, err
@@ -191,7 +192,7 @@ func (s *Logic) JoinRoom(_ context.Context, in *pb.JoinRoomReq) (*pb.NoResp, err
 }
 
 func (s *Logic) QuitRoom(_ context.Context, in *pb.QuitRoomReq) (*pb.NoResp, error) {
-	err := sql.DelUserRoom(s.db, in.Userid, in.Roomid)
+	err := s.db.DelUserRoom(in.Userid, in.Roomid)
 	if err != nil {
 		log.Printf("faild user %d to quit room:%d\n", in.Roomid, in.Userid)
 	}
@@ -203,7 +204,7 @@ func (s *Logic) QueryRoom(_ context.Context, in *pb.QueryRoomReq) (*pb.QueryRoom
 		Roomids: make([]*pb.QueryRoomResp_RoomSlice, 0),
 	}
 	for _, userid := range in.Userid {
-		roomids, err := dao.UserRoom(s.redis.Client, s.db, userid)
+		roomids, err := s.daoo.UserRoom(s.redis.Client, s.db, userid)
 		// log.Printf("logic dao query user%d have room%v\n", userid, roomids)
 		if err != nil {
 			return nil, err

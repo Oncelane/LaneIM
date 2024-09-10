@@ -274,7 +274,7 @@ canal.instance.tsdb.enable=true
 canal.instance.dbUsername=debian-sys-maint
 canal.instance.dbPassword=FJho5xokpFqZygL5
 # debian-sys-maint
-# QTLVb6BaeeaJsFMT
+# FJho5xokpFqZygL5
 canal.instance.connectionCharset = UTF-8
 # enable druid Decrypt database password
 canal.instance.enableDruid=false

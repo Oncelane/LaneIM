@@ -19,6 +19,9 @@ mysql:
   type: ""
   name: "0"
   username: debian-sys-maint
-  password: QTLVb6BaeeaJsFMT
+  password: FJho5xokpFqZygL5
   addr: 127.0.0.1:3306
   database: laneIM
+  batchwriter:
+    maxtime: 100
+    maxcount: 1000

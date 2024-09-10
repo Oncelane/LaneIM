@@ -158,22 +158,44 @@ type KafkaComsumer struct {
 }
 
 type Mysql struct {
-	Type     string
-	Name     string
-	Username string
-	Password string
-	Addr     string
-	DataBase string
+	Type        string
+	Name        string
+	Username    string
+	Password    string
+	Addr        string
+	DataBase    string
+	BatchWriter BatchWriter
 }
 
 func (c *Mysql) Default() {
+	batch := BatchWriter{}
+	batch.Default()
 	*c = Mysql{
-		Name:     "0",
-		Username: "debian-sys-maint",
-		Password: "QTLVb6BaeeaJsFMT",
-		Addr:     "127.0.0.1:3306",
-		DataBase: "laneIM",
+		Name:        "0",
+		Username:    "debian-sys-maint",
+		Password:    "FJho5xokpFqZygL5",
+		Addr:        "127.0.0.1:3306",
+		DataBase:    "laneIM",
+		BatchWriter: batch,
 	}
+}
+
+type BatchWriter struct {
+	MaxTime  int
+	MaxCount int
+}
+
+func (c *BatchWriter) Default() {
+	*c = BatchWriter{
+		MaxTime:  100,
+		MaxCount: 1000,
+	}
+}
+
+func DefaultBatchWriter() BatchWriter {
+	BatchWriter := BatchWriter{}
+	BatchWriter.Default()
+	return BatchWriter
 }
 
 type LaneConfig interface {

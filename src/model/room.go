@@ -14,9 +14,8 @@ func Init(db *gorm.DB) {
 		&UserMgr{},
 		&RoomOnline{},
 		&RoomComet{},
-		&RoomUserid{},
 		&UserComet{},
-		&UserRoom{},
+		// &UserRoom{},
 		&UserOnline{},
 	)
 	if err != nil {
@@ -26,7 +25,8 @@ func Init(db *gorm.DB) {
 
 // RoomMgr 模型
 type RoomMgr struct {
-	RoomID int64 `gorm:"primary_key;"`
+	RoomID int64     `gorm:"primary_key"`
+	Users  []UserMgr `gorm:"many2many:room_users;"`
 }
 
 // RoomOnline 模型
@@ -42,7 +42,7 @@ type RoomComet struct {
 }
 
 // RoomUserid 模型
-type RoomUserid struct {
-	RoomID int64
+type RoomUser struct {
+	RoomID int64 `gorm:"primary_key"`
 	UserID int64 `gorm:"primary_key"`
 }

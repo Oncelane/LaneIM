@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"laneIM/src/config"
+	"laneIM/src/dao"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
 	"log"
@@ -11,20 +12,20 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/allegro/bigcache"
-	"gorm.io/gorm"
 )
 
 // singleton
 type Job struct {
 	etcd          *pkg.EtcdClient
 	redis         *pkg.RedisClient
-	db            *gorm.DB
+	db            *sql.SqlDB
 	kafkaComsumer sarama.ConsumerGroup
 	conf          config.Job
 	mu            sync.RWMutex
 	buckets       []*Bucket
 	comets        map[string]*CometClient
 	cache         *bigcache.BigCache
+	daoo          *dao.Dao
 }
 
 func NewJob(conf config.Job) *Job {
@@ -40,12 +41,13 @@ func NewJob(conf config.Job) *Job {
 		kafkaComsumer: pkg.NewKafkaGroupComsumer(conf.KafkaComsumer),
 		conf:          conf,
 		comets:        make(map[string]*CometClient),
+		daoo:          dao.NewDao(conf.Mysql.BatchWriter),
 	}
 	cacheConfig := bigcache.DefaultConfig(time.Minute) // 缓存项默认过期时间为1分钟
 	cache, _ := bigcache.NewBigCache(cacheConfig)
 	j.cache = cache
 
-	j.db = sql.DB(conf.Mysql)
+	j.db = sql.NewDB(conf.Mysql)
 
 	j.NewBucket()
 

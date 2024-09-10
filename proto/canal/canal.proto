@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package lane.canal;
+option go_package = "laneIM/proto/canal;canal";
+
+message Update {
+  repeated int64 RoomComet = 1;
+  repeated int64 RoomUserid = 2;
+  repeated int64 UserRoom = 3;
+  repeated int64 UserComet = 4;
+}
+
+message NoResp {}

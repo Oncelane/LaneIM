@@ -4,12 +4,12 @@ import (
 	"laneIM/proto/comet"
 	"laneIM/proto/msg"
 	"laneIM/src/dao"
+	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
 	"log"
 	"sync"
 
 	"github.com/allegro/bigcache"
-	"gorm.io/gorm"
 )
 
 // 得有一个结构存储 userid->comet
@@ -34,9 +34,9 @@ func (j *Job) Push(message *comet.RoomReq) {
 // 	}
 // }
 
-func (r *Room) UpdateFromRedis(cache *bigcache.BigCache, rds *pkg.RedisClient, db *gorm.DB) error {
+func (r *Room) UpdateFromRedis(cache *bigcache.BigCache, rds *pkg.RedisClient, db *sql.SqlDB, d *dao.Dao) error {
 	serversMap := make(map[string]bool)
-	servers, err := dao.RoomComet(cache, rds.Client, db, r.roomid)
+	servers, err := d.RoomComet(cache, rds.Client, db, r.roomid)
 	if err != nil {
 		log.Printf("faild to read room:%d 's comets\n", err)
 		return err
@@ -45,7 +45,7 @@ func (r *Room) UpdateFromRedis(cache *bigcache.BigCache, rds *pkg.RedisClient, d
 		serversMap[member] = true
 	}
 	useridMap := make(map[int64]bool)
-	usersid, err := dao.RoomUserid(cache, rds.Client, db, r.roomid)
+	usersid, err := d.RoomUserid(cache, rds.Client, db, r.roomid)
 	if err != nil {
 		log.Printf("faild to read room:%d 's suerids\n", err)
 		return err
