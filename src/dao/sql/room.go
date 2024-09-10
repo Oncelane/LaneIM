@@ -6,6 +6,7 @@ import (
 	"laneIM/src/model"
 	"laneIM/src/pkg/mergewrite"
 	"log"
+	"strconv"
 
 	mysql2 "github.com/go-sql-driver/mysql"
 	"golang.org/x/sync/singleflight"
@@ -187,15 +188,21 @@ func (d *SqlDB) RoomUserid(roomid int64) ([]int64, error) {
 	return rt, nil
 }
 
-// func (d *SqlDB) RoomCount(roomid int64) (int, error) {
-// 	// 查询所有行的 ID
-// 	var userids []int64
-// 	err := d.DB.Model(&model.RoomUserid{}).Where("room_id = ?", roomid).Pluck("user_id", &userids).Error
-// 	if err != nil {
-// 		log.Println("faild to query room userid", err)
-// 	}
-// 	return len(userids), nil
-// }
+// singleflight
+func (d *SqlDB) RoomUserSingleflight(roomid int64) ([]int64, error) {
+	key := "room:user:" + strconv.FormatInt(roomid, 36)
+	r, err, _ := d.SingleFlightGroup.Do(key, func() (any, error) {
+		return d.RoomUserid(roomid)
+	})
+	var (
+		rt []int64
+		ok bool
+	)
+	if rt, ok = r.([]int64); !ok {
+		return nil, fmt.Errorf("batch return type wrong")
+	}
+	return rt, err
+}
 
 func (d *SqlDB) AddRoomUser(roomid int64, userid int64) error {
 	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Users").Append(&model.UserMgr{UserID: userid})

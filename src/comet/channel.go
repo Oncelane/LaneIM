@@ -65,6 +65,7 @@ func (c *Comet) recvRoutine(ch *Channel) {
 
 func (c *Comet) sendRoutine(ch *Channel) {
 	for message := range ch.sendCh {
+		// log.Println("send room msg to websocket")
 		err := ch.conn.WriteMsg(message)
 		if err != nil {
 			// TODO
@@ -83,6 +84,6 @@ func (c *Channel) Reply(data []byte, seq int64, path string) {
 
 func (c *Channel) Close() {
 	c.done = true
-	close(c.sendCh)
+	// close(c.sendCh)
 	c.conn.Close()
 }

@@ -23,7 +23,7 @@ import (
 // 		} else {
 // 			return rt, nil
 // 		}
-// 		// log.Println("触发sql查询")
+// 		// //log.Println("触发sql查询")
 // 		rt, err = db.AllRoomidSingleflight()
 // 		if err != nil {
 // 			return rt, err
@@ -31,7 +31,7 @@ import (
 // 		if len(rt) == 0 {
 // 			return rt, nil
 // 		}
-// 		// log.Println("同步到redis")
+// 		// //log.Println("同步到redis")
 // 		rds.SetNEAllRoomid(rdb, rt)
 // 		return rt, nil
 // 	})
@@ -52,36 +52,34 @@ func (d *Dao) RoomUserid(cache *bigcache.BigCache, rdb *redis.ClusterClient, db 
 	}
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
 
-		log.Println("触发redis查询")
+		log.Println("room user query redis")
 		rt, err := rds.RoomMgrUserid(rdb, roomid)
 		if err != nil {
 			if err != redis.Nil {
 				return rt, err
 			}
 		} else {
-			log.Println("同步到本地cache")
+			//log.Println("同步到本地cache", rt)
 			localCache.SetRoomUserid(cache, roomid, rt)
 			return rt, nil
 		}
-		log.Println("触发sql查询")
+		//log.Println("触发sql查询")
 		rt, err = db.RoomUserid(roomid)
 		if err != nil {
 			return rt, err
 		}
-		if len(rt) == 0 {
-			return rt, nil
+
+		//log.Println("同步到本地cache", rt)
+		localCache.SetRoomUserid(cache, roomid, rt)
+
+		// TODO 单独同步某一项到redis
+		//log.Println("同步到redis", rt)
+		err = rds.SetNERoomMgrUsers(rdb, roomid, rt)
+		if err != nil {
+			return rt, err
 		}
 
-		log.Println("同步到本地cache")
-		localCache.SetRoomUserid(cache, roomid, rt)
 		return rt, nil
-		// TODO 单独同步某一项到redis
-		// log.Println("同步到redis")
-		// err = rds.SetNERoomUser(rdb, roomid, rt)
-		// if err != nil {
-		// 	return rt, err
-		// }
-		// return rt, nil
 	})
 	if r, ok := rt.([]int64); ok {
 		return r, err
@@ -100,32 +98,29 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
 
-		log.Println("触发redis查询")
+		log.Println("room comet query redis")
 		rt, err := rds.RoomMgrComet(rdb, roomid)
 		if err != nil {
 			if err != redis.Nil {
 				return rt, err
 			}
 		} else {
-			log.Println("同步到本地cache")
+			//log.Println("同步到本地cache:", rt)
 			localCache.SetRoomComet(cache, roomid, rt)
 			return rt, nil
 		}
-		log.Println("触发sql查询")
+		//log.Println("触发sql查询")
 		rt, err = db.RoomComet(roomid)
 		if err != nil {
 			return rt, err
 		}
-		if len(rt) == 0 {
-			return rt, nil
-		}
-		log.Println("同步到本地cache")
+
+		//log.Println("同步到本地cache", rt)
 		localCache.SetRoomComet(cache, roomid, rt)
-		return rt, nil
 		//TODO 单独同步到redis
-		// log.Println("同步到redis")
-		// rds.SetNERoomComet(rdb, roomid, rt)
-		// return rt, nil
+		//log.Println("同步到redis", rt)
+		rds.SetNERoomMgrComet(rdb, roomid, rt)
+		return rt, nil
 	})
 	log.Println("time on query room spand", time.Since(startTime))
 	if r, ok := rt.([]string); ok {

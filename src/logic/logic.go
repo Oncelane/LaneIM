@@ -6,6 +6,7 @@ import (
 	pb "laneIM/proto/logic"
 	"laneIM/src/config"
 	"laneIM/src/dao"
+	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/sql"
 	"laneIM/src/model"
 	"laneIM/src/pkg"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/allegro/bigcache"
 	"github.com/bwmarrin/snowflake"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -41,6 +43,7 @@ func (u *UuidGenerator) Generator() (rt int64) {
 type Logic struct {
 	conf  config.Logic
 	etcd  *pkg.EtcdClient
+	cache *bigcache.BigCache
 	redis *pkg.RedisClient
 	db    *sql.SqlDB
 	kafka *pkg.KafkaProducer
@@ -60,6 +63,7 @@ func NewLogic(conf config.Logic) *Logic {
 		conf:   conf,
 		daoo:   dao.NewDao(conf.Mysql.BatchWriter),
 		comets: make(map[string]struct{}),
+		cache:  localCache.Cache(time.Minute),
 	}
 	s.uuid = NewUuidGenerator(int64(conf.Id))
 
@@ -248,7 +252,7 @@ func (s *Logic) QueryRoom(_ context.Context, in *pb.QueryRoomReq) (*pb.QueryRoom
 		Roomids: make([]*pb.QueryRoomResp_RoomSlice, 0),
 	}
 	for _, userid := range in.Userid {
-		roomids, err := s.daoo.UserRoom(s.redis.Client, s.db, userid)
+		roomids, err := s.daoo.UserRoom(s.cache, s.redis.Client, s.db, userid)
 		// log.Printf("logic dao query user%d have room%v\n", userid, roomids)
 		if err != nil {
 			return nil, err

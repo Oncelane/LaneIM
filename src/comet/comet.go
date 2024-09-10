@@ -211,6 +211,7 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 }
 
 func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
+	// log.Println("recv from job", in.Roomid)
 	c.Bucket(in.Roomid).GetRoom(in.Roomid).Send(&msg.Msg{
 		Path: "roomMsg",
 		Data: in.Data,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"laneIM/src/config"
 	"laneIM/src/dao"
+	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
 	"log"
@@ -42,10 +43,8 @@ func NewJob(conf config.Job) *Job {
 		conf:          conf,
 		comets:        make(map[string]*CometClient),
 		daoo:          dao.NewDao(conf.Mysql.BatchWriter),
+		cache:         localCache.Cache(time.Minute),
 	}
-	cacheConfig := bigcache.DefaultConfig(time.Minute) // 缓存项默认过期时间为1分钟
-	cache, _ := bigcache.NewBigCache(cacheConfig)
-	j.cache = cache
 
 	j.db = sql.NewDB(conf.Mysql)
 

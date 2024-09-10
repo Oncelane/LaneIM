@@ -208,15 +208,6 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 			}
 			go c.db.MergeWriter.Do(redisKey+col[1].GetValue(), func() (any, error) {
 
-				// check exist
-				exist, err := rds.EXRoomUser(c.redis.Client, roomid)
-				if err != nil {
-					log.Println("faild to sync ", redisKey, err)
-				}
-				if !exist {
-					return nil, nil
-				}
-
 				// sql
 				userids, err := c.db.RoomUserid(roomid)
 				if err != nil {
@@ -224,7 +215,7 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 				}
 
 				// updata setex
-				err = rds.SetEXRoomUser(c.redis.Client, roomid, userids)
+				err = rds.SetEXRoomMgrUsers(c.redis.Client, roomid, userids)
 				if err != nil {
 					log.Println("faild to sync ", redisKey, err)
 				}
@@ -239,15 +230,6 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 			}
 			go c.db.MergeWriter.Do(redisKey+col[1].GetValue(), func() (any, error) {
 
-				// check exist
-				exist, err := rds.EXRoomComet(c.redis.Client, roomid)
-				if err != nil {
-					log.Println("faild to sync ", redisKey, err)
-				}
-				if !exist {
-					return nil, nil
-				}
-
 				// sql
 				comets, err := c.db.RoomComet(roomid)
 				if err != nil {
@@ -255,7 +237,7 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 				}
 
 				// updata setex
-				err = rds.SetEXRoomComet(c.redis.Client, roomid, comets)
+				err = rds.SetEXRoomMgrComet(c.redis.Client, roomid, comets)
 				if err != nil {
 					log.Println("faild to sync ", redisKey, err)
 				}
@@ -266,123 +248,30 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 	case "user":
 		switch rediskey1 {
 		case "mgr":
+			userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			if err != nil {
+				log.Println("fomat err")
+				return
+			}
 			go c.db.MergeWriter.Do(redisKey, func() (any, error) {
-				// check exist
-				exist, err := rds.EXAllUserid(c.redis.Client)
-				if err != nil {
-					log.Println("faild to sync ", redisKey, err)
-				}
-				if !exist {
-					log.Println("not exist")
-					return nil, nil
-				}
 
 				// sql
-				userids, err := c.db.AllUserid()
+				user, err := c.db.UserMgr(userid)
 				if err != nil {
 					log.Println("faild to sql user")
 				}
 
 				// updata setex
-				err = rds.SetEXAllUserid(c.redis.Client, userids)
+				err = rds.SetEXUserMgr(c.redis.Client, user)
 				if err != nil {
 					log.Println("faild to sync ", redisKey, err)
 				}
+
 				log.Println("sync", redisKey)
 				return nil, nil
+
 			})
 		}
-		// case "online":
-		// 	go c.db.MergeWriter.Do(redisKey, func() (any, error) {
-		// 		roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
-		// 		if err != nil {
-		// 			log.Println("fomat err")
-		// 			return nil, nil
-		// 		}
-
-		// 		// check exist
-		// 		exist, err := rds.EXRoomOnline(c.redis.Client, roomid)
-		// 		if err != nil {
-		// 			log.Println("faild to check", redisKey, err)
-		// 			return nil, nil
-		// 		}
-		// 		if !exist {
-		// 			return nil, nil
-		// 		}
-
-		// 		//sql
-		// 		count, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
-		// 		if err != nil {
-		// 			log.Println("faild to decode onlinecount", col[1].GetValue(), err)
-		// 		}
-		// 		err = rds.SetEXRoomOnlie(c.redis.Client, roomid, int(count))
-		// 		if err != nil {
-		// 			log.Println("faild to sync ", redisKey, err)
-		// 		}
-		// 		log.Println("sync", redisKey)
-		// 		return nil, nil
-		// 	})
-		// case "room":
-		// 	go c.db.MergeWriter.Do(redisKey, func() (any, error) {
-		// 		userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
-		// 		if err != nil {
-		// 			log.Println("fomat err")
-		// 			return nil, nil
-		// 		}
-		// 		// check exist
-		// 		exist, err := rds.EXUserRoom(c.redis.Client, userid)
-		// 		if err != nil {
-		// 			log.Println("faild to sync ", redisKey, err)
-		// 		}
-		// 		if !exist {
-		// 			return nil, nil
-		// 		}
-
-		// 		// sql
-		// 		roomids, err := c.db.UserRoom(userid)
-		// 		if err != nil {
-		// 			log.Println("faild to sql ", redisKey)
-		// 		}
-
-		// 		// updata setex
-		// 		err = rds.SetEXUserRoom(c.redis.Client, userid, roomids)
-		// 		if err != nil {
-		// 			log.Println("faild to sync ", redisKey, err)
-		// 		}
-		// 		log.Println("sync", redisKey)
-		// 		return nil, nil
-		// 	})
-		// case "comet":
-		// 	go c.db.MergeWriter.Do(redisKey, func() (any, error) {
-		// 		userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
-		// 		if err != nil {
-		// 			log.Println("fomat err")
-		// 			return nil, nil
-		// 		}
-		// 		// check exist
-		// 		exist, err := rds.EXUserComet(c.redis.Client, userid)
-		// 		if err != nil {
-		// 			log.Println("faild to sync ", redisKey, err)
-		// 		}
-		// 		if !exist {
-		// 			return nil, nil
-		// 		}
-
-		// 		// sql
-		// 		cometAddr, err := c.db.UserComet(userid)
-		// 		if err != nil {
-		// 			log.Println("faild to sql user")
-		// 		}
-
-		// 		// updata setex
-		// 		err = rds.SetEXUserComet(c.redis.Client, userid, cometAddr)
-		// 		if err != nil {
-		// 			log.Println("faild to sync ", redisKey, err)
-		// 		}
-		// 		log.Println("sync", redisKey)
-		// 		return nil, nil
-		// 	})
-		// }
 	}
 }
 

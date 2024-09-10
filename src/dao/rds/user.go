@@ -14,7 +14,7 @@ import (
 //room:mgr
 
 func SetNEUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
-	pipe := rdb.Pipeline()
+
 	strUserid := strconv.FormatInt(user.UserID, 36)
 	key := "user:" + strUserid
 
@@ -27,12 +27,13 @@ func SetNEUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 
 		// 如果键不存在，则执行写入操作
 		if exists == 0 {
+			pipe := rdb.Pipeline()
 			pipe.HMSet(key, map[string]interface{}{"CA": user.CometAddr, "OL": user.Online}).Err()
 			for i := range user.Rooms {
 				pipe.SAdd(fmt.Sprintf("%s:roomS", key), user.Rooms[i].RoomID).Err()
 			}
-			pipe.Expire(key, time.Second*30)
-			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*30)
+			pipe.Expire(key, time.Second*60)
+			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*60)
 
 			_, err := pipe.Exec()
 			if err != nil {
@@ -43,13 +44,16 @@ func SetNEUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 		}
 		return nil
 	}, key)
-
+	if err != nil {
+		log.Println("faild to set user mgr")
+		return err
+	}
 	return err
 
 }
 
 func SetEXUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
-	pipe := rdb.Pipeline()
+
 	strUserid := strconv.FormatInt(user.UserID, 36)
 	key := "user:" + strUserid
 
@@ -62,12 +66,14 @@ func SetEXUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 
 		// 如果键存在，则执行写入操作
 		if exists != 0 {
+			pipe := rdb.Pipeline()
+			pipe.Del(fmt.Sprintf("%s:roomS", key))
 			pipe.HMSet(key, map[string]interface{}{"CA": user.CometAddr, "OL": user.Online}).Err()
 			for i := range user.Rooms {
 				pipe.SAdd(fmt.Sprintf("%s:roomS", key), user.Rooms[i].RoomID).Err()
 			}
-			pipe.Expire(key, time.Second*30)
-			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*30)
+			pipe.Expire(key, time.Second*60)
+			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*60)
 
 			_, err := pipe.Exec()
 			if err != nil {
@@ -78,7 +84,10 @@ func SetEXUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 		}
 		return nil
 	}, key)
-
+	if err != nil {
+		log.Println("faild to set user mgr")
+		return err
+	}
 	return err
 
 }
@@ -127,6 +136,9 @@ func UserMgrRoom(rdb *redis.ClusterClient, userid int64) ([]int64, error) {
 	strUserid := strconv.FormatInt(userid, 36)
 	roomSetKey := fmt.Sprintf("user:%s:roomS", strUserid)
 	roomIDs, err := rdb.SMembers(roomSetKey).Result()
+	if len(roomIDs) == 0 {
+		return nil, redis.Nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +153,66 @@ func UserMgrRoom(rdb *redis.ClusterClient, userid int64) ([]int64, error) {
 	return rooms, nil
 }
 
-func SetNEUserMgrRoom
+func SetNEUSerMgrRoom(rdb *redis.ClusterClient, userid int64, rooms []int64) error {
+	strRoomid := strconv.FormatInt(userid, 36)
+	key := "user:" + strRoomid
+
+	err := rdb.Watch(func(tx *redis.Tx) error {
+		// 检查键是否存在
+		exists, err := tx.Exists(key).Result()
+		if err != nil {
+			return err
+		}
+
+		// 如果键不存在，则执行写入操作
+		if exists == 0 {
+			pipe := rdb.Pipeline()
+			for i := range rooms {
+				pipe.SAdd(fmt.Sprintf("%s:roomS", key), rooms[i]).Err()
+			}
+			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*60)
+			_, err := pipe.Exec()
+			return err
+		}
+		return nil
+	}, key)
+	if err != nil {
+		log.Println("faild to set user room", err)
+		return err
+	}
+	return nil
+}
+
+func SetEXUSerMgrRoom(rdb *redis.ClusterClient, userid int64, rooms []int64) error {
+	strUserid := strconv.FormatInt(userid, 36)
+	key := "user:" + strUserid
+
+	err := rdb.Watch(func(tx *redis.Tx) error {
+		// 检查键是否存在
+		exists, err := tx.Exists(key).Result()
+		if err != nil {
+			return err
+		}
+
+		// 如果键存在，则执行写入操作
+		if exists != 0 {
+			pipe := rdb.Pipeline()
+			pipe.Del(fmt.Sprintf("%s:roomS", key))
+			for i := range rooms {
+				pipe.SAdd(fmt.Sprintf("%s:roomS", key), rooms[i]).Err()
+			}
+			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*60)
+			_, err := pipe.Exec()
+			return err
+		}
+		return nil
+	}, key)
+	if err != nil {
+		log.Println("faild to set user room", err)
+		return err
+	}
+	return nil
+}
 
 // user:comet
 func UserMgrComet(rdb *redis.ClusterClient, userid int64) (string, error) {
@@ -154,4 +225,59 @@ func UserMgrComet(rdb *redis.ClusterClient, userid int64) (string, error) {
 		return "", err
 	}
 	return CometAddr, err
+}
+
+func SetNEUSerMgrComet(rdb *redis.ClusterClient, userid int64, comet string) error {
+	strUserid := strconv.FormatInt(userid, 36)
+	key := fmt.Sprintf("user:%s", strUserid)
+	err := rdb.Watch(func(tx *redis.Tx) error {
+		// 检查键是否存在
+		exists, err := tx.Exists(key).Result()
+		if err != nil {
+			return err
+		}
+
+		// 如果键不存在，则执行写入操作
+		if exists == 0 {
+			pipe := rdb.Pipeline()
+			pipe.HSet(key, "CA", comet).Result()
+			pipe.Expire(key, time.Second*60)
+			_, err := pipe.Exec()
+			return err
+		}
+		return nil
+	}, key)
+	if err != nil {
+		log.Println("faild to set user comet", err)
+		return err
+	}
+	return nil
+}
+
+func SetEXUSerMgrComet(rdb *redis.ClusterClient, userid int64, comet string) error {
+	strUserid := strconv.FormatInt(userid, 36)
+	key := fmt.Sprintf("user:%s", strUserid)
+
+	err := rdb.Watch(func(tx *redis.Tx) error {
+		// 检查键是否存在
+		exists, err := tx.Exists(key).Result()
+		if err != nil {
+			return err
+		}
+
+		// 如果键存在，则执行写入操作
+		if exists != 0 {
+			pipe := rdb.Pipeline()
+			pipe.HSet(key, "CA", comet).Result()
+			pipe.Expire(key, time.Second*60)
+			_, err := pipe.Exec()
+			return err
+		}
+		return nil
+	}, key)
+	if err != nil {
+		log.Println("faild to set user comet", err)
+		return err
+	}
+	return nil
 }

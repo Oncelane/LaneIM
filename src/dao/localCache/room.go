@@ -18,7 +18,8 @@ func Cache(time time.Duration) *bigcache.BigCache {
 }
 
 func RoomComet(cache *bigcache.BigCache, roomid int64) ([]string, error) {
-	data, err := cache.Get(strconv.FormatInt(roomid, 36))
+	key := "room:comet" + strconv.FormatInt(roomid, 36)
+	data, err := cache.Get(key)
 	if err != nil {
 		// log.Println("miss local cache room:comet", err)
 		return nil, err
@@ -27,15 +28,18 @@ func RoomComet(cache *bigcache.BigCache, roomid int64) ([]string, error) {
 }
 
 func SetRoomComet(cache *bigcache.BigCache, roomid int64, comets []string) error {
-	return cache.Set(strconv.FormatInt(roomid, 36), []byte(strings.Join(comets, ";")))
+	key := "room:comet" + strconv.FormatInt(roomid, 36)
+	return cache.Set(key, []byte(strings.Join(comets, ";")))
 }
 
 func DelRoomComet(cache *bigcache.BigCache, roomid int64) error {
-	return cache.Delete("room:comet" + strconv.FormatInt(roomid, 36))
+	key := "room:comet" + strconv.FormatInt(roomid, 36)
+	return cache.Delete(key)
 }
 
 func RoomUserid(cache *bigcache.BigCache, roomid int64) ([]int64, error) {
-	data, err := cache.Get(strconv.FormatInt(roomid, 36))
+	key := "room:user" + strconv.FormatInt(roomid, 36)
+	data, err := cache.Get(key)
 	if err != nil {
 		// log.Println("miss local cache room:user", err)
 		return nil, err
@@ -53,14 +57,16 @@ func RoomUserid(cache *bigcache.BigCache, roomid int64) ([]int64, error) {
 }
 
 func SetRoomUserid(cache *bigcache.BigCache, roomid int64, userids []int64) error {
+	key := "room:user" + strconv.FormatInt(roomid, 36)
 	rawuserids := make([]string, len(userids))
 	for i := range userids {
 		raw := strconv.FormatInt(userids[i], 36)
 		rawuserids[i] = raw
 	}
-	return cache.Set(strconv.FormatInt(roomid, 36), []byte(strings.Join(rawuserids, ";")))
+	return cache.Set(key, []byte(strings.Join(rawuserids, ";")))
 }
 
 func DelRoomUserid(cache *bigcache.BigCache, roomid int64) error {
-	return cache.Delete("room:user" + strconv.FormatInt(roomid, 36))
+	key := "room:user" + strconv.FormatInt(roomid, 36)
+	return cache.Delete(key)
 }

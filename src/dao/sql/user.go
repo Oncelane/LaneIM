@@ -10,6 +10,31 @@ import (
 )
 
 // --------------User------------
+func (d *SqlDB) NewUser(userid int64) error {
+	user := model.UserMgr{
+		UserID: userid,
+	}
+	d.DB.Save(&user)
+	return nil
+}
+
+func (d *SqlDB) DelUser(userid int64) error {
+	user := model.UserMgr{
+		UserID: userid,
+	}
+	d.DB.Delete(&user)
+	return nil
+}
+
+func (d *SqlDB) UserMgr(userid int64) (*model.UserMgr, error) {
+	user := model.UserMgr{}
+	err := d.DB.Preload("Rooms").First(&user, userid).Error
+	if err != nil {
+		log.Println("faild to sql userMgr")
+		return nil, err
+	}
+	return &user, nil
+}
 
 // user:mgr
 func (d *SqlDB) AllUserid() ([]int64, error) {
@@ -90,7 +115,7 @@ func (d *SqlDB) AddUserRoom(userid int64, roomid int64) error {
 				return nil
 			}
 		}
-		log.Println("faild to add room user", err)
+		log.Println("faild to add user room", err)
 		return err
 	}
 	return nil
@@ -143,21 +168,5 @@ func (d *SqlDB) DelUserComet(userid int64, comet string) error {
 		log.Println("faild to del user comet", err)
 		return err
 	}
-	return nil
-}
-
-func (d *SqlDB) NewUser(userid int64) error {
-	user := model.UserMgr{
-		UserID: userid,
-	}
-	d.DB.Save(&user)
-	return nil
-}
-
-func (d *SqlDB) DelUser(userid int64) error {
-	user := model.UserMgr{
-		UserID: userid,
-	}
-	d.DB.Delete(&user)
 	return nil
 }

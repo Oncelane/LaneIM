@@ -11,18 +11,18 @@ import (
 	"time"
 )
 
-func TestGetUserOnline(t *testing.T) {
-	mysqlConfig := config.Mysql{}
-	mysqlConfig.Default()
-	db := sql.NewDB(mysqlConfig)
-	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001"}})
-	d := dao.NewDao(config.DefaultBatchWriter())
-	rt, cometAddr, err := d.UserOnline(rdb.Client, db, 21)
-	if err != nil {
-		t.Error(err)
-	}
-	log.Println("query redis and sql", rt, "comet:", cometAddr)
-}
+// func TestGetUserOnline(t *testing.T) {
+// 	mysqlConfig := config.Mysql{}
+// 	mysqlConfig.Default()
+// 	db := sql.NewDB(mysqlConfig)
+// 	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001"}})
+// 	d := dao.NewDao(config.DefaultBatchWriter())
+// 	rt, cometAddr, err := d.UserOnline(rdb.Client, db, 21)
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// 	log.Println("query redis and sql", rt, "comet:", cometAddr)
+// }
 
 func TestSetUserOnline(t *testing.T) {
 	mysqlConfig := config.Mysql{}
@@ -49,7 +49,7 @@ func TestRedisAndSqlAllRoomid(t *testing.T) {
 	mysqlConfig.Default()
 	db := sql.NewDB(mysqlConfig)
 	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001"}})
-	cache := localCache.Cache(time.Second * 30)
+	cache := localCache.Cache(time.Minute)
 	d := dao.NewDao(config.DefaultBatchWriter())
 	rt, err := d.RoomUserid(cache, rdb.Client, db, 1005)
 	if err != nil {

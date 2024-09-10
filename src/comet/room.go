@@ -48,7 +48,7 @@ func (g *Room) Send(m *msg.Msg) {
 				g.DelChannel(ch)
 				return true
 			}
-			// log.Println("room msg success send")
+			// log.Println("message enter ch.sendch", ch.id)
 			ch.sendCh <- m
 		}
 		return true
