@@ -5,6 +5,7 @@ import (
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
+	"log"
 	"strconv"
 
 	"github.com/allegro/bigcache"
@@ -49,18 +50,18 @@ func (d *Dao) RoomUserid(cache *bigcache.BigCache, rdb *redis.ClusterClient, db 
 		if err == nil {
 			return rt, err
 		}
-		// log.Println("触发redis查询")
+		log.Println("触发redis查询")
 		rt, err = rds.RoomUserid(rdb, roomid)
 		if err != nil {
 			if err != redis.Nil {
 				return rt, err
 			}
 		} else {
-			// log.Println("同步到本地cache")
+			log.Println("同步到本地cache")
 			localCache.SetRoomUserid(cache, roomid, rt)
 			return rt, nil
 		}
-		// log.Println("触发sql查询")
+		log.Println("触发sql查询")
 		rt, err = db.RoomUserid(roomid)
 		if err != nil {
 			return rt, err
@@ -68,7 +69,7 @@ func (d *Dao) RoomUserid(cache *bigcache.BigCache, rdb *redis.ClusterClient, db 
 		if len(rt) == 0 {
 			return rt, nil
 		}
-		// log.Println("同步到redis")
+		log.Println("同步到redis")
 
 		err = rds.SetNERoomUser(rdb, roomid, rt)
 		if err != nil {
@@ -91,18 +92,18 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 		if err == nil {
 			return rt, err
 		}
-		// log.Println("触发redis查询")
+		log.Println("触发redis查询")
 		rt, err = rds.RoomComet(rdb, roomid)
 		if err != nil {
 			if err != redis.Nil {
 				return rt, err
 			}
 		} else {
-			// log.Println("同步到本地cache")
+			log.Println("同步到本地cache")
 			localCache.SetRoomComet(cache, roomid, rt)
 			return rt, nil
 		}
-		// log.Println("触发sql查询")
+		log.Println("触发sql查询")
 		rt, err = db.RoomComet(roomid)
 		if err != nil {
 			return rt, err
@@ -110,7 +111,7 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 		if len(rt) == 0 {
 			return rt, nil
 		}
-		// log.Println("同步到redis")
+		log.Println("同步到redis")
 		rds.SetNERoomComet(rdb, roomid, rt)
 		return rt, nil
 	})

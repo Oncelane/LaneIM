@@ -60,6 +60,7 @@ func (r *Room) UpdateFromRedis(cache *bigcache.BigCache, rds *pkg.RedisClient, d
 		Server: serversMap,
 		Users:  useridMap,
 	}
+	log.Println("roominfo:", r.info.String())
 	r.rw.Unlock()
 	return nil
 }

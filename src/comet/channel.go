@@ -46,7 +46,7 @@ func (c *Comet) recvRoutine(ch *Channel) {
 				c.DelChannel(ch)
 				return
 			}
-			log.Println("websocket close", ch.id)
+			// log.Println("websocket close", ch.id)
 			c.DelChannel(ch)
 			return
 		}

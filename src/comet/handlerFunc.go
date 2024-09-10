@@ -72,7 +72,7 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 	if len(rt.Roomids) != 0 {
 		for _, roomid := range rt.Roomids[0].Roomid {
 			c.Bucket(roomid).PutChannel(roomid, ch)
-			log.Println("userid:", ch.id, "in room", roomid)
+			// log.Println("userid:", ch.id, "in room", roomid)
 		}
 	}
 	outstruct := &msg.CRoomidResp{
@@ -225,7 +225,7 @@ func (c *Comet) HandleOnline(m *msg.Msg, ch *Channel) {
 		if len(rt.Roomids) != 0 {
 			for _, roomid := range rt.Roomids[0].Roomid {
 				c.Bucket(roomid).PutChannel(roomid, ch)
-				log.Println("userid:", ch.id, "in room", roomid)
+				// log.Println("userid:", ch.id, "in room", roomid)
 			}
 		}
 	}
