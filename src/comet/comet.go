@@ -70,6 +70,7 @@ type Comet struct {
 	BatcherNewUser  *batch.BatchArgs[BatchStructNewUser]
 	BatcherSetOline *batch.BatchArgs[BatchStructSetOnline]
 	BatcherJoinRoom *batch.BatchArgs[BatchStructJoinRoom]
+	BatcherSendRoom *batch.BatchArgs[BatchStructSendRoom]
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
@@ -111,12 +112,15 @@ func (c *Comet) InitBatch() {
 
 	c.BatcherJoinRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doJoinRoomBatch)
 	c.BatcherJoinRoom.Start()
+
+	c.BatcherSendRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSendRoomBatch)
+	c.BatcherSendRoom.Start()
 }
 
 func (c *Comet) InitFunc() {
 	//func router
 	c.funcRout = NewWsFuncRouter()
-	c.funcRout.Use("sendRoom", c.HandleSendRoom)
+	c.funcRout.Use("sendRoom", c.HandleSendRoomBatch)
 	c.funcRout.Use("queryRoom", c.HandleRoom)
 	c.funcRout.Use("auth", c.HandleAuth)
 	c.funcRout.Use("newUser", c.HandleNewUserBatch)
@@ -225,8 +229,8 @@ func (c *Comet) DelChannel(ch *Channel) {
 	c.mu.Unlock()
 }
 
-func (c *Comet) LogictSendMsg(message *logic.SendMsgReq) error {
-	_, err := c.pickLogic().Client.SendMsg(context.Background(), message)
+func (c *Comet) LogictSendMsgBatch(message *logic.SendMsgBatchReq) error {
+	_, err := c.pickLogic().Client.SendMsgBatch(context.Background(), message)
 	if err != nil {
 		laneLog.Logger.Infoln(err)
 	}
@@ -241,12 +245,24 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 	return nil, nil
 }
 
-func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
+// func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
+// 	// laneLog.Logger.Infoln("recv from job", in.Roomid)
+// 	c.Bucket(in.Roomid).GetRoom(in.Roomid).Send(&msg.Msg{
+// 		Path: "roomMsg",
+// 		Data: in.Data,
+// 	})
+
+// 	return nil, nil
+// }
+
+func (c *Comet) RoomBatch(_ context.Context, in *comet.RoomBatchReq) (*comet.NoResp, error) {
 	// laneLog.Logger.Infoln("recv from job", in.Roomid)
-	c.Bucket(in.Roomid).GetRoom(in.Roomid).Send(&msg.Msg{
-		Path: "roomMsg",
-		Data: in.Data,
-	})
+	for i := range in.Roomid {
+		c.Bucket(in.Roomid[i]).GetRoom(in.Roomid[i]).SendBatch(&msg.MsgBatch{
+			Path:  "batchMsg",
+			Datas: in.Data,
+		})
+	}
 
 	return nil, nil
 }

@@ -24,27 +24,47 @@ func (consumer *MyConsumer) Cleanup(session sarama.ConsumerGroupSession) error {
 	return nil
 }
 
+// func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+// 	for message := range claim.Messages() {
+// 		// laneLog.Logger.Infof("Received message: from %s/%d\n", message.Topic, message.Partition)
+// 		// 处理消息...
+// 		protoMsg := &logic.SendMsgReq{}
+// 		err := proto.Unmarshal(message.Value, protoMsg)
+// 		if err != nil {
+// 			laneLog.Logger.Infoln("wrong protobuf decode")
+// 		}
+// 		switch protoMsg.Path {
+// 		case "sendRoom":
+// 			// 可能的初始化room，获取room所处的comets
+// 			// for addr := range room.info.Server {
+// 			// 检查是否实际连接上了comet
+// 			consumer.job.Push(&comet.RoomReq{
+// 				Roomid: protoMsg.Roomid,
+// 				Data:   protoMsg.Data,
+// 			})
+
+//				// }
+//			}
+//			// 标记消息为已消费
+//			session.MarkMessage(message, "")
+//		}
+//		return nil
+//	}
 func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
 		// laneLog.Logger.Infof("Received message: from %s/%d\n", message.Topic, message.Partition)
 		// 处理消息...
-		protoMsg := &logic.SendMsgReq{}
+		protoMsg := &logic.SendMsgBatchReq{}
 		err := proto.Unmarshal(message.Value, protoMsg)
 		if err != nil {
 			laneLog.Logger.Infoln("wrong protobuf decode")
 		}
-		switch protoMsg.Path {
-		case "sendRoom":
-			// 可能的初始化room，获取room所处的comets
-			// for addr := range room.info.Server {
-			// 检查是否实际连接上了comet
-			consumer.job.Push(&comet.RoomReq{
-				Roomid: protoMsg.Roomid,
-				Data:   protoMsg.Data,
-			})
 
-			// }
-		}
+		consumer.job.Push(&comet.RoomReq{
+			Roomid: protoMsg.Roomid,
+			Data:   protoMsg.Data,
+		})
+
 		// 标记消息为已消费
 		session.MarkMessage(message, "")
 	}

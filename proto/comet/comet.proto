@@ -17,16 +17,22 @@ message BrodcastReq { bytes data = 1; }
 message BrodcastResp {}
 
 message RoomReq {
-  int64 roomid = 2;
-  bytes data = 3;
+  int64 roomid = 1;
+  bytes data = 2;
 }
-
 message RoomResp {}
+
+message RoomBatchReq {
+  repeated int64 roomid = 1;
+  repeated bytes data = 2;
+}
+message RoomBatchResp {}
 
 message NoResp {}
 
 service comet {
   rpc Single(SingleReq) returns (NoResp);
   rpc Brodcast(BrodcastReq) returns (NoResp);
-  rpc Room(RoomReq) returns (NoResp);
+  // rpc Room(RoomReq) returns (NoResp);
+  rpc RoomBatch(RoomBatchReq) returns (NoResp);
 }

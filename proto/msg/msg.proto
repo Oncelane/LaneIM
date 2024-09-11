@@ -12,6 +12,13 @@ message Msg {
   int64 seq = 3;
 }
 
+message MsgBatch {
+  string path = 1;
+  repeated bytes datas = 2;
+  repeated string paths = 3;
+  repeated int64 seqs = 4;
+}
+
 message UserInfo {
   int64 userid = 1;
   bool online = 2;

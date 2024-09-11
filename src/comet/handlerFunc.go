@@ -91,26 +91,73 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 
 }
 
-func (c *Comet) HandleSendRoom(m *msg.Msg, ch *Channel) {
+// func (c *Comet) HandleSendRoom(m *msg.Msg, ch *Channel) {
+// 	cSendRoomReq := &msg.CSendRoomReq{}
+// 	err := proto.Unmarshal(m.Data, cSendRoomReq)
+// 	if err != nil {
+// 		laneLog.Logger.Infoln("faild to decode proto", err)
+// 		return
+// 	}
+
+// 	err = c.LogictSendMsg(&logic.SendMsgReq{
+// 		Data:   []byte(cSendRoomReq.Msg),
+// 		Path:   m.Path,
+// 		Addr:   c.conf.Addr,
+// 		Userid: cSendRoomReq.Userid,
+// 		Roomid: cSendRoomReq.Roomid,
+// 	})
+// 	if err != nil {
+// 		laneLog.Logger.Infoln("faild to send logic", err)
+// 		return
+// 	}
+// 	ch.Reply([]byte("ack"), m.Seq, m.Path)
+// }
+
+type BatchStructSendRoom struct {
+	arg *msg.CSendRoomReq
+	ch  *Channel
+	seq int64
+}
+
+func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
+
+	msgs := make([]*logic.SendMsgReq, len(in))
+	for i := range in {
+		msgs[i] = &logic.SendMsgReq{
+			Data:   []byte(in[i].arg.Msg),
+			Path:   "sendRoom",
+			Addr:   c.conf.Addr,
+			Userid: in[i].arg.Userid,
+			Roomid: in[i].arg.Roomid,
+		}
+	}
+
+	err := c.LogictSendMsgBatch(&logic.SendMsgBatchReq{
+		Msgs: msgs,
+	})
+	if err != nil {
+		laneLog.Logger.Infoln("faild to send logic", err)
+		return
+	}
+	for i := range in {
+		in[i].ch.Reply([]byte("ack"), in[i].seq, "sendRoom")
+	}
+
+}
+
+func (c *Comet) HandleSendRoomBatch(m *msg.Msg, ch *Channel) {
 	cSendRoomReq := &msg.CSendRoomReq{}
 	err := proto.Unmarshal(m.Data, cSendRoomReq)
 	if err != nil {
 		laneLog.Logger.Infoln("faild to decode proto", err)
 		return
 	}
-
-	err = c.LogictSendMsg(&logic.SendMsgReq{
-		Data:   []byte(cSendRoomReq.Msg),
-		Path:   m.Path,
-		Addr:   c.conf.Addr,
-		Userid: cSendRoomReq.Userid,
-		Roomid: cSendRoomReq.Roomid,
+	c.BatcherSendRoom.Add(&BatchStructSendRoom{
+		arg: cSendRoomReq,
+		ch:  ch,
+		seq: m.Seq,
 	})
-	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
-		return
-	}
-	ch.Reply([]byte("ack"), m.Seq, m.Path)
+
 }
 
 func (c *Comet) HandleNewUser(m *msg.Msg, ch *Channel) {

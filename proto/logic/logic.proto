@@ -14,6 +14,8 @@ message SendMsgReq {
   int64 toUserid = 6;
 }
 
+message SendMsgBatchReq { repeated SendMsgReq msgs = 1; }
+
 message NoResp {}
 
 message SetOnlineReq {
@@ -89,6 +91,7 @@ message AuthResp { bool pass = 1; }
 
 service logic {
   rpc SendMsg(SendMsgReq) returns (NoResp);
+  rpc SendMsgBatch(SendMsgBatchReq) returns (NoResp);
 
   rpc SetOnline(SetOnlineReq) returns (NoResp);
   rpc SetOnlineBatch(SetOnlineBatchReq) returns (NoResp);

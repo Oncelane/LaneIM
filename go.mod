@@ -9,7 +9,6 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/withlin/canal-go v1.1.2
 	go.etcd.io/etcd/client/v3 v3.5.15
 	go.uber.org/zap v1.27.0
@@ -20,6 +19,8 @@ require (
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.11
 )
+
+require github.com/natefinch/lumberjack v2.0.0+incompatible
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

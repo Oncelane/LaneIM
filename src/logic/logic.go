@@ -167,6 +167,21 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 	}
 	return nil, nil
 }
+func (s *Logic) SendMsgBatch(_ context.Context, in *pb.SendMsgBatchReq) (*pb.NoResp, error) {
+	data, err := proto.Marshal(in)
+	if err != nil {
+		laneLog.Logger.Infoln("proto marshal error")
+	}
+	msg := &sarama.ProducerMessage{
+		Topic: "laneIM",
+		Value: sarama.ByteEncoder(data),
+	}
+	_, _, err = s.kafka.Client.SendMessage(msg)
+	if err != nil {
+		laneLog.Logger.Infoln("faild to send kafka:", err)
+	}
+	return nil, nil
+}
 
 func (s *Logic) NewUser(_ context.Context, in *pb.NewUserReq) (*pb.NewUserResp, error) {
 	uuid := s.uuid.Generator()

@@ -12,8 +12,8 @@ type Channel struct {
 	id   int64
 	conn pkg.MsgReadWriteCloser
 	// conn   pkg.MsgReadWriteCloser
-	recvCh chan *msg.Msg
-	sendCh chan *msg.Msg
+	recvCh chan *msg.MsgBatch
+	sendCh chan *msg.MsgBatch
 	done   bool
 }
 
@@ -21,8 +21,8 @@ func (c *Comet) NewChannel(wsconn *websocket.Conn) *Channel {
 	ch := &Channel{
 		id:     -1,
 		conn:   pkg.NewConnWs(wsconn, c.pool),
-		recvCh: make(chan *msg.Msg, 100),
-		sendCh: make(chan *msg.Msg, 100),
+		recvCh: make(chan *msg.MsgBatch, 100),
+		sendCh: make(chan *msg.MsgBatch, 100),
 		done:   false,
 	}
 	// ch.serveIO()
