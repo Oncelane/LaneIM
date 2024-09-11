@@ -2,13 +2,13 @@ package rds
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
 	"github.com/go-redis/redis"
 
 	"laneIM/src/model"
+	"laneIM/src/pkg/laneLog.go"
 )
 
 //room:mgr
@@ -37,7 +37,7 @@ func SetNEUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 
 			_, err := pipe.Exec()
 			if err != nil {
-				log.Println("faild to save usermgr")
+				laneLog.Logger.Infoln("faild to save usermgr")
 				return err
 			}
 			return nil
@@ -45,7 +45,7 @@ func SetNEUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set user mgr")
+		laneLog.Logger.Infoln("faild to set user mgr")
 		return err
 	}
 	return err
@@ -77,7 +77,7 @@ func SetEXUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 
 			_, err := pipe.Exec()
 			if err != nil {
-				log.Println("faild to save usermgr")
+				laneLog.Logger.Infoln("faild to save usermgr")
 				return err
 			}
 			return nil
@@ -85,7 +85,7 @@ func SetEXUserMgr(rdb *redis.ClusterClient, user *model.UserMgr) error {
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set user mgr")
+		laneLog.Logger.Infoln("faild to set user mgr")
 		return err
 	}
 	return err
@@ -105,7 +105,7 @@ func UserMgr(rdb *redis.ClusterClient, userid int64) (*model.UserMgr, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("TODO注意一下Online是个什么东西:", Online)
+	laneLog.Logger.Infoln("TODO注意一下Online是个什么东西:", Online)
 
 	// Retrieve Users
 	roomSetKey := fmt.Sprintf("user:%s:roomS", strUserid)
@@ -153,6 +153,39 @@ func UserMgrRoom(rdb *redis.ClusterClient, userid int64) ([]int64, error) {
 	return rooms, nil
 }
 
+func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, bool) {
+	// Retrieve Users
+	rt := make([][]int64, len(userids))
+	full := true
+	pipe := rdb.Pipeline()
+	for i := range userids {
+		strUserid := strconv.FormatInt(userids[i], 36)
+		roomSetKey := fmt.Sprintf("user:%s:roomS", strUserid)
+		roomIDs, err := pipe.SMembers(roomSetKey).Result()
+		if len(roomIDs) == 0 {
+			full = false
+			continue
+		}
+		if err != nil && err != redis.Nil {
+			laneLog.Logger.Errorln("faild redis query", err)
+			full = false
+			continue
+		}
+		rooms := make([]int64, len(roomIDs))
+		for i, idStr := range roomIDs {
+			roomID, err := strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				laneLog.Logger.Errorln("faild read roomid", err)
+				full = false
+				continue
+			}
+			rooms[i] = roomID
+		}
+		rt[i] = rooms
+	}
+	return rt, full
+}
+
 func SetNEUSerMgrRoom(rdb *redis.ClusterClient, userid int64, rooms []int64) error {
 	strRoomid := strconv.FormatInt(userid, 36)
 	key := "user:" + strRoomid
@@ -177,7 +210,7 @@ func SetNEUSerMgrRoom(rdb *redis.ClusterClient, userid int64, rooms []int64) err
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set user room", err)
+		laneLog.Logger.Infoln("faild to set user room", err)
 		return err
 	}
 	return nil
@@ -208,7 +241,89 @@ func SetEXUSerMgrRoom(rdb *redis.ClusterClient, userid int64, rooms []int64) err
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set user room", err)
+		laneLog.Logger.Infoln("faild to set user room", err)
+		return err
+	}
+	return nil
+}
+
+func SetNEUSerMgrRoomBatch(rdb *redis.ClusterClient, userids []int64, roomss [][]int64) error {
+	pipe := rdb.Pipeline()
+	exists := make([]bool, len(userids))
+	for i := range userids {
+		strRoomid := strconv.FormatInt(userids[i], 36)
+		key := "user:" + strRoomid
+		exist, err := pipe.Exists(key).Result()
+		if err != nil {
+			continue
+		}
+		exists[i] = exist != 0
+	}
+	start := time.Now()
+	_, err := pipe.Exec()
+	laneLog.Logger.Debugln("pipe exist spand", time.Since(start))
+	if err != nil {
+		laneLog.Logger.Infoln("faild to set user room", err)
+		return err
+	}
+	pipe = rdb.Pipeline()
+
+	for i := range userids {
+		strRoomid := strconv.FormatInt(userids[i], 36)
+		key := "user:" + strRoomid
+		// 如果键不存在，则执行写入操作
+		if !exists[i] {
+			for j := range roomss[i] {
+				pipe.SAdd(fmt.Sprintf("%s:roomS", key), roomss[i][j]).Err()
+			}
+			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*60)
+		}
+
+	}
+	start = time.Now()
+	_, err = pipe.Exec()
+	laneLog.Logger.Debugln("pipe set user room spand", time.Since(start))
+	if err != nil {
+		laneLog.Logger.Infoln("faild to set user room", err)
+		return err
+	}
+	return nil
+}
+
+func SetEXUSerMgrRoomBatch(rdb *redis.ClusterClient, userids []int64, roomss [][]int64) error {
+	pipe := rdb.Pipeline()
+	exists := make([]bool, len(userids))
+	for i := range userids {
+		strRoomid := strconv.FormatInt(userids[i], 36)
+		key := "user:" + strRoomid
+		exist, err := pipe.Exists(key).Result()
+		if err != nil {
+			continue
+		}
+		exists[i] = exist != 0
+	}
+	_, err := pipe.Exec()
+	if err != nil {
+		laneLog.Logger.Infoln("faild to set user room", err)
+		return err
+	}
+	pipe = rdb.Pipeline()
+
+	for i := range userids {
+		strRoomid := strconv.FormatInt(userids[i], 36)
+		key := "user:" + strRoomid
+		// 如果键存在，则执行写入操作
+		if exists[i] {
+			for j := range roomss[i] {
+				pipe.SAdd(fmt.Sprintf("%s:roomS", key), roomss[i][j]).Err()
+			}
+			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*60)
+		}
+
+	}
+	_, err = pipe.Exec()
+	if err != nil {
+		laneLog.Logger.Infoln("faild to set user room", err)
 		return err
 	}
 	return nil
@@ -239,7 +354,7 @@ func SetNEUSerMgrComet(rdb *redis.ClusterClient, userid int64, comet string) err
 
 		// 如果键不存在，则执行写入操作
 		if exists == 0 {
-			pipe := rdb.Pipeline()
+			pipe := tx.Pipeline()
 			pipe.HSet(key, "CA", comet).Result()
 			pipe.Expire(key, time.Second*60)
 			_, err := pipe.Exec()
@@ -248,7 +363,7 @@ func SetNEUSerMgrComet(rdb *redis.ClusterClient, userid int64, comet string) err
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set user comet", err)
+		laneLog.Logger.Infoln("faild to set user comet", err.Error())
 		return err
 	}
 	return nil
@@ -267,7 +382,7 @@ func SetEXUSerMgrComet(rdb *redis.ClusterClient, userid int64, comet string) err
 
 		// 如果键存在，则执行写入操作
 		if exists != 0 {
-			pipe := rdb.Pipeline()
+			pipe := tx.Pipeline()
 			pipe.HSet(key, "CA", comet).Result()
 			pipe.Expire(key, time.Second*60)
 			_, err := pipe.Exec()
@@ -276,7 +391,7 @@ func SetEXUSerMgrComet(rdb *redis.ClusterClient, userid int64, comet string) err
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set user comet", err)
+		laneLog.Logger.Infoln("faild to set user comet", err.Error())
 		return err
 	}
 	return nil

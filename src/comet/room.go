@@ -2,7 +2,7 @@ package comet
 
 import (
 	"laneIM/proto/msg"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"sync"
 )
 
@@ -17,13 +17,13 @@ func (m *Bucket) NewRoom(roomid int64) *Room {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if r, exist := m.rooms[roomid]; exist {
-		log.Println("room:", roomid, "already exist,can not new")
+		laneLog.Logger.Infoln("room:", roomid, "already exist,can not new")
 		return r
 	}
 	newRoom := &Room{
 		id: roomid,
 	}
-	log.Println("new room:", roomid)
+	laneLog.Logger.Infoln("new room:", roomid)
 	m.rooms[roomid] = newRoom
 	return newRoom
 
@@ -48,7 +48,7 @@ func (g *Room) Send(m *msg.Msg) {
 				g.DelChannel(ch)
 				return true
 			}
-			// log.Println("message enter ch.sendch", ch.id)
+			// laneLog.Logger.Infoln("message enter ch.sendch", ch.id)
 			ch.sendCh <- m
 		}
 		return true

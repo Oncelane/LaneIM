@@ -7,6 +7,8 @@ import (
 	"laneIM/proto/msg"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
+	"laneIM/src/pkg/batch"
+	"laneIM/src/pkg/laneLog.go"
 	"net"
 	"time"
 
@@ -28,11 +30,11 @@ type Logic struct {
 func NewLogic(addr string) *Logic {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Println("Dail faild ", err.Error())
+		laneLog.Logger.Infoln("Dail faild ", err.Error())
 		return nil
 	}
 	c := logic.NewLogicClient(conn)
-	log.Println("connet to logic:", addr)
+	laneLog.Logger.Infoln("connet to logic:", addr)
 	return &Logic{
 		Addr:   addr,
 		Client: c,
@@ -45,7 +47,7 @@ func (l *Logic) Close() {
 	l.Online = false
 	l.Client = nil
 	l.conn.Close()
-	//log.Println("remove logic", l.Addr)
+	//laneLog.Logger.Infoln("remove logic", l.Addr)
 }
 
 type Comet struct {
@@ -63,68 +65,97 @@ type Comet struct {
 	channels map[int64]*Channel
 
 	funcRout *WsFuncRouter
+
+	//batch
+	BatcherNewUser  *batch.BatchArgs[BatchStructNewUser]
+	BatcherSetOline *batch.BatchArgs[BatchStructSetOnline]
+	BatcherJoinRoom *batch.BatchArgs[BatchStructJoinRoom]
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 	ret = &Comet{
-		etcd:   pkg.NewEtcd(conf.Etcd),
-		logics: make(map[string]*Logic),
-		conf:   conf,
-		pool:   pkg.NewMsgPool(),
-
-		//bucket
-		buckets: make([]*Bucket, conf.BucketSize),
-
-		//func router
-		funcRout: NewWsFuncRouter(),
+		conf: conf,
+		pool: pkg.NewMsgPool(),
 
 		channels: make(map[int64]*Channel),
 	}
-	for i := range ret.buckets {
-		ret.buckets[i] = NewBucket()
-	}
 
+	ret.InitBatch()
+
+	ret.InitFunc()
+
+	ret.InitBucket()
+
+	// init etcd
+	ret.etcd = pkg.NewEtcd(ret.conf.Etcd)
 	// watch logic
 	go ret.WatchLogic()
 
 	// server grpc
-	lis, err := net.Listen("tcp", conf.Addr)
+	ret.ServeGrpc()
+
+	// register
+	ret.etcd.SetAddr("grpc:comet:"+conf.Name, conf.Addr)
+
+	return ret
+}
+
+func (c *Comet) InitBatch() {
+	c.BatcherNewUser = batch.NewBatchArgs(1000, time.Millisecond*100, c.doNewUserBatch)
+	// 开启goroutine
+	c.BatcherNewUser.Start()
+
+	c.BatcherSetOline = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSetOnlineBatch)
+	c.BatcherSetOline.Start()
+
+	c.BatcherJoinRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doJoinRoomBatch)
+	c.BatcherJoinRoom.Start()
+}
+
+func (c *Comet) InitFunc() {
+	//func router
+	c.funcRout = NewWsFuncRouter()
+	c.funcRout.Use("sendRoom", c.HandleSendRoom)
+	c.funcRout.Use("queryRoom", c.HandleRoom)
+	c.funcRout.Use("auth", c.HandleAuth)
+	c.funcRout.Use("newUser", c.HandleNewUserBatch)
+	c.funcRout.Use("newRoom", c.HandleNewRoom)
+	c.funcRout.Use("joinRoom", c.HandleJoinRoomBatch)
+	c.funcRout.Use("online", c.HandleSetOnlineBatch)
+}
+
+func (c *Comet) InitBucket() {
+	c.buckets = make([]*Bucket, c.conf.BucketSize)
+	for i := range c.buckets {
+		c.buckets[i] = NewBucket()
+	}
+}
+
+func (c *Comet) ServeGrpc() {
+	lis, err := net.Listen("tcp", c.conf.Addr)
 	if err != nil {
 		log.Fatalln("error: comet start faild", err)
 	}
 	gServer := grpc.NewServer()
-	comet.RegisterCometServer(gServer, ret)
-	log.Println("comet serivce is running on port")
-	ret.grpc = gServer
+	comet.RegisterCometServer(gServer, c)
+	laneLog.Logger.Infoln("comet serivce is running on port")
+	c.grpc = gServer
 	go func() {
 		if err := gServer.Serve(lis); err != nil {
 			log.Fatalln("failed to serve : ", err.Error())
 		}
 	}()
-
-	//init func
-	// ret.funcRout.Use("newUser", ret.HandleNewUser)
-	ret.funcRout.Use("sendRoom", ret.HandleSendRoom)
-	ret.funcRout.Use("queryRoom", ret.HandleRoom)
-	ret.funcRout.Use("auth", ret.HandleAuth)
-	ret.funcRout.Use("newUser", ret.HandleNewUser)
-	ret.funcRout.Use("newRoom", ret.HandleNewRoom)
-	ret.funcRout.Use("joinRoom", ret.HandleJoinRoom)
-	ret.funcRout.Use("online", ret.HandleOnline)
-
-	// regieter etcd
-	ret.etcd.SetAddr("grpc:comet:"+conf.Name, conf.Addr)
-	return ret
 }
 
 func (c *Comet) Close() {
 	c.etcd.DelAddr("grpc:comet:"+c.conf.Name, c.conf.Addr)
 	c.grpc.Stop()
-	log.Println("exit comet")
+	laneLog.Logger.Infoln("exit comet")
 }
 
 func (c *Comet) WatchLogic() {
+	c.logics = make(map[string]*Logic)
 	for {
 		addrs := c.etcd.GetAddr("grpc:logic")
 		remoteAddrs := make(map[string]struct{})
@@ -138,7 +169,7 @@ func (c *Comet) WatchLogic() {
 			}
 
 			// not exist
-			//log.Println("etcd discovery logic:", addr)
+			//laneLog.Logger.Infoln("etcd discovery logic:", addr)
 			c.mu.Lock()
 			c.logics[addr] = NewLogic(addr)
 			c.mu.Unlock()
@@ -174,7 +205,7 @@ func (c *Comet) pickLogic() *Logic {
 			return v
 		}
 		c.mu.RUnlock()
-		// log.Println("non discovery logic")
+		// laneLog.Logger.Infoln("non discovery logic")
 		time.Sleep(time.Second)
 	}
 }
@@ -197,7 +228,7 @@ func (c *Comet) DelChannel(ch *Channel) {
 func (c *Comet) LogictSendMsg(message *logic.SendMsgReq) error {
 	_, err := c.pickLogic().Client.SendMsg(context.Background(), message)
 	if err != nil {
-		log.Println(err)
+		laneLog.Logger.Infoln(err)
 	}
 	return err
 }
@@ -211,7 +242,7 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 }
 
 func (c *Comet) Room(_ context.Context, in *comet.RoomReq) (*comet.NoResp, error) {
-	// log.Println("recv from job", in.Roomid)
+	// laneLog.Logger.Infoln("recv from job", in.Roomid)
 	c.Bucket(in.Roomid).GetRoom(in.Roomid).Send(&msg.Msg{
 		Path: "roomMsg",
 		Data: in.Data,

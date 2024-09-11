@@ -4,7 +4,7 @@ import (
 	"flag"
 	"laneIM/src/config"
 	"laneIM/src/job"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,7 +19,10 @@ func main() {
 	flag.Parse()
 	conf := config.Job{}
 	config.Init(*ConfigPath, &conf)
-	log.Printf("job server start by env:%+v", conf)
+
+	laneLog.InitLogger("job"+conf.Name, true)
+
+	laneLog.Logger.Infof("job server start")
 	j := job.NewJob(conf)
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)

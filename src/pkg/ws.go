@@ -2,7 +2,7 @@ package pkg
 
 import (
 	"laneIM/proto/msg"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
@@ -31,13 +31,13 @@ func NewConnWs(conn *websocket.Conn, pool *MsgPool) *ConnWs {
 func (w *ConnWs) ReadMsg() (message *msg.Msg, err error) {
 	_, p, err := w.conn.ReadMessage()
 	if err != nil {
-		// log.Println("read err:", err)
+		// laneLog.Logger.Infoln("read err:", err)
 		return nil, err
 	}
 	message = w.pool.Get()
 	err = proto.Unmarshal(p, message)
 	if err != nil {
-		log.Println("unmarshal err", err)
+		laneLog.Logger.Infoln("unmarshal err", err)
 		return nil, err
 	}
 	return
@@ -46,12 +46,12 @@ func (w *ConnWs) ReadMsg() (message *msg.Msg, err error) {
 func (w *ConnWs) WriteMsg(message *msg.Msg) error {
 	p, err := proto.Marshal(message)
 	if err != nil {
-		log.Println("marshal err", err)
+		laneLog.Logger.Infoln("marshal err", err)
 		return err
 	}
 	err = w.conn.WriteMessage(websocket.BinaryMessage, p)
 	if err != nil {
-		log.Println("websocket write err", err)
+		laneLog.Logger.Infoln("websocket write err", err)
 		return err
 	}
 	return nil

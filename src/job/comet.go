@@ -3,7 +3,7 @@ package job
 import (
 	"context"
 	"laneIM/proto/comet"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,7 +23,7 @@ type CometClient struct {
 func (j *Job) NewComet(addr string) *CometClient {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Println("Dail faild ", err.Error())
+		laneLog.Logger.Infoln("Dail faild ", err.Error())
 		return nil
 	}
 	client := comet.NewCometClient(conn)
@@ -36,7 +36,7 @@ func (j *Job) NewComet(addr string) *CometClient {
 		conn:       conn,
 		done:       make(chan struct{}, j.conf.CometRoutineSize),
 	}
-	log.Println("connet to comet:", addr)
+	laneLog.Logger.Infoln("connet to comet:", addr)
 	j.mu.Lock()
 	j.comets[addr] = c
 	j.mu.Unlock()
@@ -51,20 +51,20 @@ func (c *CometClient) HandlerComet() {
 		case msg := <-c.brodcastCh:
 			_, err := c.client.Brodcast(context.Background(), msg)
 			if err != nil {
-				log.Println("brodcrast err:", err)
+				laneLog.Logger.Infoln("brodcrast err:", err)
 				continue
 			}
 		case msg := <-c.roomCh:
 			_, err := c.client.Room(context.Background(), msg)
 			if err != nil {
-				log.Println("brodcrastRoom err:", err)
+				laneLog.Logger.Infoln("brodcrastRoom err:", err)
 				continue
 			}
 
 		case msg := <-c.singleCh:
 			_, err := c.client.Single(context.Background(), msg)
 			if err != nil {
-				log.Println("single err:", err)
+				laneLog.Logger.Infoln("single err:", err)
 				continue
 			}
 		case <-c.done:

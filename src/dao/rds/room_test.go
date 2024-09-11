@@ -6,7 +6,7 @@ import (
 	"laneIM/src/dao/sql"
 	"laneIM/src/model"
 	"laneIM/src/pkg"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"testing"
 )
 
@@ -16,9 +16,9 @@ func TestRoom(t *testing.T) {
 	room := model.RoomMgr{}
 	err := db.DB.Preload("Users").Preload("Comets").First(&room, 1833490758133350400).Error
 	if err != nil {
-		log.Println("faild to sql roomid")
+		laneLog.Logger.Infoln("faild to sql roomid")
 	}
-	log.Printf("sql room:%+v\n", room)
+	laneLog.Logger.Infof("sql room:%+v\n", room)
 	err = rds.SetNERoomMgr(r.Client, &room)
 	if err != nil {
 		t.Error(err)
@@ -28,5 +28,5 @@ func TestRoom(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Printf("redis room:%+v\n", getRoom)
+	laneLog.Logger.Infof("redis room:%+v\n", getRoom)
 }

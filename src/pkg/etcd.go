@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"laneIM/src/config"
+	"laneIM/src/pkg/laneLog.go"
 	"log"
 	"strconv"
 	"strings"
@@ -52,7 +53,7 @@ func (e *EtcdClient) SetAddr(key, addr string) {
 		log.Fatalln("failed to set etcd:", err.Error())
 		return
 	}
-	log.Printf("registe %s:%s\n", key, addr)
+	laneLog.Logger.Infof("registe %s:%s\n", key, addr)
 }
 
 func (e *EtcdClient) DelAddr(key, addr string) {
@@ -60,7 +61,7 @@ func (e *EtcdClient) DelAddr(key, addr string) {
 	if err != nil {
 		log.Fatalln("failed to get etcd:", err.Error())
 	}
-	log.Println("delete addr:", addr, "num (should be one):", rt.Deleted)
+	laneLog.Logger.Infoln("delete addr:", addr, "num (should be one):", rt.Deleted)
 }
 
 func (e *EtcdClient) GetUserServerAddr(userid int64) ([]string, error) {
@@ -102,7 +103,7 @@ func (e *EtcdClient) AddUserServerAddr(userid int64, addr string) error {
 
 	for _, v := range oldAddrs {
 		if v == addr {
-			log.Printf("addr[%s]  already in  userid[%d]  \n", addr, userid)
+			laneLog.Logger.Infof("addr[%s]  already in  userid[%d]  \n", addr, userid)
 			return nil
 		}
 	}
@@ -138,13 +139,13 @@ func (e *EtcdClient) AddUserRoomid(userid int64, roomid int64) error {
 	}
 	for _, v := range oldRoom.Id {
 		if v == roomid {
-			log.Printf("user[%d]  already in  room[%d]  \n", userid, roomid)
+			laneLog.Logger.Infof("user[%d]  already in  room[%d]  \n", userid, roomid)
 			return nil
 		}
 	}
 	oldValue, err := json.Marshal(oldRoom)
 	if err != nil {
-		log.Println("json marshel err")
+		laneLog.Logger.Infoln("json marshel err")
 		return err
 	}
 
@@ -191,7 +192,7 @@ func (e *EtcdClient) DeleteUserRoom(userid int64, roomid int64) error {
 	}
 	oldValue, err := json.Marshal(oldRoom)
 	if err != nil {
-		log.Println("json marshel err")
+		laneLog.Logger.Infoln("json marshel err")
 		return err
 	}
 	rt := false
@@ -203,7 +204,7 @@ func (e *EtcdClient) DeleteUserRoom(userid int64, roomid int64) error {
 	}
 
 	if !rt {
-		log.Printf("user[%d] do not have this room[%d]\n", userid, roomid)
+		laneLog.Logger.Infof("user[%d] do not have this room[%d]\n", userid, roomid)
 		return nil
 	}
 
@@ -230,7 +231,7 @@ type UserRoom struct {
 func (e *EtcdClient) atomicUpdate(key, old, new string) error {
 	rt, err := conc.NewSTM(e.etcd, func(s conc.STM) error {
 		tmp := s.Get(key)
-		// log.Printf("key[%v], old[%v], new[%v], tmp[%v]\n", key, old, new, tmp)
+		// laneLog.Logger.Infof("key[%v], old[%v], new[%v], tmp[%v]\n", key, old, new, tmp)
 		if tmp == old || tmp == "" {
 			s.Put(key, new)
 			return nil
@@ -243,7 +244,7 @@ func (e *EtcdClient) atomicUpdate(key, old, new string) error {
 	if rt.Succeeded {
 		return nil
 	}
-	log.Println("update failed")
+	laneLog.Logger.Infoln("update failed")
 	return errors.New("failed")
 }
 

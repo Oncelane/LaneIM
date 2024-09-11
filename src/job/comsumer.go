@@ -3,7 +3,7 @@ package job
 import (
 	"laneIM/proto/comet"
 	"laneIM/proto/logic"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 
 	"github.com/IBM/sarama"
 	"google.golang.org/protobuf/proto"
@@ -26,12 +26,12 @@ func (consumer *MyConsumer) Cleanup(session sarama.ConsumerGroupSession) error {
 
 func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
-		// log.Printf("Received message: from %s/%d\n", message.Topic, message.Partition)
+		// laneLog.Logger.Infof("Received message: from %s/%d\n", message.Topic, message.Partition)
 		// 处理消息...
 		protoMsg := &logic.SendMsgReq{}
 		err := proto.Unmarshal(message.Value, protoMsg)
 		if err != nil {
-			log.Println("wrong protobuf decode")
+			laneLog.Logger.Infoln("wrong protobuf decode")
 		}
 		switch protoMsg.Path {
 		case "sendRoom":

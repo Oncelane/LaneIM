@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"laneIM/src/config"
+	"laneIM/src/pkg/laneLog.go"
 	"log"
 
 	"github.com/IBM/sarama"
@@ -27,7 +28,7 @@ func NewKafkaProducer(conf config.KafkaProducer) *KafkaProducer {
 		return kp
 	}
 	kp.Client = producer
-	log.Println("create kafka producer:", conf.Addr)
+	laneLog.Logger.Infoln("create kafka producer:", conf.Addr)
 	return kp
 }
 
@@ -40,7 +41,7 @@ func NewKafkaComsumer(conf config.KafkaComsumer) *KafkaComsumer {
 		log.Panicln("failed to create kafka comsumer:", err)
 	}
 	kc.Client = c
-	log.Println("create kafka comsumer:", conf.Addr)
+	laneLog.Logger.Infoln("create kafka comsumer:", conf.Addr)
 	return kc
 }
 

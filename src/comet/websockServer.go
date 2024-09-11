@@ -1,8 +1,9 @@
 package comet
 
 import (
-	"log"
 	"net/http"
+
+	"laneIM/src/pkg/laneLog.go"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,14 +22,14 @@ var upGrader = websocket.Upgrader{
 // 			return
 // 		}
 // 		if err != nil {
-// 			log.Println("faild to get ws message")
+// 			laneLog.Logger.Infoln("faild to get ws message")
 // 			ch.Close()
 // 			return
 // 		}
-// 		log.Println("receive a path message")
+// 		laneLog.Logger.Infoln("receive a path message")
 // 		f := c.funcRout.Find(message.Path)
 // 		if f == nil {
-// 			log.Println("wrong method")
+// 			laneLog.Logger.Infoln("wrong method")
 // 			continue
 // 		}
 // 		f(message, ch)
@@ -40,10 +41,10 @@ var upGrader = websocket.Upgrader{
 
 func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 建立websocket链接
-	// log.Println("receive ws connect")
+	// laneLog.Logger.Infoln("receive ws connect")
 	ws, err := upGrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("upGrader fail", err)
+		laneLog.Logger.Infoln("upGrader fail", err)
 		return
 	}
 

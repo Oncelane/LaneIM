@@ -2,16 +2,17 @@ package sql
 
 import (
 	"laneIM/src/model"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 )
 
 func (d *SqlDB) AddComet(addr string) error {
 	comet := model.CometMgr{
 		CometAddr: addr,
+		Valid:     true,
 	}
 	err := d.DB.Save(&comet).Error
 	if err != nil {
-		log.Println("faild to save comet", err)
+		laneLog.Logger.Infoln("faild to save comet", err)
 		return err
 	}
 	return nil
@@ -20,10 +21,11 @@ func (d *SqlDB) AddComet(addr string) error {
 func (d *SqlDB) DelComet(addr string) error {
 	comet := model.CometMgr{
 		CometAddr: addr,
+		Valid:     false,
 	}
-	err := d.DB.Delete(&comet).Error
+	err := d.DB.Save(&comet).Error
 	if err != nil {
-		log.Println("faild to delete comet", err)
+		laneLog.Logger.Infoln("faild to delete comet", err)
 		return err
 	}
 	return nil

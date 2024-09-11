@@ -39,7 +39,7 @@ func (r *Room) UpdateFromCache(cache *bigcache.BigCache, rds *pkg.RedisClient, d
 // 	serversMap := make(map[string]bool)
 // 	servers, err := d.RoomComet(cache, rds.Client, db, r.roomid)
 // 	if err != nil {
-// 		log.Printf("faild to read room:%d 's comets\n", err)
+// 		laneLog.Logger.Infof("faild to read room:%d 's comets\n", err)
 // 		return err
 // 	}
 // 	for _, member := range servers {
@@ -48,7 +48,7 @@ func (r *Room) UpdateFromCache(cache *bigcache.BigCache, rds *pkg.RedisClient, d
 // 	useridMap := make(map[int64]bool)
 // 	usersid, err := d.RoomUserid(cache, rds.Client, db, r.roomid)
 // 	if err != nil {
-// 		log.Printf("faild to read room:%d 's suerids\n", err)
+// 		laneLog.Logger.Infof("faild to read room:%d 's suerids\n", err)
 // 		return err
 // 	}
 // 	for _, member := range usersid {
@@ -61,7 +61,7 @@ func (r *Room) UpdateFromCache(cache *bigcache.BigCache, rds *pkg.RedisClient, d
 // 		Server: serversMap,
 // 		Users:  useridMap,
 // 	}
-// 	log.Println("roominfo:", r.info.String())
+// 	laneLog.Logger.Infoln("roominfo:", r.info.String())
 // 	r.rw.Unlock()
 // 	return nil
 // }

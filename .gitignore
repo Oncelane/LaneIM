@@ -5,3 +5,5 @@
 *.conf
 
 *bin/
+
+*logs/

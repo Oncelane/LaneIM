@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"laneIM/src/config"
 	"laneIM/src/model"
+	"laneIM/src/pkg/laneLog.go"
 	"laneIM/src/pkg/mergewrite"
 	"log"
 	"strconv"
@@ -22,7 +23,6 @@ type SqlDB struct {
 
 func NewDB(conf config.Mysql) *SqlDB {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", conf.Username, conf.Password, conf.Addr, conf.DataBase)
-	log.Println(dsn)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		DisableAutomaticPing:   true,
 		SkipDefaultTransaction: true, // 关闭默认事务
@@ -57,7 +57,7 @@ func (d *SqlDB) NewRoom(roomid int64, userid int64, serverAddr string) error {
 				return nil
 			}
 		}
-		log.Println("faild to add room user", err)
+		laneLog.Logger.Infoln("faild to add room user", err)
 		return err
 	}
 	err = d.AddRoomComet(roomid, serverAddr)
@@ -89,7 +89,7 @@ func (d *SqlDB) RoomMgr(roomid int64) (*model.RoomMgr, error) {
 	room := model.RoomMgr{}
 	err := d.DB.Preload("Users").Preload("Comets").First(&room, roomid).Error
 	if err != nil {
-		log.Println("faild to sql roomMgr")
+		laneLog.Logger.Infoln("faild to sql roomMgr")
 		return nil, err
 	}
 	return &room, nil
@@ -100,7 +100,7 @@ func (d *SqlDB) AllRoomid() ([]int64, error) {
 	var roomids []int64
 	result := d.DB.Model(&model.RoomMgr{}).Pluck("room_id", &roomids)
 	if result.Error != nil {
-		log.Println("faild to query room:mgr:k", result.Error)
+		laneLog.Logger.Infoln("faild to query room:mgr:k", result.Error)
 	}
 	return roomids, nil
 }
@@ -143,7 +143,7 @@ func (d *SqlDB) AllRoomidSingleflight() ([]int64, error) {
 // 				return nil
 // 			}
 // 		}
-// 		log.Println("faild to add room user", err)
+// 		laneLog.Logger.Infoln("faild to add room user", err)
 // 		return err
 // 	}
 // 	return nil
@@ -212,16 +212,43 @@ func (d *SqlDB) AddRoomUser(roomid int64, userid int64) error {
 				return nil
 			}
 		}
-		log.Println("faild to add room user", err)
+		laneLog.Logger.Infoln("faild to add room user", err)
 		return err
 	}
+	return nil
+}
+
+func (d *SqlDB) AddRoomUserBatch(tx *gorm.DB, roomids []int64, userids []int64) error {
+	var end bool
+	if tx == nil {
+		end = true
+		tx = d.DB.Begin()
+	}
+	for i := range roomids {
+
+		err := tx.Model(&model.RoomMgr{RoomID: roomids[i]}).Association("Users").Append(&model.UserMgr{UserID: userids[i]})
+		if err != nil {
+			tx.Rollback()
+			laneLog.Logger.Infoln("faild commit ,roll back", err)
+			return err
+		}
+	}
+
+	if end {
+		err := tx.Commit().Error
+		if err != nil {
+			laneLog.Logger.Infoln("faild to commit batch room user")
+		}
+		return err
+	}
+
 	return nil
 }
 
 func (d *SqlDB) DelRoomUser(roomid int64, userid int64) error {
 	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Users").Delete(&model.UserMgr{UserID: userid})
 	if err != nil {
-		log.Println("faild to del room user", err)
+		laneLog.Logger.Infoln("faild to del room user", err)
 		return err
 	}
 	return nil
@@ -242,9 +269,8 @@ func (d *SqlDB) RoomComet(roomid int64) ([]string, error) {
 	room := model.RoomMgr{}
 	err := d.DB.Preload("Comets").First(&room, roomid).Error
 	if err != nil {
-		log.Println("faild to query room comet", err)
+		laneLog.Logger.Infoln("faild to query room comet", err)
 	}
-	log.Println("room:", room)
 	rt := make([]string, len(room.Comets))
 	for i, u := range room.Comets {
 		rt[i] = u.CometAddr
@@ -260,7 +286,7 @@ func (d *SqlDB) AddRoomComet(roomid int64, comet string) error {
 				return nil
 			}
 		}
-		log.Println("faild to add room comet", err)
+		laneLog.Logger.Infoln("faild to add room comet", err)
 		return err
 	}
 	return err
@@ -287,9 +313,52 @@ WHERE
 				return nil
 			}
 		}
-		log.Println("faild to add comet to room", err)
+		laneLog.Logger.Infoln("faild to add comet to room", err)
 		return err
 	}
+	return nil
+
+}
+
+func (d *SqlDB) AddRoomCometWithUseridBatch(tx *gorm.DB, userids []int64, cometAddr string) error {
+	var end bool
+	if tx == nil {
+		end = true
+		tx = d.DB.Begin()
+	}
+
+	query := `
+INSERT IGNORE INTO
+    room_comets (
+        room_mgr_room_id,
+        comet_mgr_comet_addr
+    )
+SELECT room_mgr_room_id, ?
+FROM room_users
+    JOIN room_mgrs ON room_users.room_mgr_room_id = room_mgrs.room_id
+WHERE
+    room_users.user_mgr_user_id = ?
+`
+	for i := range userids {
+		err := tx.Exec(query, cometAddr, userids[i]).Error
+		if err != nil {
+			if sqlerr, ok := err.(*mysql2.MySQLError); ok {
+				if sqlerr.Number == 1062 {
+					return nil
+				}
+			}
+			laneLog.Logger.Infoln("faild to add comet to room", err)
+			return err
+		}
+	}
+
+	if end {
+		err := tx.Commit()
+		if err != nil {
+			laneLog.Logger.Infoln("faild to commit add room user's comet", err)
+		}
+	}
+
 	return nil
 
 }
@@ -297,7 +366,7 @@ WHERE
 func (d *SqlDB) DelRoomComet(roomid int64, comet string) error {
 	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Comets").Delete(&model.CometMgr{CometAddr: comet})
 	if err != nil {
-		log.Println("faild to del room comet", err)
+		laneLog.Logger.Infoln("faild to del room comet", err)
 		return err
 	}
 	return nil

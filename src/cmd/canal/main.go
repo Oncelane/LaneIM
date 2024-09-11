@@ -7,7 +7,7 @@ import (
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"os"
 	"strconv"
 	"strings"
@@ -35,7 +35,7 @@ func NewCanal(conf config.Canal) *Canal {
 
 	err := connector.Connect()
 	if err != nil {
-		log.Println(err)
+		laneLog.Logger.Infoln(err)
 		os.Exit(1)
 	}
 	// connector.RollBack(-1)
@@ -48,7 +48,7 @@ func NewCanal(conf config.Canal) *Canal {
 		conf:          conf,
 	}
 	c.db = sql.NewDB(conf.Mysql)
-	log.Println("start canal")
+	laneLog.Logger.Infoln("start canal")
 	return c
 
 }
@@ -58,7 +58,7 @@ func (c *Canal) RunCanal() {
 
 		message, err := c.connector.Get(100, nil, nil)
 		if err != nil {
-			log.Println(err)
+			laneLog.Logger.Infoln(err)
 			os.Exit(1)
 		}
 		batchId := message.Id
@@ -112,7 +112,10 @@ func main() {
 	flag.Parse()
 	conf := config.Canal{}
 	config.Init(*ConfigPath, &conf)
-	log.Println("time", time.Duration(conf.Mysql.BatchWriter.MaxTime)*time.Millisecond, "count", conf.Mysql.BatchWriter.MaxCount)
+
+	laneLog.InitLogger("canal"+conf.Name, true)
+
+	laneLog.Logger.Infoln("time", time.Duration(conf.Mysql.BatchWriter.MaxTime)*time.Millisecond, "count", conf.Mysql.BatchWriter.MaxCount)
 	canal := NewCanal(conf)
 	go canal.RunCanal()
 	go canal.RunReceive()
@@ -131,12 +134,12 @@ func (c *Canal) printEntry(entrys []pbe.Entry) {
 		if rowChange != nil {
 			eventType := rowChange.GetEventType()
 			header := entrys[i].GetHeader()
-			log.Printf("================> binlog[%s : %d],name[%s,%s], eventType: %s\n", header.GetLogfileName(), header.GetLogfileOffset(), header.GetSchemaName(), header.GetTableName(), header.GetEventType())
+			laneLog.Logger.Infof("================> binlog[%s : %d],name[%s,%s], eventType: %s\n", header.GetLogfileName(), header.GetLogfileOffset(), header.GetSchemaName(), header.GetTableName(), header.GetEventType())
 			if len(header.GetTableName()) == 0 {
 				continue
 			}
 			rediskey := strings.ReplaceAll(header.GetTableName(), "_", ":")[:len(header.GetTableName())-1]
-			log.Printf("redis key: %s\n", rediskey)
+			laneLog.Logger.Infof("redis key: %s\n", rediskey)
 			for _, rowData := range rowChange.GetRowDatas() {
 				if eventType == pbe.EventType_DELETE {
 					printColumn(rowData.GetBeforeColumns())
@@ -166,7 +169,7 @@ func (c *Canal) HandleRowData(rowChange *pbe.RowChange, event pbe.EventType, red
 		case pbe.EventType_DELETE:
 			c.HandleInsert(col.GetBeforeColumns(), redisKey)
 		default:
-			log.Println("忽略", event)
+			laneLog.Logger.Infoln("忽略", event)
 		}
 	}
 }
@@ -181,29 +184,29 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 		case "mgr":
 			roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
 			if err != nil {
-				log.Println("fomat err")
+				laneLog.Logger.Infoln("fomat err")
 				return
 			}
 			go c.db.MergeWriter.Do(redisKey, func() (any, error) {
 				// sql
 				room, err := c.db.RoomMgr(roomid)
 				if err != nil {
-					log.Println("faild to sql roommgr")
+					laneLog.Logger.Infoln("faild to sql roommgr")
 				}
 				// updata setex
 				err = rds.SetEXRoomMgr(c.redis.Client, room)
 				if err != nil {
-					log.Println("faild to sync ", redisKey, err)
+					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
 				}
 
-				log.Println("sync", redisKey)
+				laneLog.Logger.Infoln("sync", redisKey)
 				return nil, nil
 			})
 
 		case "user":
 			roomid, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
 			if err != nil {
-				log.Println("fomat err")
+				laneLog.Logger.Infoln("fomat err")
 				return
 			}
 			go c.db.MergeWriter.Do(redisKey+col[1].GetValue(), func() (any, error) {
@@ -211,21 +214,21 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 				// sql
 				userids, err := c.db.RoomUserid(roomid)
 				if err != nil {
-					log.Println("faild to sql ", redisKey)
+					laneLog.Logger.Infoln("faild to sql ", redisKey)
 				}
 
 				// updata setex
 				err = rds.SetEXRoomMgrUsers(c.redis.Client, roomid, userids)
 				if err != nil {
-					log.Println("faild to sync ", redisKey, err)
+					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
 				}
-				log.Println("sync", redisKey)
+				laneLog.Logger.Infoln("sync", redisKey)
 				return nil, nil
 			})
 		case "comet":
 			roomid, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
 			if err != nil {
-				log.Println("fomat err")
+				laneLog.Logger.Infoln("fomat err")
 				return
 			}
 			go c.db.MergeWriter.Do(redisKey+col[1].GetValue(), func() (any, error) {
@@ -233,15 +236,15 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 				// sql
 				comets, err := c.db.RoomComet(roomid)
 				if err != nil {
-					log.Println("faild to sql roomid")
+					laneLog.Logger.Infoln("faild to sql roomid")
 				}
 
 				// updata setex
 				err = rds.SetEXRoomMgrComet(c.redis.Client, roomid, comets)
 				if err != nil {
-					log.Println("faild to sync ", redisKey, err)
+					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
 				}
-				log.Println("sync", redisKey)
+				laneLog.Logger.Infoln("sync", redisKey)
 				return nil, nil
 			})
 		}
@@ -250,7 +253,7 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 		case "mgr":
 			userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
 			if err != nil {
-				log.Println("fomat err")
+				laneLog.Logger.Infoln("fomat err")
 				return
 			}
 			go c.db.MergeWriter.Do(redisKey, func() (any, error) {
@@ -258,16 +261,16 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 				// sql
 				user, err := c.db.UserMgr(userid)
 				if err != nil {
-					log.Println("faild to sql user")
+					laneLog.Logger.Infoln("faild to sql user")
 				}
 
 				// updata setex
 				err = rds.SetEXUserMgr(c.redis.Client, user)
 				if err != nil {
-					log.Println("faild to sync ", redisKey, err)
+					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
 				}
 
-				log.Println("sync", redisKey)
+				laneLog.Logger.Infoln("sync", redisKey)
 				return nil, nil
 
 			})

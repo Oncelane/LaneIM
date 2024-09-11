@@ -2,13 +2,13 @@ package rds
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
 	"github.com/go-redis/redis"
 
 	"laneIM/src/model"
+	"laneIM/src/pkg/laneLog.go"
 )
 
 //--------------Room------------
@@ -43,7 +43,7 @@ func SetNERoomMgr(rdb *redis.ClusterClient, room *model.RoomMgr) error {
 
 			_, err := pipe.Exec()
 			if err != nil {
-				log.Println("faild to save roommgr")
+				laneLog.Logger.Infoln("faild to save roommgr")
 				return err
 			}
 			return nil
@@ -85,7 +85,7 @@ func SetEXRoomMgr(rdb *redis.ClusterClient, room *model.RoomMgr) error {
 
 			_, err := pipe.Exec()
 			if err != nil {
-				log.Println("faild to save roommgr")
+				laneLog.Logger.Infoln("faild to save roommgr")
 				return err
 			}
 			return nil
@@ -187,7 +187,7 @@ func SetEXRoomMgrComet(rdb *redis.ClusterClient, roomid int64, cometAddrs []stri
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set room comet")
+		laneLog.Logger.Infoln("faild to set room comet")
 		return err
 	}
 	return nil
@@ -217,7 +217,7 @@ func SetNERoomMgrComet(rdb *redis.ClusterClient, roomid int64, cometAddrs []stri
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set room comet")
+		laneLog.Logger.Infoln("faild to set room comet")
 		return err
 	}
 	return nil
@@ -273,7 +273,7 @@ func SetEXRoomMgrUsers(rdb *redis.ClusterClient, roomid int64, users []int64) er
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set room user", err)
+		laneLog.Logger.Infoln("faild to set room user", err)
 		return err
 	}
 	return nil
@@ -303,7 +303,7 @@ func SetNERoomMgrUsers(rdb *redis.ClusterClient, roomid int64, users []int64) er
 		return nil
 	}, key)
 	if err != nil {
-		log.Println("faild to set room user", err)
+		laneLog.Logger.Infoln("faild to set room user", err)
 		return err
 	}
 	return nil

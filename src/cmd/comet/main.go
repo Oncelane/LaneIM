@@ -4,7 +4,7 @@ import (
 	"flag"
 	"laneIM/src/comet"
 	"laneIM/src/config"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,20 +20,22 @@ func main() {
 	conf := config.Comet{}
 	config.Init(*ConfigPath, &conf)
 
-	log.Printf("comet server start by env:%+v", conf)
+	laneLog.InitLogger("comet"+conf.Name, true)
+
+	laneLog.Logger.Infof("comet server start")
 	c := comet.NewSerivceComet(conf)
 
 	// 启动websocket服务
 	http.HandleFunc("/ws", c.ServeHTTP)
-	log.Println("listening websocket", conf.WebsocketAddr)
+	laneLog.Logger.Infoln("listening websocket", conf.WebsocketAddr)
 	go http.ListenAndServe(conf.WebsocketAddr, nil)
 
 	// 等待信号
-	log.Println("wait ctrl+c")
+	laneLog.Logger.Infoln("wait ctrl+c")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan // 阻塞等待信号
-	log.Println("close comet")
+	laneLog.Logger.Infoln("close comet")
 	c.Close()
 
 }

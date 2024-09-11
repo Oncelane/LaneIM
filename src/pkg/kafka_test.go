@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
+	"laneIM/src/pkg/laneLog.go"
 	"log"
 	"testing"
 
@@ -67,7 +68,7 @@ func TestProducer(t *testing.T) {
 
 	}
 
-	log.Println("send all messages:")
+	laneLog.Logger.Infoln("send all messages:")
 
 }
 func TestAsyncProducer(t *testing.T) {
@@ -92,7 +93,7 @@ func TestAsyncProducer(t *testing.T) {
 			fmt.Println("send message", msg)
 		}
 	}
-	log.Println("send all messages:")
+	laneLog.Logger.Infoln("send all messages:")
 }
 
 func TestSaramComsumer(t *testing.T) {
@@ -118,7 +119,7 @@ func TestSaramComsumer(t *testing.T) {
 	defer partitionConsumer.Close()
 
 	// Start a loop to process messages
-	log.Println("start recving...")
+	laneLog.Logger.Infoln("start recving...")
 	count := 0
 	for {
 		select {
@@ -157,7 +158,7 @@ func TestSaramGroupComsumer(t *testing.T) {
 	if err := consumer.Consume(ctx, []string{topic}, handler); err != nil {
 		log.Fatalf("Error from consumer group: %v", err)
 	}
-	log.Println("comsumer exit")
+	laneLog.Logger.Infoln("comsumer exit")
 }
 
 // func TestKafkaComsumer(t *testing.T) {
@@ -174,15 +175,15 @@ func TestSaramGroupComsumer(t *testing.T) {
 // 	for {
 // 		msg, err := comsumer.Client.ReadMessage(-1)
 // 		if err != nil {
-// 			log.Printf("error wihle receiving message: %s\n", err)
+// 			laneLog.Logger.Infof("error wihle receiving message: %s\n", err)
 // 			continue
 // 		}
 // 		count++
-// 		log.Println("recv:", string(msg.Value))
+// 		laneLog.Logger.Infoln("recv:", string(msg.Value))
 // 		// if count == 1000 {
 // 		// 	count = 0
-// 		// 	log.Println("recv:", string(msg.Value))
+// 		// 	laneLog.Logger.Infoln("recv:", string(msg.Value))
 // 		// }
 // 	}
-// 	log.Println("receive all msg")
+// 	laneLog.Logger.Infoln("receive all msg")
 // }

@@ -7,6 +7,7 @@ import (
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
+	"laneIM/src/pkg/laneLog.go"
 	"log"
 	"sync"
 	"time"
@@ -34,7 +35,7 @@ func NewJob(conf config.Job) *Job {
 
 	// connect to redis
 	addrs := e.GetAddr("redis")
-	log.Printf("job starting...\n get redis addrs: %v", addrs)
+	laneLog.Logger.Infof("job starting...\n get redis addrs: %v", addrs)
 
 	j := &Job{
 		etcd:          e,
@@ -59,7 +60,7 @@ func NewJob(conf config.Job) *Job {
 func (j *Job) WatchComet() {
 	for {
 		addrs := j.etcd.GetAddr("grpc:comet")
-		// log.Println("addrs:", addrs)
+		// laneLog.Logger.Infoln("addrs:", addrs)
 		remoteAddrs := make(map[string]struct{})
 		for _, addr := range addrs {
 			remoteAddrs[addr] = struct{}{}
@@ -69,7 +70,7 @@ func (j *Job) WatchComet() {
 			}
 
 			// discovery comet
-			log.Println("discovery comet:", addr)
+			laneLog.Logger.Infoln("discovery comet:", addr)
 			j.NewComet(addr)
 		}
 		for addr, c := range j.comets {
@@ -80,7 +81,7 @@ func (j *Job) WatchComet() {
 				for range j.conf.CometRoutineSize {
 					c.done <- struct{}{}
 				}
-				log.Println("remove comet:", addr)
+				laneLog.Logger.Infoln("remove comet:", addr)
 				j.mu.Unlock()
 			}
 
@@ -91,7 +92,7 @@ func (j *Job) WatchComet() {
 }
 
 func (j *Job) Close() {
-	log.Println("job exit", j.conf.Addr)
+	laneLog.Logger.Infoln("job exit", j.conf.Addr)
 }
 
 func (j *Job) RunGroupComsumer() {
@@ -101,5 +102,5 @@ func (j *Job) RunGroupComsumer() {
 	if err := j.kafkaComsumer.Consume(context.Background(), j.conf.KafkaComsumer.Topics, handler); err != nil {
 		log.Fatalf("Error from consumer group: %v", err)
 	}
-	log.Println("group comsumer exit")
+	laneLog.Logger.Infoln("group comsumer exit")
 }

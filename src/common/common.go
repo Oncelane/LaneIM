@@ -2,7 +2,7 @@ package common
 
 import (
 	"hash/fnv"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"strconv"
 )
 
@@ -37,7 +37,7 @@ func StringTo64(in string) int64 {
 
 	out, err := strconv.ParseInt(in, 36, 64)
 	if err != nil {
-		log.Printf("wrong string%s to int64:%v\n", in, err)
+		laneLog.Logger.Infof("wrong string%s to int64:%v\n", in, err)
 		return 404
 	}
 	return out

@@ -2,7 +2,7 @@ package client_test
 
 import (
 	"laneIM/src/client"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"testing"
 	"time"
 )
@@ -14,6 +14,7 @@ func TestManyUser(t *testing.T) {
 	g := client.NewClientGroup(num)
 
 	{ // new user
+		start := time.Now()
 		g.Wait.Add(num)
 		for i, c := range g.Clients {
 			go func(i int, c *client.Client) {
@@ -24,19 +25,21 @@ func TestManyUser(t *testing.T) {
 			}(i, c)
 		}
 		g.Wait.Wait()
-		log.Printf("all %d connetc and auth", num)
+		laneLog.Logger.Infof("all %d connetc and auth spand time %v", num, time.Since(start))
 	}
 
 	{ // new room
+		start := time.Now()
 		g.Wait.Add(1)
 		go func() {
 			g.Clients[0].NewRoom()
 		}()
 		g.Wait.Wait()
-		log.Println("new roomid:", g.Clients[0].Room[0])
+		laneLog.Logger.Infoln("new roomid:", g.Clients[0].Room[0], " spand time ", time.Since(start))
 	}
 
 	{ // join room
+		start := time.Now()
 		g.Wait.Add(num)
 		for i, c := range g.Clients {
 			go func(i int, c *client.Client) {
@@ -44,10 +47,11 @@ func TestManyUser(t *testing.T) {
 			}(i, c)
 		}
 		g.Wait.Wait()
-		log.Printf("all %d join room", num)
+		laneLog.Logger.Infof("all %d join room spand time %v", num, time.Since(start))
 	}
 
 	{ // set online
+		start := time.Now()
 		g.Wait.Add(num)
 		for i, c := range g.Clients {
 			go func(i int, c *client.Client) {
@@ -55,7 +59,7 @@ func TestManyUser(t *testing.T) {
 			}(i, c)
 		}
 		g.Wait.Wait()
-		log.Printf("all %d online", num)
+		laneLog.Logger.Infof("all %d online spand time %v", num, time.Since(start))
 	}
 
 	msg := "hello"
@@ -72,12 +76,12 @@ func TestManyUser(t *testing.T) {
 			}
 			time.Sleep(time.Millisecond * 10)
 			if sum == num*num {
-				log.Println("receve message count:", sum, "spand time", time.Since(timeStart))
+				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
 				ch <- struct{}{}
 				break
 			}
 		}
 	}()
 	<-ch
-	log.Println("end")
+	laneLog.Logger.Infoln("end")
 }

@@ -6,7 +6,7 @@ import (
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"testing"
 	"time"
 )
@@ -21,7 +21,7 @@ import (
 // 	if err != nil {
 // 		t.Error(err)
 // 	}
-// 	log.Println("query redis and sql", rt, "comet:", cometAddr)
+// 	laneLog.Logger.Infoln("query redis and sql", rt, "comet:", cometAddr)
 // }
 
 func TestSetUserOnline(t *testing.T) {
@@ -55,7 +55,7 @@ func TestRedisAndSqlAllRoomid(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println("query redis and sql", rt)
+	laneLog.Logger.Infoln("query redis and sql", rt)
 }
 
 func TestAddRoomUser(t *testing.T) {

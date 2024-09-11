@@ -21,7 +21,7 @@ func RoomComet(cache *bigcache.BigCache, roomid int64) ([]string, error) {
 	key := "room:comet" + strconv.FormatInt(roomid, 36)
 	data, err := cache.Get(key)
 	if err != nil {
-		// log.Println("miss local cache room:comet", err)
+		// laneLog.Logger.Infoln("miss local cache room:comet", err)
 		return nil, err
 	}
 	return strings.Split(string(data), ";"), nil
@@ -41,7 +41,7 @@ func RoomUserid(cache *bigcache.BigCache, roomid int64) ([]int64, error) {
 	key := "room:user" + strconv.FormatInt(roomid, 36)
 	data, err := cache.Get(key)
 	if err != nil {
-		// log.Println("miss local cache room:user", err)
+		// laneLog.Logger.Infoln("miss local cache room:user", err)
 		return nil, err
 	}
 	rawInt64 := strings.Split(string(data), ";")

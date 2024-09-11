@@ -2,7 +2,7 @@ package job
 
 import (
 	"laneIM/proto/comet"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"sync"
 )
 
@@ -45,15 +45,15 @@ func (b *Bucket) NewRoom(roomid int64) *Room {
 	b.rw.Lock()
 	defer b.rw.Unlock()
 	if r, exist := b.rooms[roomid]; exist {
-		// log.Println("room:", roomid, "already exist,can not new")
+		// laneLog.Logger.Infoln("room:", roomid, "already exist,can not new")
 		return r
 	}
 	newRoom := &Room{
 		roomid: roomid,
 	}
-	log.Println("create new room:", roomid)
+	laneLog.Logger.Infoln("create new room:", roomid)
 	newRoom.UpdateFromCache(b.job.cache, b.job.redis, b.job.db, b.job.daoo)
-	// log.Println("sync room from redis:", roomid, "comets:", newRoom.info.Server)
+	// laneLog.Logger.Infoln("sync room from redis:", roomid, "comets:", newRoom.info.Server)
 	b.rooms[roomid] = newRoom
 
 	return newRoom
@@ -74,7 +74,7 @@ func (g *Bucket) Room(m *comet.RoomReq) {
 	room := g.GetRoom(m.Roomid)
 	comets, err := g.job.daoo.RoomComet(g.job.cache, g.job.redis.Client, g.job.db, m.Roomid)
 	if err != nil {
-		log.Println("faild to cache get comets", err)
+		laneLog.Logger.Infoln("faild to cache get comets", err)
 		return
 	}
 	room.rw.RLock()
@@ -83,10 +83,10 @@ func (g *Bucket) Room(m *comet.RoomReq) {
 	for _, cometAddr := range comets {
 		if _, exist := g.job.comets[cometAddr]; exist {
 			// 通过bucket的routine进行实际IO
-			// log.Printf("message to roomid:%d comet:%v", room.roomid, cometAddr)
+			// laneLog.Logger.Infof("message to roomid:%d comet:%v", room.roomid, cometAddr)
 			g.job.comets[cometAddr].roomCh <- m
 		} else {
-			log.Println("error job doesn't have this comet:", cometAddr)
+			laneLog.Logger.Infoln("error job doesn't have this comet:", cometAddr)
 		}
 	}
 

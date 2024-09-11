@@ -3,7 +3,7 @@ package comet
 import (
 	"laneIM/proto/msg"
 	"laneIM/src/pkg"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 
 	"github.com/gorilla/websocket"
 )
@@ -42,18 +42,18 @@ func (c *Comet) recvRoutine(ch *Channel) {
 		}
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
-				log.Println("faild to get ws message")
+				laneLog.Logger.Infoln("faild to get ws message")
 				c.DelChannel(ch)
 				return
 			}
-			// log.Println("websocket close", ch.id)
+			// laneLog.Logger.Infoln("websocket close", ch.id)
 			c.DelChannel(ch)
 			return
 		}
-		// log.Println("message.Path", message.Path)
+		// laneLog.Logger.Infoln("message.Path", message.Path)
 		f := c.funcRout.Find(message.Path)
 		if f == nil {
-			log.Println("wrong method")
+			laneLog.Logger.Infoln("wrong method")
 			continue
 		}
 		go f(message, ch)
@@ -65,11 +65,17 @@ func (c *Comet) recvRoutine(ch *Channel) {
 
 func (c *Comet) sendRoutine(ch *Channel) {
 	for message := range ch.sendCh {
-		// log.Println("send room msg to websocket")
+		// laneLog.Logger.Infoln("send room msg to websocket")
 		err := ch.conn.WriteMsg(message)
 		if err != nil {
-			// TODO
-			continue
+			if _, ok := err.(*websocket.CloseError); !ok {
+				laneLog.Logger.Infoln("faild to get ws message")
+				c.DelChannel(ch)
+				return
+			}
+			// laneLog.Logger.Infoln("websocket close", ch.id)
+			c.DelChannel(ch)
+			return
 		}
 	}
 }

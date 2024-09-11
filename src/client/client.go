@@ -3,6 +3,7 @@ package client
 import (
 	"laneIM/proto/msg"
 	"laneIM/src/pkg"
+	"laneIM/src/pkg/laneLog.go"
 	"log"
 	"sync"
 
@@ -45,7 +46,7 @@ type ClientGroup struct {
 
 func (c *ClientGroup) Send(msg *string) {
 	for _, client := range c.Clients {
-		//log.Println("in ch")
+		//laneLog.Logger.Infoln("in ch")
 		client.MsgCh <- msg
 	}
 }
@@ -81,7 +82,7 @@ func (c *Client) Connect(cometAddr string) {
 		log.Fatal("连接错误:", err)
 		return
 	}
-	//log.Println("连接到comet:", cometAddr)
+	//laneLog.Logger.Infoln("连接到comet:", cometAddr)
 	c.conn = pkg.NewConnWs(conn, pool)
 	go c.Receive()
 	go c.Send()
@@ -95,7 +96,7 @@ func (c *Client) Auth(str string) {
 	}
 	tokenDate, err := proto.Marshal(token)
 	if err != nil {
-		log.Println("faild to encode token")
+		laneLog.Logger.Infoln("faild to encode token")
 	}
 	err = c.conn.WriteMsg(&msg.Msg{
 		Path: "auth",
@@ -103,7 +104,7 @@ func (c *Client) Auth(str string) {
 		Data: tokenDate,
 	})
 	if err != nil {
-		log.Println("发送消息错误:", err)
+		laneLog.Logger.Infoln("发送消息错误:", err)
 	}
 }
 
@@ -115,16 +116,16 @@ func (c *Client) SendRoomMsg(message *string) {
 	}
 	data, err := proto.Marshal(sendRoomReq)
 	if err != nil {
-		log.Println("faild to proto marshal", err)
+		laneLog.Logger.Infoln("faild to proto marshal", err)
 	}
-	//log.Println("发送房间消息")
+	//laneLog.Logger.Infoln("发送房间消息")
 	err = c.conn.WriteMsg(&msg.Msg{
 		Path: "sendRoom",
 		Seq:  1,
 		Data: data,
 	})
 	if err != nil {
-		log.Println("send err", err)
+		laneLog.Logger.Infoln("send err", err)
 	}
 }
 
@@ -134,7 +135,7 @@ func (c *Client) QueryRoom() {
 	}
 	data, err := proto.Marshal(cRoomidReq)
 	if err != nil {
-		log.Println("faild to marhal")
+		laneLog.Logger.Infoln("faild to marhal")
 		return
 	}
 
@@ -144,7 +145,7 @@ func (c *Client) QueryRoom() {
 		Data: data,
 	})
 	if err != nil {
-		log.Println("send err:", err)
+		laneLog.Logger.Infoln("send err:", err)
 	}
 }
 
@@ -159,7 +160,7 @@ func (c *Client) NewUser() {
 		Data: data,
 	})
 	if err != nil {
-		log.Println("send err:", err)
+		laneLog.Logger.Infoln("send err:", err)
 	}
 }
 
@@ -176,7 +177,7 @@ func (c *Client) NewRoom() {
 		Data: data,
 	})
 	if err != nil {
-		log.Println("send err:", err)
+		laneLog.Logger.Infoln("send err:", err)
 	}
 }
 
@@ -194,7 +195,7 @@ func (c *Client) JoinRoom(roomid int64) {
 		Data: data,
 	})
 	if err != nil {
-		log.Println("send err:", err)
+		laneLog.Logger.Infoln("send err:", err)
 	}
 	c.Roomids = append(c.Roomids, roomid)
 }
@@ -212,7 +213,7 @@ func (c *Client) Online() {
 		Data: data,
 	})
 	if err != nil {
-		log.Println("send err:", err)
+		laneLog.Logger.Infoln("send err:", err)
 	}
 }
 
@@ -226,20 +227,20 @@ func (c *Client) Receive() {
 	for {
 		message, err := c.conn.ReadMsg()
 		if err != nil {
-			log.Println("comet error:", err)
+			laneLog.Logger.Infoln("comet error:", err)
 			return
 		}
-		// //log.Printf("comet reply: %s", message.String())
+		// //laneLog.Logger.Infof("comet reply: %s", message.String())
 		switch message.Path {
 		case "newUser":
 			rt := &msg.CNewUserResp{}
 			err := proto.Unmarshal(message.Data, rt)
 			if err != nil {
-				log.Println("faild proto", message.Path, err)
+				laneLog.Logger.Infoln("faild proto", message.Path, err)
 				continue
 			}
 			c.Userid = rt.Userid
-			//log.Println("newUser:", c.Userid)
+			//laneLog.Logger.Infoln("newUser:", c.Userid)
 			if c.Mgr != nil {
 				c.Mgr.Wait.Done()
 			}
@@ -247,41 +248,41 @@ func (c *Client) Receive() {
 			rt := &msg.CNewRoomResp{}
 			err := proto.Unmarshal(message.Data, rt)
 			if err != nil {
-				log.Println("faild proto", message.Path, err)
+				laneLog.Logger.Infoln("faild proto", message.Path, err)
 				continue
 			}
 			c.Room = append(c.Room, rt.Roomid)
-			//log.Println("newUser:", c.Userid)
+			//laneLog.Logger.Infoln("newUser:", c.Userid)
 			if c.Mgr != nil {
 				c.Mgr.Wait.Done()
 			}
 		case "auth":
-			//log.Println("auth:", c.Userid, string(message.Data))
+			//laneLog.Logger.Infoln("auth:", c.Userid, string(message.Data))
 			c.QueryRoom()
 		case "joinRoom":
-			//log.Println("joinRoom:", c.Userid, string(message.Data))
+			//laneLog.Logger.Infoln("joinRoom:", c.Userid, string(message.Data))
 			if c.Mgr != nil {
 				c.Mgr.Wait.Done()
 			}
 		case "online":
-			//log.Println("online:", c.Userid, string(message.Data))
+			//laneLog.Logger.Infoln("online:", c.Userid, string(message.Data))
 			if c.Mgr != nil {
 				c.Mgr.Wait.Done()
 			}
 		case "sendRoom":
-			//log.Println("send room:", string(message.Data))
+			//laneLog.Logger.Infoln("send room:", string(message.Data))
 		case "queryRoom":
 			roomResp := &msg.CRoomidResp{}
 			err := proto.Unmarshal(message.Data, roomResp)
 			if err != nil {
-				log.Println("faild proto", message.Path, err)
+				laneLog.Logger.Infoln("faild proto", message.Path, err)
 				continue
 			}
 			c.Roomids = roomResp.Roomid
-			//log.Println("query room:", c.Roomids[0])
+			//laneLog.Logger.Infoln("query room:", c.Roomids[0])
 		case "roomMsg":
 			c.ReceiveCount++
-			//log.Printf("ch.id[%d] roomMsg receive:%s\n", c.Userid, string(message.Data))
+			//laneLog.Logger.Infof("ch.id[%d] roomMsg receive:%s\n", c.Userid, string(message.Data))
 		}
 	}
 }

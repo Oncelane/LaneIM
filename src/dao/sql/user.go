@@ -3,10 +3,11 @@ package sql
 import (
 	"fmt"
 	"laneIM/src/model"
+	"laneIM/src/pkg/laneLog.go"
 	"log"
 	"strconv"
 
-	mysql2 "github.com/go-sql-driver/mysql"
+	"gorm.io/gorm"
 )
 
 // --------------User------------
@@ -18,6 +19,30 @@ func (d *SqlDB) NewUser(userid int64) error {
 	return nil
 }
 
+func (d *SqlDB) NewUserBatch(tx *gorm.DB, userids []int64) error {
+	var end bool
+	if tx == nil {
+		end = true
+		tx = d.DB.Begin()
+	}
+
+	users := make([]model.UserMgr, len(userids))
+	for i := range userids {
+		users[i] = model.UserMgr{
+			UserID: userids[i],
+		}
+	}
+	tx.Save(&users)
+
+	if end {
+		err := tx.Commit().Error
+		if err != nil {
+			laneLog.Logger.Infoln("faild to commit new user comet", err.Error())
+		}
+	}
+	return nil
+}
+
 func (d *SqlDB) DelUser(userid int64) error {
 	user := model.UserMgr{
 		UserID: userid,
@@ -26,11 +51,22 @@ func (d *SqlDB) DelUser(userid int64) error {
 	return nil
 }
 
+func (d *SqlDB) DelUserBatch(userids []int64) error {
+	users := make([]model.UserMgr, len(userids))
+	for i := range userids {
+		users[i] = model.UserMgr{
+			UserID: userids[i],
+		}
+	}
+	d.DB.Delete(&users)
+	return nil
+}
+
 func (d *SqlDB) UserMgr(userid int64) (*model.UserMgr, error) {
 	user := model.UserMgr{}
 	err := d.DB.Preload("Rooms").First(&user, userid).Error
 	if err != nil {
-		log.Println("faild to sql userMgr")
+		laneLog.Logger.Infoln("faild to sql userMgr")
 		return nil, err
 	}
 	return &user, nil
@@ -42,7 +78,7 @@ func (d *SqlDB) AllUserid() ([]int64, error) {
 	var userids []int64
 	err := d.DB.Model(&model.UserMgr{}).Pluck("user_id", &userids).Error
 	if err != nil {
-		log.Println("faild to query userid", err)
+		laneLog.Logger.Infoln("faild to query userid", err)
 	}
 	return userids, nil
 }
@@ -65,6 +101,32 @@ func (d *SqlDB) SetUserOnline(userid int64, cometAddr string) error {
 		return err
 	}
 	d.SetUserComet(userid, cometAddr)
+	return nil
+}
+
+func (d *SqlDB) SetUserOnlineBatch(tx *gorm.DB, userids []int64, cometAddr string) error {
+	var end bool
+	if tx == nil {
+		end = true
+		tx = d.DB.Begin()
+	}
+	for i := range userids {
+		err := tx.Model(&model.UserMgr{UserID: userids[i]}).Update("online", true).Error
+		if err != nil {
+			tx.Rollback()
+			laneLog.Logger.Infoln("faild to set user online rollback", err)
+			return err
+		}
+	}
+
+	d.SetUserCometBatch(tx, userids, cometAddr)
+	d.AddRoomCometWithUseridBatch(tx, userids, cometAddr)
+	if end {
+		err := tx.Commit().Error
+		if err != nil {
+			laneLog.Logger.Infoln("faild to commit set user online", err.Error())
+		}
+	}
 	return nil
 }
 
@@ -91,6 +153,23 @@ func (d *SqlDB) UserRoom(userid int64) ([]int64, error) {
 	return rt, nil
 }
 
+func (d *SqlDB) UserRoomBatch(userids []int64) ([][]int64, error) {
+
+	var users []model.UserMgr
+	if err := d.DB.Where("user_id IN ?", userids).Preload("Rooms").Find(&users).Error; err != nil {
+		return nil, err
+	}
+	results := make([][]int64, len(userids))
+	for i, user := range users {
+		rt := make([]int64, len(user.Rooms))
+		for j, room := range user.Rooms {
+			rt[j] = room.RoomID
+		}
+		results[i] = rt
+	}
+	return results, nil
+}
+
 // singleflight
 func (d *SqlDB) UserRoomSingleflight(userid int64) ([]int64, error) {
 	key := "user:room:" + strconv.FormatInt(userid, 36)
@@ -107,24 +186,10 @@ func (d *SqlDB) UserRoomSingleflight(userid int64) ([]int64, error) {
 	return rt, err
 }
 
-func (d *SqlDB) AddUserRoom(userid int64, roomid int64) error {
-	err := d.DB.Model(&model.UserMgr{UserID: userid}).Association("Rooms").Append(&model.RoomMgr{RoomID: roomid})
-	if err != nil {
-		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
-			if sqlerr.Number == 1062 {
-				return nil
-			}
-		}
-		log.Println("faild to add user room", err)
-		return err
-	}
-	return nil
-}
-
 func (d *SqlDB) DelUserRoom(userid int64, roomid int64) error {
 	err := d.DB.Model(&model.UserMgr{UserID: userid}).Association("Rooms").Delete(&model.RoomMgr{RoomID: roomid})
 	if err != nil {
-		log.Println("faild to del user user", err)
+		laneLog.Logger.Infoln("faild to del user user", err)
 		return err
 	}
 	return nil
@@ -145,7 +210,7 @@ func (d *SqlDB) UserComet(userid int64) (string, error) {
 	user := model.UserMgr{}
 	err := d.DB.Model(&model.UserMgr{}).Where("user_id = ?", userid).First(&user).Error
 	if err != nil {
-		log.Println("failed to query user comet:", err)
+		laneLog.Logger.Infoln("failed to query user comet:", err)
 		return "", err
 	}
 	return user.CometAddr, nil
@@ -155,17 +220,43 @@ func (d *SqlDB) SetUserComet(userid int64, comet string) error {
 
 	err := d.DB.Model(&model.UserMgr{UserID: userid}).Update("comet_addr", comet).Error
 	if err != nil {
-		log.Println("faild to add user comet", err)
+		laneLog.Logger.Infoln("faild to add user comet", err)
 		return err
 	}
 	return err
 
 }
 
+func (d *SqlDB) SetUserCometBatch(tx *gorm.DB, userids []int64, comet string) error {
+	var end bool
+	if tx == nil {
+		end = true
+		tx = d.DB.Begin()
+	}
+
+	for i := range userids {
+		err := tx.Model(&model.UserMgr{UserID: userids[i]}).Update("comet_addr", comet).Error
+		if err != nil {
+			laneLog.Logger.Infoln("faild rollback set user comet batch")
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if end {
+		err := tx.Commit().Error
+		if err != nil {
+			laneLog.Logger.Infoln("faild to commit set user comet", err.Error())
+		}
+	}
+	return nil
+
+}
+
 func (d *SqlDB) DelUserComet(userid int64, comet string) error {
 	err := d.DB.Model(&model.UserMgr{UserID: userid}).Update("comet_addr", "").Error
 	if err != nil {
-		log.Println("faild to del user comet", err)
+		laneLog.Logger.Infoln("faild to del user comet", err)
 		return err
 	}
 	return nil

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"laneIM/src/config"
 	"laneIM/src/logic"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,7 +18,10 @@ func main() {
 	flag.Parse()
 	conf := config.Logic{}
 	config.Init(*ConfigPath, &conf)
-	log.Printf("logic server start by env:%+v", conf)
+
+	laneLog.InitLogger("logic"+conf.Name, true)
+
+	laneLog.Logger.Infof("logic server start by env")
 	l := logic.NewLogic(conf)
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)

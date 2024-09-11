@@ -9,6 +9,7 @@ import (
 )
 
 type Canal struct {
+	Name             string
 	CanalAddress     string
 	CanalPort        int
 	CanalName        string
@@ -27,6 +28,7 @@ func (c *Canal) Default() {
 	mysqlC := Mysql{}
 	mysqlC.Default()
 	*c = Canal{
+		Name:             "0",
 		CanalAddress:     "127.0.0.1",
 		CanalPort:        11111,
 		CanalName:        "canal",
@@ -173,7 +175,7 @@ func (c *Mysql) Default() {
 	*c = Mysql{
 		Name:        "0",
 		Username:    "debian-sys-maint",
-		Password:    "QTLVb6BaeeaJsFMT",
+		Password:    "FJho5xokpFqZygL5",
 		Addr:        "127.0.0.1:3306",
 		DataBase:    "laneIM",
 		BatchWriter: batch,

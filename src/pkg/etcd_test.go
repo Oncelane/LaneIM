@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
-	"log"
+	"laneIM/src/pkg/laneLog.go"
 	"reflect"
 	"strings"
 	"testing"
@@ -44,7 +44,7 @@ func TestEtcd(t *testing.T) {
 	}
 	newRoom.Id = append(roomid, 2345)
 	newValue, _ = json.Marshal(newRoom)
-	log.Println(etcd.AddUserRoomid(1, 2345))
+	laneLog.Logger.Infoln(etcd.AddUserRoomid(1, 2345))
 	a, err = etcd.GetUserRoomid(1)
 	if err != nil {
 		t.Error(err)
@@ -57,7 +57,7 @@ func TestEtcd(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(v)
+	laneLog.Logger.Infoln(v)
 }
 
 func TestEtcdServerAddr(t *testing.T) {
@@ -73,12 +73,12 @@ func TestEtcdServerAddr(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println("setValue:", setValue)
+	laneLog.Logger.Infoln("setValue:", setValue)
 	if !reflect.DeepEqual(newValue, setValue) {
 		t.Errorf("wrong set")
 	}
 
-	log.Println(etcd.AddUserServerAddr(1, "3.3.3.3"))
+	laneLog.Logger.Infoln(etcd.AddUserServerAddr(1, "3.3.3.3"))
 	addrs = append(addrs, "3.3.3.3")
 	newValue = strings.Join(addrs, ";")
 	setAddrs, err = etcd.GetUserServerAddr(1)
@@ -93,7 +93,7 @@ func TestEtcdServerAddr(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Println(value)
+	laneLog.Logger.Infoln(value)
 }
 
 // func TestEtcdSetWithFunc(t *testing.T) {
@@ -112,7 +112,7 @@ func TestEtcdServerAddr(t *testing.T) {
 // 	}
 // 	getUser := &model.UserStage{}
 // 	json.Unmarshal(v, getUser)
-// 	log.Println(getUser)
+// 	laneLog.Logger.Infoln(getUser)
 
 // 	etcd.SetUserOnline(testUser.Userid)
 
@@ -122,5 +122,5 @@ func TestEtcdServerAddr(t *testing.T) {
 // 	}
 // 	getUser = &model.UserStage{}
 // 	json.Unmarshal(v, getUser)
-// 	log.Println(getUser)
+// 	laneLog.Logger.Infoln(getUser)
 // }
