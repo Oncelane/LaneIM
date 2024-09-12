@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"laneIM/proto/msg"
 	"laneIM/src/pkg"
 	"laneIM/src/pkg/laneLog.go"
@@ -19,6 +20,7 @@ type Client struct {
 	MsgCh        chan *string
 	ReceiveCount int
 	Room         []int64
+	Seq          int64
 }
 
 // var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
@@ -75,6 +77,37 @@ func (c *Client) AttachToGroup(g *ClientGroup) {
 
 var pool = pkg.NewMsgPool()
 
+func (c *Client) SendCometSingle(path string, data []byte) error {
+	err := c.conn.WriteMsg(&msg.MsgBatch{
+		Msgs: []*msg.Msg{
+			{
+				Path: path,
+				Seq:  c.Seq,
+				Data: data,
+			},
+		},
+	})
+	c.Seq++
+	return err
+}
+
+func (c *Client) SendCometBatch(paths []string, datas [][]byte) error {
+	if len(paths) != len(datas) {
+		return fmt.Errorf("wrong send format, paths.length != datas.lenght")
+	}
+	msgs := make([]*msg.Msg, len(paths))
+	for i := range paths {
+		msgs[i].Path = paths[i]
+		msgs[i].Data = datas[i]
+		msgs[i].Seq = c.Seq
+		c.Seq++
+	}
+	err := c.conn.WriteMsg(&msg.MsgBatch{
+		Msgs: msgs,
+	})
+	return err
+}
+
 func (c *Client) Connect(cometAddr string) {
 	// 连接到WebSocket服务
 	conn, _, err := websocket.DefaultDialer.Dial(cometAddr, nil)
@@ -98,15 +131,7 @@ func (c *Client) Auth(str string) {
 	if err != nil {
 		laneLog.Logger.Infoln("faild to encode token")
 	}
-	err = c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: []*msg.Msg{
-			{
-				Path: "auth",
-				Seq:  1,
-				Data: tokenDate,
-			},
-		},
-	})
+	err = c.SendCometSingle("auth", tokenDate)
 	if err != nil {
 		laneLog.Logger.Infoln("发送消息错误:", err)
 	}
@@ -123,15 +148,7 @@ func (c *Client) SendRoomMsg(message *string) {
 		laneLog.Logger.Infoln("faild to proto marshal", err)
 	}
 	//laneLog.Logger.Infoln("发送房间消息")
-	err = c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: []*msg.Msg{
-			{
-				Path: "sendRoom",
-				Seq:  1,
-				Data: data,
-			},
-		},
-	})
+	err = c.SendCometSingle("sendRoom", data)
 	if err != nil {
 		laneLog.Logger.Infoln("send err", err)
 	}
@@ -146,16 +163,7 @@ func (c *Client) QueryRoom() {
 		laneLog.Logger.Infoln("faild to marhal")
 		return
 	}
-
-	err = c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: []*msg.Msg{
-			{
-				Path: "queryRoom",
-				Seq:  1,
-				Data: data,
-			},
-		},
-	})
+	err = c.SendCometSingle("queryRoom", data)
 	if err != nil {
 		laneLog.Logger.Infoln("send err:", err)
 	}
@@ -166,15 +174,7 @@ func (c *Client) NewUser() {
 	if err != nil {
 		log.Panicln("faild to encode")
 	}
-	err = c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: []*msg.Msg{
-			{
-				Path: "newUser",
-				Seq:  1,
-				Data: data,
-			},
-		},
-	})
+	err = c.SendCometSingle("newUser", data)
 	if err != nil {
 		laneLog.Logger.Infoln("send err:", err)
 	}
@@ -187,15 +187,7 @@ func (c *Client) NewRoom() {
 	if err != nil {
 		log.Panicln("faild to encode")
 	}
-	err = c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: []*msg.Msg{
-			{
-				Path: "newRoom",
-				Seq:  2,
-				Data: data,
-			},
-		},
-	})
+	err = c.SendCometSingle("newRoom", data)
 	if err != nil {
 		laneLog.Logger.Infoln("send err:", err)
 	}
@@ -209,15 +201,7 @@ func (c *Client) JoinRoom(roomid int64) {
 	if err != nil {
 		log.Panicln("faild to encode")
 	}
-	err = c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: []*msg.Msg{
-			{
-				Path: "joinRoom",
-				Seq:  2,
-				Data: data,
-			},
-		},
-	})
+	err = c.SendCometSingle("joinRoom", data)
 	if err != nil {
 		laneLog.Logger.Infoln("send err:", err)
 	}
@@ -231,15 +215,7 @@ func (c *Client) Online() {
 	if err != nil {
 		log.Panicln("faild to encode")
 	}
-	err = c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: []*msg.Msg{
-			{
-				Path: "online",
-				Seq:  2,
-				Data: data,
-			},
-		},
-	})
+	err = c.SendCometSingle("joinRoom", data)
 	if err != nil {
 		laneLog.Logger.Infoln("send err:", err)
 	}

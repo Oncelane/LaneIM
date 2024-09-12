@@ -4,6 +4,7 @@ import (
 	"context"
 	"laneIM/proto/logic"
 	"laneIM/proto/msg"
+	"laneIM/src/dao/localCache"
 	"laneIM/src/pkg/laneLog.go"
 	"time"
 
@@ -114,21 +115,24 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 // }
 
 type BatchStructSendRoom struct {
-	arg *msg.CSendRoomReq
-	ch  *Channel
-	seq int64
+	arg      *msg.CSendRoomReq
+	ch       *Channel
+	seq      int64
+	timeunix int64
 }
 
 func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
-
+	start := time.Now()
 	msgs := make([]*msg.SendMsgReq, len(in))
 	for i := range in {
 		msgs[i] = &msg.SendMsgReq{
-			Data:   []byte(in[i].arg.Msg),
-			Path:   "sendRoom",
-			Addr:   c.conf.Addr,
-			Userid: in[i].arg.Userid,
-			Roomid: in[i].arg.Roomid,
+			Data:     []byte(in[i].arg.Msg),
+			Path:     "sendRoom",
+			Addr:     c.conf.Addr,
+			Userid:   in[i].arg.Userid,
+			Roomid:   in[i].arg.Roomid,
+			Roomseq:  in[i].seq,
+			Timeunix: in[i].timeunix,
 		}
 	}
 
@@ -142,7 +146,7 @@ func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
 	for i := range in {
 		in[i].ch.Reply([]byte("ack"), in[i].seq, "sendRoom")
 	}
-
+	laneLog.Logger.Debugln("doSendRoomBatch spand", time.Since(start))
 }
 
 func (c *Comet) HandleSendRoomBatch(m *msg.Msg, ch *Channel) {
@@ -191,6 +195,7 @@ type BatchStructNewUser struct {
 }
 
 func (c *Comet) doNewUserBatch(in []*BatchStructNewUser) {
+	start := time.Now()
 	rt, err := c.pickLogic().Client.NewUserBatch(context.Background(), &logic.NewUserBatchReq{Count: int64(len(in))})
 	if err != nil {
 		laneLog.Logger.Infoln("faild to send logic", err)
@@ -208,7 +213,7 @@ func (c *Comet) doNewUserBatch(in []*BatchStructNewUser) {
 		in[i].ch.id = rt.Userid[i]
 		in[i].ch.Reply(reply, in[i].seq, "newUser")
 	}
-	laneLog.Logger.Infoln("debug: doNewUserBatch run once")
+	laneLog.Logger.Debugln("doNewUserBatch spand", time.Since(start))
 }
 
 func (c *Comet) HandleNewUserBatch(m *msg.Msg, ch *Channel) {
@@ -254,6 +259,7 @@ type BatchStructJoinRoom struct {
 }
 
 func (c *Comet) doJoinRoomBatch(in []*BatchStructJoinRoom) {
+	start := time.Now()
 	userid := make([]int64, len(in))
 	roomid := make([]int64, len(in))
 	for i := range in {
@@ -273,6 +279,7 @@ func (c *Comet) doJoinRoomBatch(in []*BatchStructJoinRoom) {
 	for i := range in {
 		in[i].ch.Reply([]byte("ack"), in[i].seq, "joinRoom")
 	}
+	laneLog.Logger.Debugln("doJoinRoomBatch spand", time.Since(start))
 
 }
 func (c *Comet) HandleJoinRoomBatch(m *msg.Msg, ch *Channel) {
@@ -316,7 +323,7 @@ type BatchStructSetOnline struct {
 }
 
 func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
-	// start := time.Now()
+	start := time.Now()
 	userid := make([]int64, len(in))
 	for i := range len(in) {
 		userid[i] = in[i].arg.Userid
@@ -331,11 +338,27 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 		laneLog.Logger.Infoln("faild to send logic", err)
 		return
 	}
-	query := time.Now()
+	// query := time.Now()
+	// 缓存中不存在的才查询
+	mayExist, full := localCache.UserRoomidBatch(c.cache, userid)
+	miss := make([]bool, len(userid))
+	var needQueryUserid []int64
+	var debugMissCount = 0
+	if !full {
+		for i := range mayExist {
+			if len(mayExist[i]) == 0 {
+				miss[i] = true
+				debugMissCount++
+				needQueryUserid = append(needQueryUserid, userid[i])
+			}
+		}
+	}
+	// laneLog.Logger.Warnln("userid's length", len(userid), " debugMissCount = ", debugMissCount)
+
 	rt, err := c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
-		Userid: userid,
+		Userid: needQueryUserid,
 	})
-	laneLog.Logger.Debugln("doQueryRoom spand:", time.Since(query))
+	// laneLog.Logger.Debugln("doQueryRoom spand:", time.Since(query))
 	if err != nil {
 		laneLog.Logger.Infoln("faild to query logic room", err)
 		return
@@ -343,27 +366,22 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 
 	var retdata []byte
 
-	if len(rt.Roomids) != len(in) {
-		for i := range in {
-			laneLog.Logger.Errorf("faild some query room, ask %s but return %s", len(in), len(rt.Roomids))
-			retdata, err = proto.Marshal(&msg.COnlineResp{
-				Ack:    false,
-				Roomid: nil,
-			})
-			if err != nil {
-				laneLog.Logger.Errorln("faild marshal proto", err)
-			}
-			in[i].ch.Reply(retdata, in[i].seq, "online")
-		}
-		return
-	}
-
 	// putchannel
-	for i := range in {
+	var index = 0
+	for i := range mayExist {
+		if miss[i] {
+			localCache.SetUserRoomid(c.cache, userid[i], rt.Roomids[index].Roomid)
+			for _, roomid := range rt.Roomids[index].Roomid {
 
-		for _, roomid := range rt.Roomids[i].Roomid {
-			c.Bucket(roomid).PutChannel(roomid, in[i].ch)
+				c.Bucket(roomid).PutChannel(roomid, in[i].ch)
+			}
+			index++
+		} else {
+			for _, roomid := range mayExist[i] {
+				c.Bucket(roomid).PutChannel(roomid, in[i].ch)
+			}
 		}
+
 		retdata, err = proto.Marshal(&msg.COnlineResp{
 			Ack:    true,
 			Roomid: rt.Roomids[i].Roomid,
@@ -373,7 +391,7 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 		}
 		in[i].ch.Reply([]byte(retdata), in[i].seq, "online")
 	}
-	// laneLog.Logger.Debugln("total spand:", time.Since(start))
+	laneLog.Logger.Debugln("total spand:", time.Since(start))
 }
 
 func (c *Comet) HandleSetOnlineBatch(m *msg.Msg, ch *Channel) {

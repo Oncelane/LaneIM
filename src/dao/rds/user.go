@@ -157,11 +157,15 @@ func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, boo
 	// Retrieve Users
 	rt := make([][]int64, len(userids))
 	full := true
-	// pipe := rdb.Pipeline()
+	pipe := rdb.Pipeline()
 	for i := range userids {
 		strUserid := strconv.FormatInt(userids[i], 36)
 		roomSetKey := fmt.Sprintf("user:%s:roomS", strUserid)
-		roomIDs, err := rdb.SMembers(roomSetKey).Result()
+		pipe.SMembers(roomSetKey)
+	}
+	results, err := pipe.Exec()
+	for i, r := range results {
+		roomIDs, _ := r.(*redis.StringSliceCmd).Result()
 		// laneLog.Logger.Debugf("redis smembers key[%s] value[%s]", roomSetKey, roomIDs)
 		if len(roomIDs) == 0 {
 			full = false
@@ -184,7 +188,9 @@ func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, boo
 		}
 		rt[i] = rooms
 	}
+
 	return rt, full
+
 }
 
 func SetNEUSerMgrRoom(rdb *redis.ClusterClient, userid int64, rooms []int64) error {
@@ -254,15 +260,18 @@ func SetNEUSerMgrRoomBatch(rdb *redis.ClusterClient, userids []int64, roomss [][
 	for i := range userids {
 		strRoomid := strconv.FormatInt(userids[i], 36)
 		key := "user:" + strRoomid
-		exist, err := pipe.Exists(key).Result()
-		if err != nil {
-			continue
-		}
-		exists[i] = exist != 0
+		pipe.Exists(key)
 	}
 	start := time.Now()
-	_, err := pipe.Exec()
+	results, err := pipe.Exec()
 	laneLog.Logger.Debugln("pipe exist spand", time.Since(start))
+	if err != nil {
+		laneLog.Logger.Debugln("pipe exec faild")
+	}
+	for i, r := range results {
+		exist, _ := r.(*redis.IntCmd).Result()
+		exists[i] = exist != 0
+	}
 	if err != nil {
 		laneLog.Logger.Infoln("faild to set user room", err)
 		return err
@@ -298,13 +307,18 @@ func SetEXUSerMgrRoomBatch(rdb *redis.ClusterClient, userids []int64, roomss [][
 	for i := range userids {
 		strRoomid := strconv.FormatInt(userids[i], 36)
 		key := "user:" + strRoomid
-		exist, err := pipe.Exists(key).Result()
-		if err != nil {
-			continue
-		}
+		pipe.Exists(key)
+	}
+	start := time.Now()
+	results, err := pipe.Exec()
+	laneLog.Logger.Debugln("pipe exist spand", time.Since(start))
+	if err != nil {
+		laneLog.Logger.Debugln("pipe exec faild")
+	}
+	for i, r := range results {
+		exist, _ := r.(*redis.IntCmd).Result()
 		exists[i] = exist != 0
 	}
-	_, err := pipe.Exec()
 	if err != nil {
 		laneLog.Logger.Infoln("faild to set user room", err)
 		return err
@@ -323,7 +337,9 @@ func SetEXUSerMgrRoomBatch(rdb *redis.ClusterClient, userids []int64, roomss [][
 		}
 
 	}
+	start = time.Now()
 	_, err = pipe.Exec()
+	laneLog.Logger.Debugln("pipe set user room spand", time.Since(start))
 	if err != nil {
 		laneLog.Logger.Infoln("faild to set user room", err)
 		return err

@@ -6,11 +6,14 @@ import (
 	"laneIM/proto/logic"
 	"laneIM/proto/msg"
 	"laneIM/src/config"
+	"laneIM/src/dao/localCache"
 	"laneIM/src/pkg"
 	"laneIM/src/pkg/batch"
 	"laneIM/src/pkg/laneLog.go"
 	"net"
 	"time"
+
+	"github.com/allegro/bigcache"
 
 	"log"
 	"sync"
@@ -65,6 +68,7 @@ type Comet struct {
 	channels map[int64]*Channel
 
 	funcRout *WsFuncRouter
+	cache    *bigcache.BigCache
 
 	//batch
 	BatcherNewUser  *batch.BatchArgs[BatchStructNewUser]
@@ -76,9 +80,9 @@ type Comet struct {
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 	ret = &Comet{
-		conf: conf,
-		pool: pkg.NewMsgPool(),
-
+		conf:     conf,
+		pool:     pkg.NewMsgPool(),
+		cache:    localCache.Cache(time.Minute),
 		channels: make(map[int64]*Channel),
 	}
 

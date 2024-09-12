@@ -68,13 +68,13 @@ func (d *Dao) UserRoomBatch(cache *bigcache.BigCache, rdb *redis.ClusterClient, 
 		return rt, nil
 	}
 
-	// laneLog.Logger.Infoln("UserComet")
-	// rt, full = rds.UserMgrRoomBatch(rdb, userids)
-	// if full {
-	// 	laneLog.Logger.Infoln("命中redis缓存UserRoomBatch")
-	// 	go localCache.SetUserRoomidBatch(cache, userids, rt)
-	// 	return rt, nil
-	// }
+	laneLog.Logger.Infoln("UserComet")
+	rt, full = rds.UserMgrRoomBatch(rdb, userids)
+	if full {
+		laneLog.Logger.Infoln("命中redis缓存UserRoomBatch")
+		go localCache.SetUserRoomidBatch(cache, userids, rt)
+		return rt, nil
+	}
 
 	laneLog.Logger.Errorln("触发sql查询UserRoom")
 	rt, err := db.UserRoomBatch(userids)

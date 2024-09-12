@@ -8,7 +8,7 @@ import (
 )
 
 func TestManyUser(t *testing.T) {
-	num := 4000
+	num := 1000
 	var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	g := client.NewClientGroup(num)
@@ -83,9 +83,9 @@ func TestManyUser(t *testing.T) {
 		}
 	}()
 	<-ch
-	// time.Sleep(time.Second * 30)
-	laneLog.Logger.Infoln("start to send second message :hihihi")
+	time.Sleep(time.Second * 3)
 	msg = "hihihi"
+	laneLog.Logger.Infoln("start to send second message :", msg)
 	g.Send(&msg)
 	timeStart = time.Now()
 	go func() {
@@ -97,6 +97,48 @@ func TestManyUser(t *testing.T) {
 			}
 			time.Sleep(time.Millisecond * 10)
 			if sum == num*num*2 {
+				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
+				ch <- struct{}{}
+				break
+			}
+		}
+	}()
+	<-ch
+	time.Sleep(time.Second * 3)
+	msg = "33333"
+	laneLog.Logger.Infoln("start to send second message :", msg)
+	g.Send(&msg)
+	timeStart = time.Now()
+	go func() {
+		for {
+
+			sum := 0
+			for _, c := range g.Clients {
+				sum += c.ReceiveCount
+			}
+			time.Sleep(time.Millisecond * 10)
+			if sum == num*num*3 {
+				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
+				ch <- struct{}{}
+				break
+			}
+		}
+	}()
+	<-ch
+	time.Sleep(time.Second * 3)
+	msg = "44444"
+	laneLog.Logger.Infoln("start to send second message :", msg)
+	g.Send(&msg)
+	timeStart = time.Now()
+	go func() {
+		for {
+
+			sum := 0
+			for _, c := range g.Clients {
+				sum += c.ReceiveCount
+			}
+			time.Sleep(time.Millisecond * 10)
+			if sum == num*num*4 {
 				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
 				ch <- struct{}{}
 				break

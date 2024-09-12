@@ -69,7 +69,7 @@ func (c *Comet) sendRoutine(ch *Channel) {
 		err := ch.conn.WriteMsg(message)
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
-				laneLog.Logger.Infoln("faild to get ws message")
+				laneLog.Logger.Infoln("faild to get ws message", err)
 				c.DelChannel(ch)
 				return
 			}

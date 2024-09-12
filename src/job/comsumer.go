@@ -65,15 +65,21 @@ func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, cl
 		}
 		roomMsgBatch := make(map[int64]*msg.SendMsgBatchReq)
 
+		// 按群聊分成不同的SendMsgBatchReq块
 		for _, m := range protoMsg.Msgs {
 			// roomMsgBatch[msg.Roomid] =
 			if _, exist := roomMsgBatch[m.Roomid]; !exist {
 				roomMsgBatch[m.Roomid] = &msg.SendMsgBatchReq{}
 			}
 			roomMsgBatch[m.Roomid].Msgs = append(roomMsgBatch[m.Roomid].Msgs, m)
-
 		}
 
+		// 消息块排序
+		for _, BatchMsg := range roomMsgBatch {
+			consumer.job.SortRoomMsg_Timeunix(BatchMsg)
+		}
+
+		// 发送给comet
 		for roomid, BatchMsg := range roomMsgBatch {
 			consumer.job.Bucket(roomid).RoomBatch(roomid, BatchMsg)
 		}
