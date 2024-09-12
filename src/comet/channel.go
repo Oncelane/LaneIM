@@ -12,7 +12,6 @@ type Channel struct {
 	id   int64
 	conn pkg.MsgReadWriteCloser
 	// conn   pkg.MsgReadWriteCloser
-	recvCh chan *msg.MsgBatch
 	sendCh chan *msg.MsgBatch
 	done   bool
 }
@@ -21,7 +20,6 @@ func (c *Comet) NewChannel(wsconn *websocket.Conn) *Channel {
 	ch := &Channel{
 		id:     -1,
 		conn:   pkg.NewConnWs(wsconn, c.pool),
-		recvCh: make(chan *msg.MsgBatch, 100),
 		sendCh: make(chan *msg.MsgBatch, 100),
 		done:   false,
 	}
@@ -50,15 +48,17 @@ func (c *Comet) recvRoutine(ch *Channel) {
 			c.DelChannel(ch)
 			return
 		}
-		// laneLog.Logger.Infoln("message.Path", message.Path)
-		f := c.funcRout.Find(message.Path)
-		if f == nil {
-			laneLog.Logger.Infoln("wrong method")
-			continue
-		}
-		go f(message, ch)
-		if ch.done {
-			return
+		for i := range message.Msgs {
+			// laneLog.Logger.Infoln("message.Path", message.Path)
+			f := c.funcRout.Find(message.Msgs[i].Path)
+			if f == nil {
+				laneLog.Logger.Infoln("wrong method")
+				continue
+			}
+			go f(message.Msgs[i], ch)
+			if ch.done {
+				return
+			}
 		}
 	}
 }
@@ -81,11 +81,19 @@ func (c *Comet) sendRoutine(ch *Channel) {
 }
 
 func (c *Channel) Reply(data []byte, seq int64, path string) {
-	c.sendCh <- &msg.Msg{
-		Data: data,
-		Seq:  seq,
-		Path: path,
+	c.sendCh <- &msg.MsgBatch{
+		Msgs: []*msg.Msg{
+			{
+				Data: data,
+				Seq:  seq,
+				Path: path,
+			},
+		},
 	}
+}
+
+func (c *Channel) Send(in *msg.MsgBatch) {
+	c.sendCh <- in
 }
 
 func (c *Channel) Close() {

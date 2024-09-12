@@ -17,7 +17,7 @@ func TestAddRoomUseridComet(t *testing.T) {
 }
 
 var addr = []string{"127.0.0.1:50051", "127.0.0.1:50050"}
-var num = 999
+var num = 3999
 
 func TestSlowSql(t *testing.T) {
 
@@ -93,7 +93,7 @@ func TestSlowSqlOptimines(t *testing.T) {
 	addroomUsertime += time.Since(start)
 
 	laneLog.Logger.Infoln("newUsertime-batch spand", newUsertime)
-	laneLog.Logger.Infoln("addroomUsertime spand", addroomUsertime)
 	laneLog.Logger.Infoln("setUseronlinetime spand", setUseronlinetime)
+	laneLog.Logger.Infoln("addroomUsertime spand", addroomUsertime)
 	laneLog.Logger.Infoln("spand time:", time.Since(startTime))
 }

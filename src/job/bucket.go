@@ -2,6 +2,7 @@ package job
 
 import (
 	"laneIM/proto/comet"
+	"laneIM/proto/msg"
 	"laneIM/src/pkg/laneLog.go"
 	"sync"
 )
@@ -70,26 +71,46 @@ func (j *Job) Brodcast(m *comet.BrodcastReq) {
 	}
 }
 
-func (g *Bucket) Room(m *comet.RoomReq) {
-	room := g.GetRoom(m.Roomid)
-	comets, err := g.job.daoo.RoomComet(g.job.cache, g.job.redis.Client, g.job.db, m.Roomid)
+// func (g *Bucket) Room(m *comet.RoomReq) {
+// 	room := g.GetRoom(m.Roomid)
+// 	comets, err := g.job.daoo.RoomComet(g.job.cache, g.job.redis.Client, g.job.db, m.Roomid)
+// 	if err != nil {
+// 		laneLog.Logger.Infoln("faild to cache get comets", err)
+// 		return
+// 	}
+// 	room.rw.RLock()
+// 	defer room.rw.RUnlock()
+
+// 	for _, cometAddr := range comets {
+// 		if _, exist := g.job.comets[cometAddr]; exist {
+// 			// 通过bucket的routine进行实际IO
+// 			// laneLog.Logger.Infof("message to roomid:%d comet:%v", room.roomid, cometAddr)
+// 			g.job.comets[cometAddr].roomCh <- m
+// 		} else {
+// 			laneLog.Logger.Infoln("error job doesn't have this comet:", cometAddr)
+// 		}
+// 	}
+// }
+
+func (g *Bucket) RoomBatch(roomid int64, batchmsg *msg.SendMsgBatchReq) {
+	room := g.GetRoom(roomid)
+	comets, err := g.job.daoo.RoomComet(g.job.cache, g.job.redis.Client, g.job.db, roomid)
 	if err != nil {
 		laneLog.Logger.Infoln("faild to cache get comets", err)
-		return
 	}
 	room.rw.RLock()
 	defer room.rw.RUnlock()
 
 	for _, cometAddr := range comets {
 		if _, exist := g.job.comets[cometAddr]; exist {
-			// 通过bucket的routine进行实际IO
-			// laneLog.Logger.Infof("message to roomid:%d comet:%v", room.roomid, cometAddr)
-			g.job.comets[cometAddr].roomCh <- m
+			// comet内的batcher积压信息
+			g.job.comets[cometAddr].BatcherSendRoomMsg.Add(&BatchStructSendRoomMsg{
+				arg: batchmsg,
+			})
 		} else {
 			laneLog.Logger.Infoln("error job doesn't have this comet:", cometAddr)
 		}
 	}
-
 }
 
 // func (g *Bucket) Single(m *comet.SingleReq) {

@@ -59,6 +59,7 @@ func UserRoomidBatch(cache *bigcache.BigCache, userids []int64) ([][]int64, bool
 			full = false
 			continue
 		}
+		// laneLog.Logger.Debugf("localcache get userroom key[%s] value[%s]", key, string(data))
 		rawInt64 := strings.Split(string(data), ";")
 		roomids := make([]int64, len(rawInt64))
 		if len(rawInt64) == 0 {
@@ -74,7 +75,7 @@ func UserRoomidBatch(cache *bigcache.BigCache, userids []int64) ([][]int64, bool
 			}
 			roomids[i] = roomid
 		}
-		rt[i] = userids
+		rt[i] = roomids
 	}
 	return rt, full
 }
@@ -97,6 +98,7 @@ func SetUserRoomidBatch(cache *bigcache.BigCache, userids []int64, roomidss [][]
 			raw := strconv.FormatInt(roomidss[i][j], 36)
 			rawroomids[j] = raw
 		}
+		// laneLog.Logger.Debugf("localcache set key[%s],value[%v]", key, strings.Join(rawroomids, ";"))
 		err := cache.Set(key, []byte(strings.Join(rawroomids, ";")))
 		if err != nil {
 			laneLog.Logger.Errorln("batch set user roomid localcache faild", err)

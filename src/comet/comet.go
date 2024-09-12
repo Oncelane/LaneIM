@@ -139,7 +139,7 @@ func (c *Comet) InitBucket() {
 func (c *Comet) ServeGrpc() {
 	lis, err := net.Listen("tcp", c.conf.Addr)
 	if err != nil {
-		log.Fatalln("error: comet start faild", err)
+		laneLog.Logger.Errorln("error: comet start faild", err)
 	}
 	gServer := grpc.NewServer()
 	comet.RegisterCometServer(gServer, c)
@@ -229,7 +229,7 @@ func (c *Comet) DelChannel(ch *Channel) {
 	c.mu.Unlock()
 }
 
-func (c *Comet) LogictSendMsgBatch(message *logic.SendMsgBatchReq) error {
+func (c *Comet) LogictSendMsgBatch(message *msg.SendMsgBatchReq) error {
 	_, err := c.pickLogic().Client.SendMsgBatch(context.Background(), message)
 	if err != nil {
 		laneLog.Logger.Infoln(err)
@@ -255,13 +255,24 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 // 	return nil, nil
 // }
 
-func (c *Comet) RoomBatch(_ context.Context, in *comet.RoomBatchReq) (*comet.NoResp, error) {
+func (c *Comet) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*comet.NoResp, error) {
+	//消息处理，userid关注哪些room是需要知道的,由调用loigc的quryroom时得知
 	// laneLog.Logger.Infoln("recv from job", in.Roomid)
-	for i := range in.Roomid {
-		c.Bucket(in.Roomid[i]).GetRoom(in.Roomid[i]).SendBatch(&msg.MsgBatch{
-			Path:  "batchMsg",
-			Datas: in.Data,
+	//整合消息，以roomid为单位
+	roomMsgBatch := make(map[int64]*msg.MsgBatch)
+	for i := range in.Msgs {
+		// laneLog.Logger.Debugln("! receive roomid", in.Msgs[i].Roomid, "message:", string(in.Msgs[i].Data))
+		if _, exist := roomMsgBatch[in.Msgs[i].Roomid]; !exist {
+			roomMsgBatch[in.Msgs[i].Roomid] = new(msg.MsgBatch)
+		}
+		roomMsgBatch[in.Msgs[i].Roomid].Msgs = append(roomMsgBatch[in.Msgs[i].Roomid].Msgs, &msg.Msg{
+			Seq:  -1,
+			Path: "receive",
+			Data: in.Msgs[i].Data,
 		})
+	}
+	for roomid, msg := range roomMsgBatch {
+		c.Bucket(roomid).GetRoom(roomid).SendBatch(msg)
 	}
 
 	return nil, nil

@@ -121,9 +121,9 @@ type BatchStructSendRoom struct {
 
 func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
 
-	msgs := make([]*logic.SendMsgReq, len(in))
+	msgs := make([]*msg.SendMsgReq, len(in))
 	for i := range in {
-		msgs[i] = &logic.SendMsgReq{
+		msgs[i] = &msg.SendMsgReq{
 			Data:   []byte(in[i].arg.Msg),
 			Path:   "sendRoom",
 			Addr:   c.conf.Addr,
@@ -132,7 +132,7 @@ func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
 		}
 	}
 
-	err := c.LogictSendMsgBatch(&logic.SendMsgBatchReq{
+	err := c.LogictSendMsgBatch(&msg.SendMsgBatchReq{
 		Msgs: msgs,
 	})
 	if err != nil {
@@ -260,12 +260,12 @@ func (c *Comet) doJoinRoomBatch(in []*BatchStructJoinRoom) {
 		userid[i] = in[i].arg.Userid
 		roomid[i] = in[i].arg.Roomid
 	}
-	join := time.Now()
+	// join := time.Now()
 	_, err := c.pickLogic().Client.JoinRoomBatch(context.Background(), &logic.JoinRoomBatchReq{
 		Userid: userid,
 		Roomid: roomid,
 	})
-	laneLog.Logger.Debugln("join room spand:", time.Since(join))
+	// laneLog.Logger.Debugln("join room spand:", time.Since(join))
 	if err != nil {
 		laneLog.Logger.Infoln("faild to send logic", err)
 		return
@@ -316,7 +316,7 @@ type BatchStructSetOnline struct {
 }
 
 func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
-	start := time.Now()
+	// start := time.Now()
 	userid := make([]int64, len(in))
 	for i := range len(in) {
 		userid[i] = in[i].arg.Userid
@@ -326,7 +326,7 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 		Userid: userid,
 		Server: c.conf.Addr,
 	})
-	laneLog.Logger.Debugln("setonline batch spand:", time.Since(start))
+	// laneLog.Logger.Debugln("setonline batch spand:", time.Since(start))
 	if err != nil {
 		laneLog.Logger.Infoln("faild to send logic", err)
 		return
@@ -373,7 +373,7 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 		}
 		in[i].ch.Reply([]byte(retdata), in[i].seq, "online")
 	}
-	laneLog.Logger.Debugln("total spand:", time.Since(start))
+	// laneLog.Logger.Debugln("total spand:", time.Since(start))
 }
 
 func (c *Comet) HandleSetOnlineBatch(m *msg.Msg, ch *Channel) {

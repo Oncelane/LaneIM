@@ -6,18 +6,38 @@ option go_package = "laneIM/proto/msg;msg";
 // protoc --go_out=.. --go-grpc_out=..
 // --go-grpc_opt=require_unimplemented_servers=false -I. -Iproto
 // proto/msg/msg.proto proto/comet/comet.proto proto/logic/logic.proto
+
+//  client <--> comet
 message Msg {
   bytes data = 1;
   string path = 2;
   int64 seq = 3;
 }
 
-message MsgBatch {
-  string path = 1;
-  repeated bytes datas = 2;
-  repeated string paths = 3;
-  repeated int64 seqs = 4;
+// client <--> comet
+message MsgBatch { repeated Msg msgs = 1; }
+
+// in Msg.data client->logic
+message CSendRoomReq {
+  int64 userid = 1;
+  int64 roomid = 2;
+  string msg = 3;
 }
+message CSendRoomResp { bool ack = 1; }
+
+message SendMsgReq {
+  bytes data = 1;
+  string path = 2;
+  // from which server
+  string addr = 3;
+  // from which user
+  int64 userid = 4;
+  int64 roomid = 5;
+  int64 toUserid = 6;
+}
+
+// comet->logic->kafka->job
+message SendMsgBatchReq { repeated SendMsgReq msgs = 1; }
 
 message UserInfo {
   int64 userid = 1;
@@ -33,29 +53,18 @@ message RoomInfo {
   int64 onlineNum = 4;
 }
 
-// Auth
-
+// in msg.data client -> logic
 message CAuthReq {
   repeated string params = 1;
   int64 userid = 2;
 }
-
+// logic -> client
 message CAuthResp { bool pass = 1; }
 
-// query roomid
-
+// client->logic
 message CRoomidReq { int64 userid = 1; }
+// loigc -> client
 message CRoomidResp { repeated int64 roomid = 1; }
-
-// send msg to room
-
-message CSendRoomReq {
-  int64 userid = 1;
-  int64 roomid = 2;
-  string msg = 3;
-}
-
-message CSendRoomResp { bool ack = 1; }
 
 // offline
 message COfflineReq { int64 userid = 1; }

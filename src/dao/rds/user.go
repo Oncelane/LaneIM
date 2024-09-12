@@ -157,11 +157,12 @@ func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, boo
 	// Retrieve Users
 	rt := make([][]int64, len(userids))
 	full := true
-	pipe := rdb.Pipeline()
+	// pipe := rdb.Pipeline()
 	for i := range userids {
 		strUserid := strconv.FormatInt(userids[i], 36)
 		roomSetKey := fmt.Sprintf("user:%s:roomS", strUserid)
-		roomIDs, err := pipe.SMembers(roomSetKey).Result()
+		roomIDs, err := rdb.SMembers(roomSetKey).Result()
+		// laneLog.Logger.Debugf("redis smembers key[%s] value[%s]", roomSetKey, roomIDs)
 		if len(roomIDs) == 0 {
 			full = false
 			continue
@@ -274,6 +275,7 @@ func SetNEUSerMgrRoomBatch(rdb *redis.ClusterClient, userids []int64, roomss [][
 		// 如果键不存在，则执行写入操作
 		if !exists[i] {
 			for j := range roomss[i] {
+				// laneLog.Logger.Debugf("redis set key[%s] value[%s]", fmt.Sprintf("%s:roomS", key), roomss[i][j])
 				pipe.SAdd(fmt.Sprintf("%s:roomS", key), roomss[i][j]).Err()
 			}
 			pipe.Expire(fmt.Sprintf("%s:roomS", key), time.Second*60)

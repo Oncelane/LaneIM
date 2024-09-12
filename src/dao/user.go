@@ -9,7 +9,6 @@ import (
 	"laneIM/src/pkg/laneLog.go"
 	"laneIM/src/pkg/mergewrite"
 	"strconv"
-	"time"
 
 	"github.com/allegro/bigcache"
 	"github.com/go-redis/redis"
@@ -65,30 +64,28 @@ func (d *Dao) UserRoom(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *s
 func (d *Dao) UserRoomBatch(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *sql.SqlDB, userids []int64) ([][]int64, error) {
 	rt, full := localCache.UserRoomidBatch(cache, userids)
 	if full {
+		laneLog.Logger.Infoln("命中本地缓存UserRoomBatch")
 		return rt, nil
 	}
 
-	laneLog.Logger.Infoln("user room query redis")
-	rt, full = rds.UserMgrRoomBatch(rdb, userids)
-	if full {
-		laneLog.Logger.Infoln("同步到本地cache")
-		go localCache.SetUserRoomidBatch(cache, userids, rt)
-		return rt, nil
-	}
+	// laneLog.Logger.Infoln("UserComet")
+	// rt, full = rds.UserMgrRoomBatch(rdb, userids)
+	// if full {
+	// 	laneLog.Logger.Infoln("命中redis缓存UserRoomBatch")
+	// 	go localCache.SetUserRoomidBatch(cache, userids, rt)
+	// 	return rt, nil
+	// }
 
-	laneLog.Logger.Infoln("触发sql查询")
+	laneLog.Logger.Errorln("触发sql查询UserRoom")
 	rt, err := db.UserRoomBatch(userids)
 	if err != nil {
 		laneLog.Logger.Errorln("faild to sql user room batch", err)
 		return rt, err
 	}
-
-	laneLog.Logger.Infoln("同步到本地cache")
-	go localCache.SetUserRoomidBatch(cache, userids, rt)
-	laneLog.Logger.Infoln("同步到redis")
-	start := time.Now()
+	localCache.SetUserRoomidBatch(cache, userids, rt)
+	// start := time.Now()
 	go rds.SetNEUSerMgrRoomBatch(rdb, userids, rt)
-	laneLog.Logger.Debugln("go SetNEUSerMgrRoomBatch spand", time.Since(start))
+	// laneLog.Logger.Debugln("go SetNEUSerMgrRoomBatch spand", time.Since(start))
 	return rt, nil
 }
 
@@ -96,10 +93,11 @@ func (d *Dao) UserComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 	key := "user:comet" + strconv.FormatInt(userid, 36)
 	r, err := localCache.UserComet(cache, userid)
 	if err == nil {
+		laneLog.Logger.Infoln("命中本地缓存UserComet")
 		return r, err
 	}
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
-		laneLog.Logger.Infoln("user comet query redis")
+		laneLog.Logger.Infoln("触发redis查询UserComet")
 		rt, err := rds.UserMgrComet(rdb, userid)
 		if err != nil {
 			if err != redis.Nil {
@@ -110,16 +108,16 @@ func (d *Dao) UserComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 			localCache.SetUserComet(cache, userid, rt)
 			return rt, nil
 		}
-		//laneLog.Logger.Infoln("触发sql查询")
+		laneLog.Logger.Errorln("触发sql查询UserComet")
 		rt, err = db.UserComet(userid)
 		if err != nil {
 			return rt, err
 		}
-		//laneLog.Logger.Infoln("同步到本地cache", rt)
+		laneLog.Logger.Infoln("UserComet同步到本地cache")
 		localCache.SetUserComet(cache, userid, rt)
 		//TODO 单独同步到redis
-		//laneLog.Logger.Infoln("同步到redis", rt)
-		rds.SetNEUSerMgrComet(rdb, userid, rt)
+		laneLog.Logger.Infoln("UserComet同步到redis")
+		go rds.SetNEUSerMgrComet(rdb, userid, rt)
 		return rt, nil
 	})
 	if r, ok := rt.(string); ok {

@@ -93,6 +93,8 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 	key := "room:comet" + strconv.FormatInt(roomid, 36)
 	r, err := localCache.RoomComet(cache, roomid)
 	if err == nil {
+		laneLog.Logger.Debugln("RoomComet命中localcache")
+		laneLog.Logger.Debugln("time on localcache user room spand ", time.Since(startTime))
 		return r, err
 	}
 
@@ -103,6 +105,8 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 				return rt, err
 			}
 		} else {
+			laneLog.Logger.Debugln("RoomComet命中redis")
+			laneLog.Logger.Debugln("time on redis user room spand ", time.Since(startTime))
 			//laneLog.Logger.Infoln("同步到本地cache:", rt)
 			localCache.SetRoomComet(cache, roomid, rt)
 			return rt, nil
@@ -120,7 +124,7 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 		rds.SetNERoomMgrComet(rdb, roomid, rt)
 		return rt, nil
 	})
-	laneLog.Logger.Infoln("time on query room spand ", time.Since(startTime))
+	laneLog.Logger.Debugln("time on sql user room spand ", time.Since(startTime))
 	if r, ok := rt.([]string); ok {
 
 		return r, err

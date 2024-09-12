@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package lane.comet;
 option go_package = "laneIM/proto/comet;comet";
-// import "proto/msg/msg.proto";
+import "proto/msg/msg.proto";
 
 message SingleReq {
   int64 userid = 1;
@@ -22,17 +22,13 @@ message RoomReq {
 }
 message RoomResp {}
 
-message RoomBatchReq {
-  repeated int64 roomid = 1;
-  repeated bytes data = 2;
-}
-message RoomBatchResp {}
-
 message NoResp {}
 
 service comet {
   rpc Single(SingleReq) returns (NoResp);
   rpc Brodcast(BrodcastReq) returns (NoResp);
   // rpc Room(RoomReq) returns (NoResp);
-  rpc RoomBatch(RoomBatchReq) returns (NoResp);
+  // rpc RoomBatch(RoomBatchReq) returns (NoResp);
+
+  rpc SendMsgBatch(lane.msg.SendMsgBatchReq) returns (NoResp);
 }

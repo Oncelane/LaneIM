@@ -9,8 +9,8 @@ import (
 )
 
 type MsgReadWriteCloser interface {
-	ReadMsg() (message *msg.Msg, err error)
-	WriteMsg(message *msg.Msg) error
+	ReadMsg() (message *msg.MsgBatch, err error)
+	WriteMsg(message *msg.MsgBatch) error
 	Close() error
 }
 
@@ -28,7 +28,7 @@ func NewConnWs(conn *websocket.Conn, pool *MsgPool) *ConnWs {
 	}
 }
 
-func (w *ConnWs) ReadMsg() (message *msg.Msg, err error) {
+func (w *ConnWs) ReadMsg() (message *msg.MsgBatch, err error) {
 	_, p, err := w.conn.ReadMessage()
 	if err != nil {
 		// laneLog.Logger.Infoln("read err:", err)
@@ -43,7 +43,7 @@ func (w *ConnWs) ReadMsg() (message *msg.Msg, err error) {
 	return
 }
 
-func (w *ConnWs) WriteMsg(message *msg.Msg) error {
+func (w *ConnWs) WriteMsg(message *msg.MsgBatch) error {
 	p, err := proto.Marshal(message)
 	if err != nil {
 		laneLog.Logger.Infoln("marshal err", err)

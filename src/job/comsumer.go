@@ -1,8 +1,7 @@
 package job
 
 import (
-	"laneIM/proto/comet"
-	"laneIM/proto/logic"
+	"laneIM/proto/msg"
 	"laneIM/src/pkg/laneLog.go"
 
 	"github.com/IBM/sarama"
@@ -50,20 +49,34 @@ func (consumer *MyConsumer) Cleanup(session sarama.ConsumerGroupSession) error {
 //		}
 //		return nil
 //	}
+
+type BatchStructSendRoomMsg struct {
+	arg *msg.SendMsgBatchReq
+}
+
 func (consumer *MyConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
 		// laneLog.Logger.Infof("Received message: from %s/%d\n", message.Topic, message.Partition)
 		// 处理消息...
-		protoMsg := &logic.SendMsgBatchReq{}
+		protoMsg := &msg.SendMsgBatchReq{}
 		err := proto.Unmarshal(message.Value, protoMsg)
 		if err != nil {
 			laneLog.Logger.Infoln("wrong protobuf decode")
 		}
+		roomMsgBatch := make(map[int64]*msg.SendMsgBatchReq)
 
-		consumer.job.Push(&comet.RoomReq{
-			Roomid: protoMsg.Roomid,
-			Data:   protoMsg.Data,
-		})
+		for _, m := range protoMsg.Msgs {
+			// roomMsgBatch[msg.Roomid] =
+			if _, exist := roomMsgBatch[m.Roomid]; !exist {
+				roomMsgBatch[m.Roomid] = &msg.SendMsgBatchReq{}
+			}
+			roomMsgBatch[m.Roomid].Msgs = append(roomMsgBatch[m.Roomid].Msgs, m)
+
+		}
+
+		for roomid, BatchMsg := range roomMsgBatch {
+			consumer.job.Bucket(roomid).RoomBatch(roomid, BatchMsg)
+		}
 
 		// 标记消息为已消费
 		session.MarkMessage(message, "")

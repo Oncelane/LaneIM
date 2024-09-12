@@ -1,7 +1,6 @@
 package job
 
 import (
-	"laneIM/proto/comet"
 	"laneIM/src/dao"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
@@ -18,9 +17,9 @@ type Room struct {
 	rw     sync.RWMutex
 }
 
-func (j *Job) Push(message *comet.RoomReq) {
-	j.Bucket(message.Roomid).Room(message)
-}
+// func (j *Job) Push(message *comet.RoomReq) {
+// 	j.Bucket(message.Roomid).Room(message)
+// }
 
 // func (r *Room) PushSingle(message *comet.SingleReq) {
 // 	if r.info.OnlineNum == 0 {

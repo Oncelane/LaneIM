@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	pb "laneIM/proto/logic"
+	"laneIM/proto/msg"
 	"laneIM/src/config"
 	"laneIM/src/dao"
 	"laneIM/src/dao/localCache"
@@ -144,7 +145,7 @@ func (l *Logic) WatchComet() {
 
 var _ pb.LogicServer = new(Logic)
 
-func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error) {
+func (s *Logic) SendMsg(_ context.Context, in *msg.SendMsgReq) (*pb.NoResp, error) {
 	switch in.Path {
 	case "sendRoom":
 
@@ -167,7 +168,7 @@ func (s *Logic) SendMsg(_ context.Context, in *pb.SendMsgReq) (*pb.NoResp, error
 	}
 	return nil, nil
 }
-func (s *Logic) SendMsgBatch(_ context.Context, in *pb.SendMsgBatchReq) (*pb.NoResp, error) {
+func (s *Logic) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*pb.NoResp, error) {
 	data, err := proto.Marshal(in)
 	if err != nil {
 		laneLog.Logger.Infoln("proto marshal error")
