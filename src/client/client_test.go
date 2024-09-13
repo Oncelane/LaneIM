@@ -2,7 +2,7 @@ package client_test
 
 import (
 	"laneIM/src/client"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"testing"
 	"time"
 )
@@ -25,7 +25,7 @@ func TestManyUser(t *testing.T) {
 			}(i, c)
 		}
 		g.Wait.Wait()
-		laneLog.Logger.Infof("all %d connetc and auth spand time %v", num, time.Since(start))
+		laneLog.Logger.Infof("all %d connect and newuser time %v", num, time.Since(start))
 	}
 
 	{ // new room

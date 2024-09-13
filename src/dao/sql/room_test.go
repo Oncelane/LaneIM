@@ -4,7 +4,7 @@ import (
 	"laneIM/src/config"
 	"laneIM/src/dao/sql"
 	"laneIM/src/model"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"testing"
 	"time"
 )

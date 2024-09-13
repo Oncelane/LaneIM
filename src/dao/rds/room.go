@@ -8,7 +8,7 @@ import (
 	"github.com/go-redis/redis"
 
 	"laneIM/src/model"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 )
 
 //--------------Room------------

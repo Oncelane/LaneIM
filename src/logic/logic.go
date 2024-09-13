@@ -11,7 +11,7 @@ import (
 	"laneIM/src/dao/sql"
 	"laneIM/src/model"
 	"laneIM/src/pkg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"log"
 	"net"
 	"sync"

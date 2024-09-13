@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"laneIM/src/config"
 	"laneIM/src/model"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"laneIM/src/pkg/mergewrite"
 	"log"
 	"strconv"
@@ -60,6 +60,7 @@ func (d *SqlDB) NewRoom(roomid int64, userid int64, serverAddr string) error {
 		laneLog.Logger.Infoln("faild to add room user", err)
 		return err
 	}
+	// laneLog.Logger.Warnf("find the time of room create roomid[%d] userid[%d] server[%d]", roomid, userid, serverAddr)
 	err = d.AddRoomComet(roomid, serverAddr)
 	if err != nil {
 		return err
@@ -224,12 +225,13 @@ func (d *SqlDB) AddRoomUserBatch(tx *gorm.DB, roomids []int64, userids []int64) 
 		end = true
 		tx = d.DB.Begin()
 	}
+	// laneLog.Logger.Warnf("add rooms[%v] user[%v] ", roomids, userids)
 	for i := range roomids {
 
 		err := tx.Model(&model.RoomMgr{RoomID: roomids[i]}).Association("Users").Append(&model.UserMgr{UserID: userids[i]})
 		if err != nil {
 			tx.Rollback()
-			laneLog.Logger.Infoln("faild commit ,roll back", err)
+			laneLog.Logger.Errorln("faild commit ,roll back", err)
 			return err
 		}
 	}

@@ -3,7 +3,7 @@ package pkg_test
 import (
 	"laneIM/src/config"
 	"laneIM/src/pkg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"testing"
 )
 

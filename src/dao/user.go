@@ -6,7 +6,7 @@ import (
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"laneIM/src/pkg/mergewrite"
 	"strconv"
 
@@ -62,29 +62,62 @@ func (d *Dao) UserRoom(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *s
 }
 
 func (d *Dao) UserRoomBatch(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *sql.SqlDB, userids []int64) ([][]int64, error) {
-	rt, full := localCache.UserRoomidBatch(cache, userids)
-	if full {
-		laneLog.Logger.Infoln("命中本地缓存UserRoomBatch")
+	rt, nonexists := localCache.UserRoomidBatch(cache, userids)
+
+	var redisUseris []int64
+	for i, e := range nonexists {
+		if e {
+			redisUseris = append(redisUseris, userids[i])
+		}
+	}
+	laneLog.Logger.Infof("命中本地缓存UserRoomBatch [%d/%d]", len(rt)-len(redisUseris), len(rt))
+
+	if len(redisUseris) == 0 {
 		return rt, nil
 	}
 
-	laneLog.Logger.Infoln("UserComet")
-	rt, full = rds.UserMgrRoomBatch(rdb, userids)
-	if full {
-		laneLog.Logger.Infoln("命中redis缓存UserRoomBatch")
-		go localCache.SetUserRoomidBatch(cache, userids, rt)
-		return rt, nil
+	redisrt, nonexistsRedis := rds.UserMgrRoomBatch(rdb, redisUseris)
+	var sqlUserids []int64
+
+	for i, e := range nonexistsRedis {
+		if e {
+			sqlUserids = append(sqlUserids, redisUseris[i])
+		}
+	}
+	laneLog.Logger.Infof("命中redis缓存UserRoomBatch [%d/%d]", len(redisrt)-len(sqlUserids), len(redisrt))
+	if len(redisrt)-len(sqlUserids) != 0 {
+		var redisIndex = 0
+		for i, e := range nonexists {
+			if !e {
+				rt[i] = redisrt[redisIndex]
+				nonexists[i] = false
+				redisIndex++
+			}
+		}
+		localCache.SetUserRoomidBatch(cache, redisUseris, redisrt)
+		if len(sqlUserids) == 0 {
+			return rt, nil
+		}
 	}
 
-	laneLog.Logger.Errorln("触发sql查询UserRoom")
-	rt, err := db.UserRoomBatch(userids)
+	// laneLog.Logger.Errorf("触发sql查询UserRoom [%d条] [%v]", len(sqlUserids), sqlUserids)
+	sqlrt, err := db.UserRoomBatch(sqlUserids)
 	if err != nil {
 		laneLog.Logger.Errorln("faild to sql user room batch", err)
 		return rt, err
 	}
-	localCache.SetUserRoomidBatch(cache, userids, rt)
+	var sqlindex = 0
+	for i, e := range nonexists {
+		if e {
+			// laneLog.Logger.Debugf("sql 补全 userid[%d] roomids[%v] ", userids[i], sqlrt[sqlindex])
+			rt[i] = sqlrt[sqlindex]
+			nonexists[i] = false
+			sqlindex++
+		}
+	}
+	localCache.SetUserRoomidBatch(cache, sqlUserids, sqlrt)
 	// start := time.Now()
-	go rds.SetNEUSerMgrRoomBatch(rdb, userids, rt)
+	go rds.SetNEUSerMgrRoomBatch(rdb, sqlUserids, sqlrt)
 	// laneLog.Logger.Debugln("go SetNEUSerMgrRoomBatch spand", time.Since(start))
 	return rt, nil
 }

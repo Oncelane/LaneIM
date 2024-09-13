@@ -2,7 +2,7 @@ package comet
 
 import (
 	"laneIM/proto/msg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 )
 
 type WsHandler func(in *msg.Msg, ch *Channel)

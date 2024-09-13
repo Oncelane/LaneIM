@@ -4,7 +4,7 @@ import (
 	"flag"
 	"laneIM/src/comet"
 	"laneIM/src/config"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"net/http"
 	"os"
 	"os/signal"

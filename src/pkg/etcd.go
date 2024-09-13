@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"laneIM/src/config"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"log"
 	"strconv"
 	"strings"

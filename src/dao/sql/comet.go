@@ -2,7 +2,7 @@ package sql
 
 import (
 	"laneIM/src/model"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 )
 
 func (d *SqlDB) AddComet(addr string) error {

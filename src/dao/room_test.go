@@ -6,7 +6,7 @@ import (
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"testing"
 	"time"
 )

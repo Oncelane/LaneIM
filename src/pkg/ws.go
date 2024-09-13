@@ -2,7 +2,7 @@ package pkg
 
 import (
 	"laneIM/proto/msg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"

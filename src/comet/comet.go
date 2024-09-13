@@ -9,7 +9,7 @@ import (
 	"laneIM/src/dao/localCache"
 	"laneIM/src/pkg"
 	"laneIM/src/pkg/batch"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"net"
 	"time"
 

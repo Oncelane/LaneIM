@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 
 	"github.com/allegro/bigcache"
 )
@@ -48,36 +48,37 @@ func UserRoomid(cache *bigcache.BigCache, userid int64) ([]int64, error) {
 	return userids, nil
 }
 
-func UserRoomidBatch(cache *bigcache.BigCache, userids []int64) ([][]int64, bool) {
+func UserRoomidBatch(cache *bigcache.BigCache, userids []int64) ([][]int64, []bool) {
+	nonexists := make([]bool, len(userids))
 	rt := make([][]int64, len(userids))
-	full := true
 	for i := range userids {
 		key := "user:room" + strconv.FormatInt(userids[i], 36)
 		data, err := cache.Get(key)
 		if err != nil {
-			// laneLog.Logger.Infoln("miss local cache user:user", err)
-			full = false
+			// laneLog.Logger.Infoln("miss local cache [not exist] key", key, err)
+			nonexists[i] = true
 			continue
 		}
 		// laneLog.Logger.Debugf("localcache get userroom key[%s] value[%s]", key, string(data))
 		rawInt64 := strings.Split(string(data), ";")
 		roomids := make([]int64, len(rawInt64))
 		if len(rawInt64) == 0 {
-			full = false
+			nonexists[i] = true
+			laneLog.Logger.Infoln("miss local cache len(rawInt64) key", key, err)
 			continue
 		}
 		for i := range rawInt64 {
 			roomid, err := strconv.ParseInt(rawInt64[i], 36, 64)
 			if err != nil {
-				laneLog.Logger.Errorln("faild parse roomid", err)
-				full = false
+				// laneLog.Logger.Errorln("faild parse roomid rawInt64[i] key", key, err)
+				nonexists[i] = true
 				continue
 			}
 			roomids[i] = roomid
 		}
 		rt[i] = roomids
 	}
-	return rt, full
+	return rt, nonexists
 }
 
 func SetUserRoomid(cache *bigcache.BigCache, userid int64, roomids []int64) error {

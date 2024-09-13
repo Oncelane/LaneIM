@@ -175,7 +175,7 @@ func (c *Mysql) Default() {
 	*c = Mysql{
 		Name:        "0",
 		Username:    "debian-sys-maint",
-		Password:    "QTLVb6BaeeaJsFMT",
+		Password:    "FJho5xokpFqZygL5",
 		Addr:        "127.0.0.1:3306",
 		DataBase:    "laneIM",
 		BatchWriter: batch,

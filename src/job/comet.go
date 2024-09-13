@@ -5,7 +5,7 @@ import (
 	"laneIM/proto/comet"
 	"laneIM/proto/msg"
 	"laneIM/src/pkg/batch"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"time"
 
 	"google.golang.org/grpc"

@@ -2,7 +2,7 @@ package mergewrite_test
 
 import (
 	"laneIM/src/config"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"laneIM/src/pkg/mergewrite"
 	"strconv"
 	"testing"

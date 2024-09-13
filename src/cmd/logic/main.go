@@ -4,7 +4,7 @@ import (
 	"flag"
 	"laneIM/src/config"
 	"laneIM/src/logic"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"os"
 	"os/signal"
 	"syscall"

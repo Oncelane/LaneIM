@@ -2,7 +2,7 @@ package job
 
 import (
 	"laneIM/proto/msg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 
 	"github.com/IBM/sarama"
 	"google.golang.org/protobuf/proto"

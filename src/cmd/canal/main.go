@@ -7,7 +7,7 @@ import (
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"os"
 	"strconv"
 	"strings"

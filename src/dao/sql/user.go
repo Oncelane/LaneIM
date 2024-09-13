@@ -3,7 +3,7 @@ package sql
 import (
 	"fmt"
 	"laneIM/src/model"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"log"
 	"strconv"
 

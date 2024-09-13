@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"laneIM/proto/msg"
 	"laneIM/src/pkg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"log"
 	"sync"
 
@@ -198,6 +198,7 @@ func (c *Client) JoinRoom(roomid int64) {
 		Userid: c.Userid,
 		Roomid: roomid,
 	})
+	// laneLog.Logger.Warnf("client[%d] join roomid%d", c.Userid, roomid)
 	if err != nil {
 		log.Panicln("faild to encode")
 	}
@@ -215,7 +216,7 @@ func (c *Client) Online() {
 	if err != nil {
 		log.Panicln("faild to encode")
 	}
-	err = c.SendCometSingle("joinRoom", data)
+	err = c.SendCometSingle("online", data)
 	if err != nil {
 		laneLog.Logger.Infoln("send err:", err)
 	}
@@ -257,7 +258,7 @@ func (c *Client) Receive() {
 					continue
 				}
 				c.Room = append(c.Room, rt.Roomid)
-				//laneLog.Logger.Infoln("newUser:", c.Userid)
+				laneLog.Logger.Infoln("client [0] get roomid", rt.Roomid)
 				if c.Mgr != nil {
 					c.Mgr.Wait.Done()
 				}

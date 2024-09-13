@@ -5,7 +5,7 @@ import (
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"strconv"
 	"time"
 
@@ -94,7 +94,7 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 	r, err := localCache.RoomComet(cache, roomid)
 	if err == nil {
 		laneLog.Logger.Debugln("RoomComet命中localcache")
-		laneLog.Logger.Debugln("time on localcache user room spand ", time.Since(startTime))
+		// laneLog.Logger.Debugln("time on localcache user room spand ", time.Since(startTime))
 		return r, err
 	}
 

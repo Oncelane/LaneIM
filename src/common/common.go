@@ -2,7 +2,7 @@ package common
 
 import (
 	"hash/fnv"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"strconv"
 )
 

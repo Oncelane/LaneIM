@@ -3,7 +3,7 @@ package comet
 import (
 	"net/http"
 
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 
 	"github.com/gorilla/websocket"
 )

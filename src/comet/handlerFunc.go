@@ -5,7 +5,7 @@ import (
 	"laneIM/proto/logic"
 	"laneIM/proto/msg"
 	"laneIM/src/dao/localCache"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -265,12 +265,14 @@ func (c *Comet) doJoinRoomBatch(in []*BatchStructJoinRoom) {
 	for i := range in {
 		userid[i] = in[i].arg.Userid
 		roomid[i] = in[i].arg.Roomid
+		// laneLog.Logger.Warnf("send logic joinroom req : userid[%d] join room[%d]", userid[i], roomid[i])
 	}
 	// join := time.Now()
 	_, err := c.pickLogic().Client.JoinRoomBatch(context.Background(), &logic.JoinRoomBatchReq{
 		Userid: userid,
 		Roomid: roomid,
 	})
+
 	// laneLog.Logger.Debugln("join room spand:", time.Since(join))
 	if err != nil {
 		laneLog.Logger.Infoln("faild to send logic", err)
@@ -289,6 +291,7 @@ func (c *Comet) HandleJoinRoomBatch(m *msg.Msg, ch *Channel) {
 		laneLog.Logger.Infoln("faild to decode proto", err)
 		return
 	}
+	// laneLog.Logger.Warnf("client msg req[%d] HandleJoinRoomBatch: userid[%d] join room[%d]", m.Seq, cJoinRoomReq.Userid, cJoinRoomReq.Roomid)
 	c.BatcherJoinRoom.Add(&BatchStructJoinRoom{
 		arg: cJoinRoomReq,
 		ch:  ch,
@@ -340,21 +343,16 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 	}
 	// query := time.Now()
 	// 缓存中不存在的才查询
-	mayExist, full := localCache.UserRoomidBatch(c.cache, userid)
-	miss := make([]bool, len(userid))
+	mayExist, localnonexist := localCache.UserRoomidBatch(c.cache, userid)
 	var needQueryUserid []int64
-	var debugMissCount = 0
-	if !full {
-		for i := range mayExist {
-			if len(mayExist[i]) == 0 {
-				miss[i] = true
-				debugMissCount++
-				needQueryUserid = append(needQueryUserid, userid[i])
-			}
+	for i, e := range localnonexist {
+		if e {
+			needQueryUserid = append(needQueryUserid, userid[i])
 		}
 	}
-	// laneLog.Logger.Warnln("userid's length", len(userid), " debugMissCount = ", debugMissCount)
 
+	laneLog.Logger.Warnf("userroom local cache 命中[%d/%d]", len(userid)-len(needQueryUserid), len(userid))
+	// laneLog.Logger.Warnf("查询远端 userid[%v] ", userid)
 	rt, err := c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
 		Userid: needQueryUserid,
 	})
@@ -369,19 +367,19 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 	// putchannel
 	var index = 0
 	for i := range mayExist {
-		if miss[i] {
+		if localnonexist[i] {
 			localCache.SetUserRoomid(c.cache, userid[i], rt.Roomids[index].Roomid)
+			// laneLog.Logger.Warnf("远端获取 userid[%d]  roomid[%v]", userid[i], rt.Roomids[index])
 			for _, roomid := range rt.Roomids[index].Roomid {
-
 				c.Bucket(roomid).PutChannel(roomid, in[i].ch)
 			}
 			index++
 		} else {
+			// laneLog.Logger.Warnf("localcache userid[%d]  roomid[%v]", userid[i], mayExist[i])
 			for _, roomid := range mayExist[i] {
 				c.Bucket(roomid).PutChannel(roomid, in[i].ch)
 			}
 		}
-
 		retdata, err = proto.Marshal(&msg.COnlineResp{
 			Ack:    true,
 			Roomid: rt.Roomids[i].Roomid,

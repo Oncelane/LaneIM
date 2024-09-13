@@ -2,7 +2,7 @@ package batch_test
 
 import (
 	"laneIM/src/pkg/batch"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"testing"
 	"time"
 )

@@ -8,7 +8,7 @@ import (
 	"github.com/go-redis/redis"
 
 	"laneIM/src/model"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 )
 
 //room:mgr
@@ -153,10 +153,10 @@ func UserMgrRoom(rdb *redis.ClusterClient, userid int64) ([]int64, error) {
 	return rooms, nil
 }
 
-func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, bool) {
+func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, []bool) {
 	// Retrieve Users
 	rt := make([][]int64, len(userids))
-	full := true
+	nonexists := make([]bool, len(userids))
 	pipe := rdb.Pipeline()
 	for i := range userids {
 		strUserid := strconv.FormatInt(userids[i], 36)
@@ -168,12 +168,12 @@ func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, boo
 		roomIDs, _ := r.(*redis.StringSliceCmd).Result()
 		// laneLog.Logger.Debugf("redis smembers key[%s] value[%s]", roomSetKey, roomIDs)
 		if len(roomIDs) == 0 {
-			full = false
+			nonexists[i] = true
 			continue
 		}
 		if err != nil && err != redis.Nil {
 			laneLog.Logger.Errorln("faild redis query", err)
-			full = false
+			nonexists[i] = true
 			continue
 		}
 		rooms := make([]int64, len(roomIDs))
@@ -181,7 +181,7 @@ func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, boo
 			roomID, err := strconv.ParseInt(idStr, 10, 64)
 			if err != nil {
 				laneLog.Logger.Errorln("faild read roomid", err)
-				full = false
+				nonexists[i] = true
 				continue
 			}
 			rooms[i] = roomID
@@ -189,7 +189,7 @@ func UserMgrRoomBatch(rdb *redis.ClusterClient, userids []int64) ([][]int64, boo
 		rt[i] = rooms
 	}
 
-	return rt, full
+	return rt, nonexists
 
 }
 

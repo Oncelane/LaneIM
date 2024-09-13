@@ -8,7 +8,7 @@ Njob ?= 2
 Ncomet ?= 2
 
 # Build all jobs
-all: test build
+all: build-job build-comet
 
 # Build job directories and binaries
 build-job:
@@ -48,7 +48,7 @@ test:
 	$(GOTEST) -v ./...
 
 clean:
-	rm -rf target/
+	rm -rf bin/
 
 server:
 	 goreman -f local-cluster-profile start; \

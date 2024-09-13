@@ -2,7 +2,7 @@ package pkg
 
 import (
 	"laneIM/src/config"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"log"
 
 	"github.com/IBM/sarama"

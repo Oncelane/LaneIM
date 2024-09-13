@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"laneIM/src/config"
 	"laneIM/src/pkg"
-	"laneIM/src/pkg/laneLog.go"
+	"laneIM/src/pkg/laneLog"
 	"reflect"
 	"strings"
 	"testing"
