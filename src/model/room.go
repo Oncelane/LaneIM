@@ -13,6 +13,7 @@ func Init(db *gorm.DB) {
 		&RoomMgr{},
 		&UserMgr{},
 		&CometMgr{},
+		&GroupMessage{},
 		// &RoomComet{},
 		// &RoomUser{},
 	)
