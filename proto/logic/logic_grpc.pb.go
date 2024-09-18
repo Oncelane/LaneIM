@@ -20,21 +20,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Logic_SendMsg_FullMethodName        = "/lane.logic.logic/SendMsg"
-	Logic_SendMsgBatch_FullMethodName   = "/lane.logic.logic/SendMsgBatch"
-	Logic_SetOnline_FullMethodName      = "/lane.logic.logic/SetOnline"
-	Logic_SetOnlineBatch_FullMethodName = "/lane.logic.logic/SetOnlineBatch"
-	Logic_SetOffline_FullMethodName     = "/lane.logic.logic/SetOffline"
-	Logic_NewUser_FullMethodName        = "/lane.logic.logic/NewUser"
-	Logic_NewUserBatch_FullMethodName   = "/lane.logic.logic/NewUserBatch"
-	Logic_DelUser_FullMethodName        = "/lane.logic.logic/DelUser"
-	Logic_NewRoom_FullMethodName        = "/lane.logic.logic/NewRoom"
-	Logic_JoinRoom_FullMethodName       = "/lane.logic.logic/JoinRoom"
-	Logic_JoinRoomBatch_FullMethodName  = "/lane.logic.logic/JoinRoomBatch"
-	Logic_QuitRoom_FullMethodName       = "/lane.logic.logic/QuitRoom"
-	Logic_QueryRoom_FullMethodName      = "/lane.logic.logic/QueryRoom"
-	Logic_QueryServer_FullMethodName    = "/lane.logic.logic/QueryServer"
-	Logic_Auth_FullMethodName           = "/lane.logic.logic/Auth"
+	Logic_SendMsg_FullMethodName         = "/lane.logic.logic/SendMsg"
+	Logic_SendMsgBatch_FullMethodName    = "/lane.logic.logic/SendMsgBatch"
+	Logic_SetOnline_FullMethodName       = "/lane.logic.logic/SetOnline"
+	Logic_SetOnlineBatch_FullMethodName  = "/lane.logic.logic/SetOnlineBatch"
+	Logic_SetOffline_FullMethodName      = "/lane.logic.logic/SetOffline"
+	Logic_SetOfflineBatch_FullMethodName = "/lane.logic.logic/SetOfflineBatch"
+	Logic_NewUser_FullMethodName         = "/lane.logic.logic/NewUser"
+	Logic_NewUserBatch_FullMethodName    = "/lane.logic.logic/NewUserBatch"
+	Logic_DelUser_FullMethodName         = "/lane.logic.logic/DelUser"
+	Logic_NewRoom_FullMethodName         = "/lane.logic.logic/NewRoom"
+	Logic_JoinRoom_FullMethodName        = "/lane.logic.logic/JoinRoom"
+	Logic_JoinRoomBatch_FullMethodName   = "/lane.logic.logic/JoinRoomBatch"
+	Logic_QuitRoom_FullMethodName        = "/lane.logic.logic/QuitRoom"
+	Logic_QueryRoom_FullMethodName       = "/lane.logic.logic/QueryRoom"
+	Logic_QueryServer_FullMethodName     = "/lane.logic.logic/QueryServer"
+	Logic_Auth_FullMethodName            = "/lane.logic.logic/Auth"
 )
 
 // LogicClient is the client API for Logic service.
@@ -46,6 +47,7 @@ type LogicClient interface {
 	SetOnline(ctx context.Context, in *SetOnlineReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOnlineBatch(ctx context.Context, in *SetOnlineBatchReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOffline(ctx context.Context, in *SetOfflineReq, opts ...grpc.CallOption) (*NoResp, error)
+	SetOfflineBatch(ctx context.Context, in *SetOfflineBatchReq, opts ...grpc.CallOption) (*NoResp, error)
 	NewUser(ctx context.Context, in *NewUserReq, opts ...grpc.CallOption) (*NewUserResp, error)
 	NewUserBatch(ctx context.Context, in *NewUserBatchReq, opts ...grpc.CallOption) (*NewUserBatchResp, error)
 	DelUser(ctx context.Context, in *DelUserReq, opts ...grpc.CallOption) (*NoResp, error)
@@ -110,6 +112,16 @@ func (c *logicClient) SetOffline(ctx context.Context, in *SetOfflineReq, opts ..
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(NoResp)
 	err := c.cc.Invoke(ctx, Logic_SetOffline_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *logicClient) SetOfflineBatch(ctx context.Context, in *SetOfflineBatchReq, opts ...grpc.CallOption) (*NoResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NoResp)
+	err := c.cc.Invoke(ctx, Logic_SetOfflineBatch_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +237,7 @@ type LogicServer interface {
 	SetOnline(context.Context, *SetOnlineReq) (*NoResp, error)
 	SetOnlineBatch(context.Context, *SetOnlineBatchReq) (*NoResp, error)
 	SetOffline(context.Context, *SetOfflineReq) (*NoResp, error)
+	SetOfflineBatch(context.Context, *SetOfflineBatchReq) (*NoResp, error)
 	NewUser(context.Context, *NewUserReq) (*NewUserResp, error)
 	NewUserBatch(context.Context, *NewUserBatchReq) (*NewUserBatchResp, error)
 	DelUser(context.Context, *DelUserReq) (*NoResp, error)
@@ -258,6 +271,9 @@ func (UnimplementedLogicServer) SetOnlineBatch(context.Context, *SetOnlineBatchR
 }
 func (UnimplementedLogicServer) SetOffline(context.Context, *SetOfflineReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetOffline not implemented")
+}
+func (UnimplementedLogicServer) SetOfflineBatch(context.Context, *SetOfflineBatchReq) (*NoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetOfflineBatch not implemented")
 }
 func (UnimplementedLogicServer) NewUser(context.Context, *NewUserReq) (*NewUserResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewUser not implemented")
@@ -395,6 +411,24 @@ func _Logic_SetOffline_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LogicServer).SetOffline(ctx, req.(*SetOfflineReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Logic_SetOfflineBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetOfflineBatchReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).SetOfflineBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_SetOfflineBatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).SetOfflineBatch(ctx, req.(*SetOfflineBatchReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -605,6 +639,10 @@ var Logic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetOffline",
 			Handler:    _Logic_SetOffline_Handler,
+		},
+		{
+			MethodName: "SetOfflineBatch",
+			Handler:    _Logic_SetOfflineBatch_Handler,
 		},
 		{
 			MethodName: "NewUser",

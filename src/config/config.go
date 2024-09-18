@@ -72,7 +72,10 @@ func (c *Logic) Default() {
 			Addr: []string{ip + ":9092"},
 		},
 		Etcd: Etcd{
-			Addr: []string{ip + ":2379"},
+			Addr: []string{
+				"127.0.0.1:51240",
+				"127.0.0.1:51241",
+				"127.0.0.1:51242"},
 		},
 		Mysql: mysqlC,
 	}
@@ -96,7 +99,10 @@ func (c *Comet) Default() {
 		Addr: ip + ":50050",
 		Name: "0",
 		Etcd: Etcd{
-			Addr: []string{ip + ":2379"},
+			Addr: []string{
+				"127.0.0.1:51240",
+				"127.0.0.1:51241",
+				"127.0.0.1:51242"},
 		},
 		BucketSize:    32,
 		WebsocketAddr: ip + ":40050",
@@ -130,7 +136,10 @@ func (c *Job) Default() {
 			GroupId: "job",
 		},
 		Etcd: Etcd{
-			Addr: []string{ip + ":2379"},
+			Addr: []string{
+				"127.0.0.1:51240",
+				"127.0.0.1:51241",
+				"127.0.0.1:51242"},
 		},
 		Redis: Redis{
 			[]string{ip + ":7001", ip + ":7002", ip + ":7003"},

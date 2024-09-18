@@ -71,10 +71,11 @@ type Comet struct {
 	cache    *bigcache.BigCache
 
 	//batch
-	BatcherNewUser  *batch.BatchArgs[BatchStructNewUser]
-	BatcherSetOline *batch.BatchArgs[BatchStructSetOnline]
-	BatcherJoinRoom *batch.BatchArgs[BatchStructJoinRoom]
-	BatcherSendRoom *batch.BatchArgs[BatchStructSendRoom]
+	BatcherNewUser    *batch.BatchArgs[BatchStructNewUser]
+	BatcherSetOnline  *batch.BatchArgs[BatchStructSetOnline]
+	BatcherSetOffline *batch.BatchArgs[BatchStructSetOffline]
+	BatcherJoinRoom   *batch.BatchArgs[BatchStructJoinRoom]
+	BatcherSendRoom   *batch.BatchArgs[BatchStructSendRoom]
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
@@ -111,8 +112,11 @@ func (c *Comet) InitBatch() {
 	// 开启goroutine
 	c.BatcherNewUser.Start()
 
-	c.BatcherSetOline = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSetOnlineBatch)
-	c.BatcherSetOline.Start()
+	c.BatcherSetOnline = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSetOnlineBatch)
+	c.BatcherSetOnline.Start()
+
+	c.BatcherSetOffline = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSetOfflineBatch)
+	c.BatcherSetOffline.Start()
 
 	c.BatcherJoinRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doJoinRoomBatch)
 	c.BatcherJoinRoom.Start()
@@ -131,6 +135,7 @@ func (c *Comet) InitFunc() {
 	c.funcRout.Use("newRoom", c.HandleNewRoom)
 	c.funcRout.Use("joinRoom", c.HandleJoinRoomBatch)
 	c.funcRout.Use("online", c.HandleSetOnlineBatch)
+	c.funcRout.Use("offline", c.HandleSetOfflineBatch)
 }
 
 func (c *Comet) InitBucket() {
@@ -223,12 +228,28 @@ func (c *Comet) Bucket(roomid int64) *Bucket {
 }
 
 // delete channel from all room
-func (c *Comet) DelChannel(ch *Channel) {
+func (c *Comet) DelChannel(ch *Channel, force bool) {
 	c.mu.Lock()
-	ch.Close()
+	if force {
+		ch.ForceClose()
+	} else {
+		ch.Close()
+	}
 	delete(c.channels, ch.id)
 	for i := range c.buckets {
 		c.buckets[i].DelChannelAll(ch)
+	}
+	c.mu.Unlock()
+}
+
+func (c *Comet) DelChannelBatch(in []*BatchStructSetOffline) {
+	c.mu.Lock()
+	for i := range in {
+		in[i].ch.Close()
+		delete(c.channels, in[i].ch.id)
+	}
+	for i := range c.buckets {
+		c.buckets[i].DelChannelAllBatch(in)
 	}
 	c.mu.Unlock()
 }

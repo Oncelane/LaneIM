@@ -1,14 +1,17 @@
 package client_test
 
 import (
+	"bytes"
+	"encoding/gob"
 	"laneIM/src/client"
 	"laneIM/src/pkg/laneLog"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestManyUser(t *testing.T) {
-	num := 1000
+	num := 2
 	var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	g := client.NewClientGroup(num)
@@ -50,6 +53,24 @@ func TestManyUser(t *testing.T) {
 		laneLog.Logger.Infof("all %d join room spand time %v", num, time.Since(start))
 	}
 
+	// save user to disk
+	userids := make([]int64, len(g.Clients))
+	{
+		for i, c := range g.Clients {
+			userids[i] = c.Userid
+		}
+		file, err := os.Create("userids")
+		if err != nil {
+			laneLog.Logger.Fatalln("save error", err)
+			t.Error(err)
+		}
+		b := new(bytes.Buffer)
+		e := gob.NewEncoder(b)
+		e.Encode(userids)
+		file.Write(b.Bytes())
+		laneLog.Logger.Infof("all %d user id save", num)
+	}
+
 	{ // set online
 		start := time.Now()
 		g.Wait.Add(num)
@@ -64,87 +85,83 @@ func TestManyUser(t *testing.T) {
 
 	msg := "hello"
 	g.Send(&msg)
-	timeStart := time.Now()
-
-	ch := make(chan struct{})
-	go func() {
-		for {
-
-			sum := 0
-			for _, c := range g.Clients {
-				sum += c.ReceiveCount
-			}
-			time.Sleep(time.Millisecond * 10)
-			if sum == num*num {
-				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
-				ch <- struct{}{}
-				break
-			}
-		}
-	}()
-	<-ch
-	time.Sleep(time.Second * 3)
-	msg = "hihihi"
-	laneLog.Logger.Infoln("start to send second message :", msg)
+	msg = "22222"
 	g.Send(&msg)
-	timeStart = time.Now()
-	go func() {
-		for {
-
-			sum := 0
-			for _, c := range g.Clients {
-				sum += c.ReceiveCount
-			}
-			time.Sleep(time.Millisecond * 10)
-			if sum == num*num*2 {
-				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
-				ch <- struct{}{}
-				break
-			}
-		}
-	}()
-	<-ch
-	time.Sleep(time.Second * 3)
 	msg = "33333"
-	laneLog.Logger.Infoln("start to send second message :", msg)
 	g.Send(&msg)
-	timeStart = time.Now()
-	go func() {
-		for {
-
-			sum := 0
-			for _, c := range g.Clients {
-				sum += c.ReceiveCount
-			}
-			time.Sleep(time.Millisecond * 10)
-			if sum == num*num*3 {
-				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
-				ch <- struct{}{}
-				break
-			}
+	{ // set offline
+		start := time.Now()
+		for i, c := range g.Clients {
+			go func(i int, c *client.Client) {
+				c.Offline()
+			}(i, c)
 		}
-	}()
-	<-ch
-	time.Sleep(time.Second * 3)
-	msg = "44444"
-	laneLog.Logger.Infoln("start to send second message :", msg)
+		laneLog.Logger.Infof("all %d offline spand time %v", num, time.Since(start))
+	}
+	time.Sleep(time.Second * 2)
+	laneLog.Logger.Infoln("end")
+}
+func TestCacheUser(t *testing.T) {
+	num := 2
+	var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
+	g := client.NewClientGroup(num)
+	{ // read user from disk
+		userids := make([]int64, len(g.Clients))
+		data, err := os.ReadFile("userids")
+		if err != nil {
+			laneLog.Logger.Fatalln("save error", err)
+			t.Error(err)
+		}
+		b := bytes.NewBuffer(data)
+		e := gob.NewDecoder(b)
+		e.Decode(&userids)
+		for i, c := range g.Clients {
+			c.Userid = userids[i]
+			laneLog.Logger.Infoln("read userids ", userids[i])
+		}
+		laneLog.Logger.Infoln("all read userids success")
+	}
+
+	{ // connetc user
+		start := time.Now()
+		g.Wait.Add(num)
+		for i, c := range g.Clients {
+			go func(i int, c *client.Client) {
+				// block
+				c.Connect(cometAddr[i%len(cometAddr)])
+			}(i, c)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infof("all %d connect and newuser time %v", num, time.Since(start))
+	}
+
+	{ // set online
+		start := time.Now()
+		g.Wait.Add(num)
+		for i, c := range g.Clients {
+			go func(i int, c *client.Client) {
+				c.Online()
+			}(i, c)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infof("all %d online spand time %v", num, time.Since(start))
+	}
+
+	msg := "hello"
 	g.Send(&msg)
-	timeStart = time.Now()
-	go func() {
-		for {
-
-			sum := 0
-			for _, c := range g.Clients {
-				sum += c.ReceiveCount
-			}
-			time.Sleep(time.Millisecond * 10)
-			if sum == num*num*4 {
-				laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
-				ch <- struct{}{}
-				break
-			}
+	msg = "22222"
+	g.Send(&msg)
+	msg = "33333"
+	g.Send(&msg)
+	{ // set offline
+		start := time.Now()
+		for i, c := range g.Clients {
+			go func(i int, c *client.Client) {
+				c.Offline()
+			}(i, c)
 		}
-	}()
-	<-ch
+		laneLog.Logger.Infof("all %d offline spand time %v", num, time.Since(start))
+	}
+	time.Sleep(time.Second * 2)
 	laneLog.Logger.Infoln("end")
 }

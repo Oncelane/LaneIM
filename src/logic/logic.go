@@ -277,6 +277,23 @@ func (s *Logic) SetOnlineBatch(_ context.Context, in *pb.SetOnlineBatchReq) (*pb
 	return nil, nil
 }
 
+func (s *Logic) SetOfflineBatch(_ context.Context, in *pb.SetOfflineBatchReq) (*pb.NoResp, error) {
+	start := time.Now()
+	tx := s.db.DB.Begin()
+	err := s.db.SetUserOfflineBatch(tx, in.Userid)
+	if err != nil {
+		laneLog.Logger.Infoln("faild to new user batch", err)
+		return nil, err
+	}
+	err = tx.Commit().Error
+	if err != nil {
+		laneLog.Logger.Infoln("faild to commit set online batch", err)
+		return nil, err
+	}
+	laneLog.Logger.Debugln("set useronline batch spand", time.Since(start))
+	return nil, nil
+}
+
 func (s *Logic) SetOffline(_ context.Context, in *pb.SetOfflineReq) (*pb.NoResp, error) {
 	err := s.db.SetUseroffline(in.Userid)
 	if err != nil {

@@ -3,6 +3,7 @@ package pkg
 import (
 	"laneIM/proto/msg"
 	"laneIM/src/pkg/laneLog"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
@@ -12,6 +13,7 @@ type MsgReadWriteCloser interface {
 	ReadMsg() (message *msg.MsgBatch, err error)
 	WriteMsg(message *msg.MsgBatch) error
 	Close() error
+	ForceClose() error
 }
 
 type ConnWs struct {
@@ -58,5 +60,9 @@ func (w *ConnWs) WriteMsg(message *msg.MsgBatch) error {
 }
 
 func (w *ConnWs) Close() error {
+	return w.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(time.Second*3))
+}
+
+func (w *ConnWs) ForceClose() error {
 	return w.conn.Close()
 }

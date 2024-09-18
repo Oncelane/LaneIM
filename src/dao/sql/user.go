@@ -120,7 +120,6 @@ func (d *SqlDB) SetUserOnlineBatch(tx *gorm.DB, userids []int64, cometAddr strin
 	}
 
 	d.SetUserCometBatch(tx, userids, cometAddr)
-	d.AddRoomCometWithUseridBatch(tx, userids, cometAddr)
 	if end {
 		err := tx.Commit().Error
 		if err != nil {
@@ -135,6 +134,28 @@ func (d *SqlDB) SetUseroffline(userid int64) error {
 	if err != nil {
 		log.Fatalf("could not set user online: %v", err)
 		return err
+	}
+	return nil
+}
+func (d *SqlDB) SetUserOfflineBatch(tx *gorm.DB, userids []int64) error {
+	var end bool
+	if tx == nil {
+		end = true
+		tx = d.DB.Begin()
+	}
+	for i := range userids {
+		err := tx.Model(&model.UserMgr{UserID: userids[i]}).Update("online", false).Error
+		if err != nil {
+			tx.Rollback()
+			laneLog.Logger.Infoln("faild to set user online rollback", err)
+			return err
+		}
+	}
+	if end {
+		err := tx.Commit().Error
+		if err != nil {
+			laneLog.Logger.Infoln("faild to commit set user online", err.Error())
+		}
 	}
 	return nil
 }

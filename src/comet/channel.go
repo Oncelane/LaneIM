@@ -41,11 +41,11 @@ func (c *Comet) recvRoutine(ch *Channel) {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
 				laneLog.Logger.Infoln("faild to get ws message")
-				c.DelChannel(ch)
+				c.DelChannel(ch, true)
 				return
 			}
-			// laneLog.Logger.Infoln("websocket close", ch.id)
-			c.DelChannel(ch)
+			laneLog.Logger.Infoln("websocket close", ch.id)
+			c.DelChannel(ch, true)
 			return
 		}
 		for i := range message.Msgs {
@@ -70,11 +70,11 @@ func (c *Comet) sendRoutine(ch *Channel) {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
 				laneLog.Logger.Infoln("faild to get ws message", err)
-				c.DelChannel(ch)
+				c.DelChannel(ch, true)
 				return
 			}
 			// laneLog.Logger.Infoln("websocket close", ch.id)
-			c.DelChannel(ch)
+			c.DelChannel(ch, true)
 			return
 		}
 	}
@@ -100,4 +100,10 @@ func (c *Channel) Close() {
 	c.done = true
 	// close(c.sendCh)
 	c.conn.Close()
+}
+
+func (c *Channel) ForceClose() {
+	c.done = true
+	// close(c.sendCh)
+	c.conn.ForceClose()
 }

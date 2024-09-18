@@ -59,3 +59,8 @@ func (m *Bucket) DelChannelAll(c *Channel) {
 		room.DelChannel(c)
 	}
 }
+func (m *Bucket) DelChannelAllBatch(in []*BatchStructSetOffline) {
+	for _, room := range m.rooms {
+		room.DelChannelBatch(in)
+	}
+}

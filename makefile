@@ -8,7 +8,7 @@ Njob ?= 2
 Ncomet ?= 2
 
 # Build all jobs
-all: build-job build-comet
+all: stop-job stop-comet build-job build-comet
 
 # Build job directories and binaries
 build-job:
@@ -49,14 +49,6 @@ test:
 
 clean:
 	rm -rf bin/
-
-server:
-	 goreman -f local-cluster-profile start; \
-	 bash redisClusterStart.sh; \
-	 /opt/kafka/bin/kafka-server-start.sh ./config/kafka.properties; 
-
-proto:
-	protoc --go_out=.. --go-grpc_out=.. --go-grpc_opt=require_unimplemented_servers=false -I. -Iproto proto/msg/msg.proto proto/comet/comet.proto proto/logic/logic.proto; 
 # run:
 # 	nohup target/logic -conf=target/logic.toml -region=sh -zone=sh001 -deploy.env=dev -weight=10 2>&1 > target/logic.log &
 # 	nohup target/comet -conf=target/comet.toml -region=sh -zone=sh001 -deploy.env=dev -weight=10 -addrs=127.0.0.1 -debug=true 2>&1 > target/comet.log &

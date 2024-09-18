@@ -400,7 +400,7 @@ func (c *Comet) HandleSetOnlineBatch(m *msg.Msg, ch *Channel) {
 		return
 	}
 	ch.id = COnlineReq.Userid
-	c.BatcherSetOline.Add(&BatchStructSetOnline{arg: COnlineReq, seq: m.Seq, ch: ch})
+	c.BatcherSetOnline.Add(&BatchStructSetOnline{arg: COnlineReq, seq: m.Seq, ch: ch})
 }
 
 func (c *Comet) HandleSetOnline(m *msg.Msg, ch *Channel) {
@@ -419,13 +419,6 @@ func (c *Comet) HandleSetOnline(m *msg.Msg, ch *Channel) {
 		laneLog.Logger.Infoln("faild to send logic", err)
 		return
 	}
-	// reply, err := proto.Marshal(&msg.CJoinRoomResp{
-	// 	Ack: true,
-	// })
-	// if err != nil {
-	// 	laneLog.Logger.Infoln("faild to encode proto")
-	// 	return
-	// }
 
 	{ // putchannel
 		ch.id = COnlineReq.Userid
@@ -446,4 +439,69 @@ func (c *Comet) HandleSetOnline(m *msg.Msg, ch *Channel) {
 	}
 
 	ch.Reply([]byte("ack"), m.Seq, m.Path)
+}
+
+type BatchStructSetOffline struct {
+	arg *msg.COfflineReq
+	seq int64
+	ch  *Channel
+}
+
+func (c *Comet) doSetOfflineBatch(in []*BatchStructSetOffline) {
+	start := time.Now()
+	userid := make([]int64, len(in))
+	for i := range len(in) {
+		userid[i] = in[i].arg.Userid
+	}
+
+	_, err := c.pickLogic().Client.SetOfflineBatch(context.Background(), &logic.SetOfflineBatchReq{
+		Userid: userid,
+		Server: c.conf.Addr,
+	})
+	// laneLog.Logger.Debugln("setonline batch spand:", time.Since(start))
+	if err != nil {
+		laneLog.Logger.Infoln("faild to send logic", err)
+		return
+	}
+
+	// del channel
+
+	// in[i].ch.Reply([]byte("ack"), in[i].seq, "offline")
+	c.DelChannelBatch(in)
+
+	laneLog.Logger.Debugln("total spand:", time.Since(start))
+}
+func (c *Comet) HandleSetOfflineBatch(m *msg.Msg, ch *Channel) {
+	COnlineReq := &msg.COfflineReq{}
+	err := proto.Unmarshal(m.Data, COnlineReq)
+	if err != nil {
+		laneLog.Logger.Infoln("faild to decode proto", err)
+		return
+	}
+	ch.id = COnlineReq.Userid
+	c.BatcherSetOffline.Add(&BatchStructSetOffline{arg: COnlineReq, seq: m.Seq, ch: ch})
+}
+
+func (c *Comet) HandleSetOffline(m *msg.Msg, ch *Channel) {
+	COnlineReq := &msg.COfflineReq{}
+	err := proto.Unmarshal(m.Data, COnlineReq)
+	if err != nil {
+		laneLog.Logger.Infoln("faild to decode proto", err)
+		return
+	}
+
+	_, err = c.pickLogic().Client.SetOffline(context.Background(), &logic.SetOfflineReq{
+		Userid: COnlineReq.Userid,
+		Server: c.conf.Addr,
+	})
+	if err != nil {
+		laneLog.Logger.Infoln("faild to send logic", err)
+		return
+	}
+
+	{ // del channel
+		c.DelChannel(ch, false)
+	}
+
+	// ch.Reply([]byte("ack"), m.Seq, m.Path)
 }

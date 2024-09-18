@@ -7,6 +7,7 @@ import (
 	"laneIM/src/pkg/laneLog"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
@@ -41,21 +42,38 @@ type Client struct {
 // select {}
 
 type ClientGroup struct {
-	Num     int
-	Clients []*Client
-	Wait    sync.WaitGroup
+	Num         int
+	Clients     []*Client
+	Wait        sync.WaitGroup
+	MsgCount    int
+	TargetCount int
 }
 
 func (c *ClientGroup) Send(msg *string) {
+	c.TargetCount += c.Num * c.Num
 	for _, client := range c.Clients {
 		//laneLog.Logger.Infoln("in ch")
 		client.MsgCh <- msg
+	}
+	timeStart := time.Now()
+	for {
+		sum := 0
+		for _, c := range c.Clients {
+			sum += c.ReceiveCount
+		}
+		time.Sleep(time.Millisecond * 1)
+		if sum == c.TargetCount {
+			laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
+			break
+		}
 	}
 }
 
 func NewClientGroup(num int) *ClientGroup {
 	g := &ClientGroup{
-		Clients: make([]*Client, num),
+		Clients:  make([]*Client, num),
+		MsgCount: 0,
+		Num:      num,
 	}
 	for i := range g.Clients {
 		g.Clients[i] = NewClient(-1)
@@ -222,6 +240,19 @@ func (c *Client) Online() {
 	}
 }
 
+func (c *Client) Offline() {
+	data, err := proto.Marshal(&msg.COfflineReq{
+		Userid: c.Userid,
+	})
+	if err != nil {
+		log.Panicln("faild to encode")
+	}
+	err = c.SendCometSingle("offline", data)
+	if err != nil {
+		laneLog.Logger.Infoln("send err:", err)
+	}
+}
+
 func (c *Client) Send() {
 	for msg := range c.MsgCh {
 		c.SendRoomMsg(msg)
@@ -232,7 +263,12 @@ func (c *Client) Receive() {
 	for {
 		message, err := c.conn.ReadMsg()
 		if err != nil {
-			laneLog.Logger.Infoln("comet error:", err)
+			if websocket.IsCloseError(err, 1000) {
+				// laneLog.Logger.Infoln("comet close normal:", err)
+			} else {
+				laneLog.Logger.Infoln("comet close error:", err)
+			}
+			c.conn.Close()
 			return
 		}
 		for i := range message.Msgs {
