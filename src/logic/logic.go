@@ -169,6 +169,7 @@ func (s *Logic) SendMsg(_ context.Context, in *msg.SendMsgReq) (*pb.NoResp, erro
 	return nil, nil
 }
 func (s *Logic) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*pb.NoResp, error) {
+	start := time.Now()
 	data, err := proto.Marshal(in)
 	if err != nil {
 		laneLog.Logger.Infoln("proto marshal error")
@@ -177,10 +178,12 @@ func (s *Logic) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*pb.No
 		Topic: "laneIM",
 		Value: sarama.ByteEncoder(data),
 	}
+	s.db.SaveMessageBatch(in.Msgs)
 	_, _, err = s.kafka.Client.SendMessage(msg)
 	if err != nil {
 		laneLog.Logger.Infoln("faild to send kafka:", err)
 	}
+	laneLog.Logger.Debugln("SendMsgBatch spand time :", time.Since(start))
 	return nil, nil
 }
 
@@ -273,7 +276,7 @@ func (s *Logic) SetOnlineBatch(_ context.Context, in *pb.SetOnlineBatchReq) (*pb
 		laneLog.Logger.Infoln("faild to commit set online batch", err)
 		return nil, err
 	}
-	laneLog.Logger.Debugln("set useronline batch spand", time.Since(start))
+	laneLog.Logger.Debugln("SetOnlineBatch spand", time.Since(start))
 	return nil, nil
 }
 
@@ -290,7 +293,7 @@ func (s *Logic) SetOfflineBatch(_ context.Context, in *pb.SetOfflineBatchReq) (*
 		laneLog.Logger.Infoln("faild to commit set online batch", err)
 		return nil, err
 	}
-	laneLog.Logger.Debugln("set useronline batch spand", time.Since(start))
+	laneLog.Logger.Debugln("SetOfflineBatch spand", time.Since(start))
 	return nil, nil
 }
 

@@ -18,6 +18,26 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 protoc 命令
 protoc --go_out=.. --go-grpc_out=.. --go-grpc_opt=require_unimplemented_servers=false -I. -Iproto proto/msg/msg.proto proto/comet/comet.proto proto/logic/logic.proto
 
+# scylla 集群
+
+安装
+
+```sh
+https://www.scylladb.com/download/?platform=ubuntu-20.04&version=scylla-6.1#open-source
+```
+
+配置
+
+```sh
+scylla_setup accepts command line arguments as well! For easily provisioning in a similar environment than this, type:
+
+    scylla_setup --no-raid-setup --online-discard 1 --nic eth0 \
+                 --io-setup 1 --no-memory-setup --no-rsyslog-setup
+
+Also, to avoid the time-consuming I/O tuning you can add --no-io-setup and copy the contents of /etc/scylla.d/io*
+Only do that if you are moving the files into machines with the exact same hardware
+```
+
 # 启动 redis 集群
 
 redis-server ./redis.conf

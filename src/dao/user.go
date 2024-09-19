@@ -70,7 +70,7 @@ func (d *Dao) UserRoomBatch(cache *bigcache.BigCache, rdb *redis.ClusterClient, 
 			redisUseris = append(redisUseris, userids[i])
 		}
 	}
-	laneLog.Logger.Infof("命中本地缓存UserRoomBatch [%d/%d]", len(rt)-len(redisUseris), len(rt))
+	// laneLog.Logger.Infof("命中本地缓存UserRoomBatch [%d/%d]", len(rt)-len(redisUseris), len(rt))
 
 	if len(redisUseris) == 0 {
 		return rt, nil
@@ -84,11 +84,11 @@ func (d *Dao) UserRoomBatch(cache *bigcache.BigCache, rdb *redis.ClusterClient, 
 			sqlUserids = append(sqlUserids, redisUseris[i])
 		}
 	}
-	laneLog.Logger.Infof("命中redis缓存UserRoomBatch [%d/%d]", len(redisrt)-len(sqlUserids), len(redisrt))
+	// laneLog.Logger.Infof("命中redis缓存UserRoomBatch [%d/%d]", len(redisrt)-len(sqlUserids), len(redisrt))
 	if len(redisrt)-len(sqlUserids) != 0 {
 		var redisIndex = 0
 		for i, e := range nonexists {
-			if !e {
+			if e {
 				rt[i] = redisrt[redisIndex]
 				nonexists[i] = false
 				redisIndex++
@@ -126,11 +126,11 @@ func (d *Dao) UserComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 	key := "user:comet" + strconv.FormatInt(userid, 36)
 	r, err := localCache.UserComet(cache, userid)
 	if err == nil {
-		laneLog.Logger.Infoln("命中本地缓存UserComet")
+		// laneLog.Logger.Infoln("命中本地缓存UserComet")
 		return r, err
 	}
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
-		laneLog.Logger.Infoln("触发redis查询UserComet")
+		// laneLog.Logger.Infoln("触发redis查询UserComet")
 		rt, err := rds.UserMgrComet(rdb, userid)
 		if err != nil {
 			if err != redis.Nil {
@@ -141,15 +141,15 @@ func (d *Dao) UserComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 			localCache.SetUserComet(cache, userid, rt)
 			return rt, nil
 		}
-		laneLog.Logger.Errorln("触发sql查询UserComet")
+		// laneLog.Logger.Errorln("触发sql查询UserComet")
 		rt, err = db.UserComet(userid)
 		if err != nil {
 			return rt, err
 		}
-		laneLog.Logger.Infoln("UserComet同步到本地cache")
+		// laneLog.Logger.Infoln("UserComet同步到本地cache")
 		localCache.SetUserComet(cache, userid, rt)
 		//TODO 单独同步到redis
-		laneLog.Logger.Infoln("UserComet同步到redis")
+		// laneLog.Logger.Infoln("UserComet同步到redis")
 		go rds.SetNEUSerMgrComet(rdb, userid, rt)
 		return rt, nil
 	})

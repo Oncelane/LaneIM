@@ -71,6 +71,7 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 		laneLog.Logger.Infoln("faild to query logic room", err)
 		return
 	}
+	ch.id = croomidReq.Userid
 	if len(rt.Roomids) != 0 {
 		for _, roomid := range rt.Roomids[0].Roomid {
 			c.Bucket(roomid).PutChannel(roomid, ch)
@@ -90,6 +91,60 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 	}
 	ch.Reply(outData, m.Seq, m.Path)
 
+}
+
+type BatchStructQueryRoom struct {
+	arg *msg.CRoomidReq
+	ch  *Channel
+	seq int64
+}
+
+func (c *Comet) doQueryRoomBatch(in []*BatchStructQueryRoom) {
+	userids := make([]int64, len(in))
+	for i := range in {
+		userids[i] = in[i].arg.Userid
+	}
+	rt, err := c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
+		Userid: userids,
+	})
+	if err != nil {
+		laneLog.Logger.Infoln("faild to query logic room", err)
+		return
+	}
+	for i := range in {
+		outstruct := &msg.CRoomidResp{
+			Roomid: rt.Roomids[i].Roomid,
+		}
+		if len(rt.Roomids) != 0 {
+			for _, roomid := range rt.Roomids[i].Roomid {
+				c.Bucket(roomid).PutChannel(roomid, in[i].ch)
+				// laneLog.Logger.Infoln("userid:", ch.id, "in room", roomid)
+			}
+		}
+		// comet初始化已加入的room
+		outData, err := proto.Marshal(outstruct)
+		if err != nil {
+			laneLog.Logger.Infoln("marchal err", err)
+			return
+		}
+		in[i].ch.Reply(outData, in[i].seq, "queryRoom")
+	}
+
+}
+
+func (c *Comet) HandleQueryRoomBatch(m *msg.Msg, ch *Channel) {
+	croomidReq := &msg.CRoomidReq{}
+	err := proto.Unmarshal(m.Data, croomidReq)
+	if err != nil {
+		laneLog.Logger.Infoln("faild to decode userid", err)
+		return
+	}
+	ch.id = croomidReq.Userid
+	c.BatcherQueryRoom.Add(&BatchStructQueryRoom{
+		arg: croomidReq,
+		ch:  ch,
+		seq: m.Seq,
+	})
 }
 
 // func (c *Comet) HandleSendRoom(m *msg.Msg, ch *Channel) {
@@ -352,14 +407,17 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 	}
 
 	laneLog.Logger.Warnf("userroom local cache 命中[%d/%d]", len(userid)-len(needQueryUserid), len(userid))
-	// laneLog.Logger.Warnf("查询远端 userid[%v] ", userid)
-	rt, err := c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
-		Userid: needQueryUserid,
-	})
-	// laneLog.Logger.Debugln("doQueryRoom spand:", time.Since(query))
-	if err != nil {
-		laneLog.Logger.Infoln("faild to query logic room", err)
-		return
+	var rt *logic.QueryRoomResp
+	if len(needQueryUserid) != 0 {
+		// laneLog.Logger.Warnf("查询远端 userid[%v] ", userid)
+		rt, err = c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
+			Userid: needQueryUserid,
+		})
+		// laneLog.Logger.Debugln("doQueryRoom spand:", time.Since(query))
+		if err != nil {
+			laneLog.Logger.Infoln("faild to query logic room", err)
+			return
+		}
 	}
 
 	var retdata []byte
@@ -371,25 +429,32 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 			localCache.SetUserRoomid(c.cache, userid[i], rt.Roomids[index].Roomid)
 			// laneLog.Logger.Warnf("远端获取 userid[%d]  roomid[%v]", userid[i], rt.Roomids[index])
 			for _, roomid := range rt.Roomids[index].Roomid {
+				// laneLog.Logger.Debugln("put channel ch.id=", in[i].ch.id)
 				c.Bucket(roomid).PutChannel(roomid, in[i].ch)
 			}
+			retdata, err = proto.Marshal(&msg.COnlineResp{
+				Ack:    true,
+				Roomid: rt.Roomids[index].Roomid,
+			})
 			index++
 		} else {
 			// laneLog.Logger.Warnf("localcache userid[%d]  roomid[%v]", userid[i], mayExist[i])
 			for _, roomid := range mayExist[i] {
+				// laneLog.Logger.Debugln("put channel ch.id=", in[i].ch.id)
 				c.Bucket(roomid).PutChannel(roomid, in[i].ch)
 			}
+			retdata, err = proto.Marshal(&msg.COnlineResp{
+				Ack:    true,
+				Roomid: mayExist[i],
+			})
 		}
-		retdata, err = proto.Marshal(&msg.COnlineResp{
-			Ack:    true,
-			Roomid: rt.Roomids[i].Roomid,
-		})
+
 		if err != nil {
 			laneLog.Logger.Errorln("faild marshal proto", err)
 		}
 		in[i].ch.Reply([]byte(retdata), in[i].seq, "online")
 	}
-	laneLog.Logger.Debugln("total spand:", time.Since(start))
+	laneLog.Logger.Debugln("doSetOnlineBatch spand:", time.Since(start))
 }
 
 func (c *Comet) HandleSetOnlineBatch(m *msg.Msg, ch *Channel) {
@@ -400,6 +465,7 @@ func (c *Comet) HandleSetOnlineBatch(m *msg.Msg, ch *Channel) {
 		return
 	}
 	ch.id = COnlineReq.Userid
+	// laneLog.Logger.Debugln("ch.id=", ch.id, "COnlineReq.Userid=", COnlineReq.Userid)
 	c.BatcherSetOnline.Add(&BatchStructSetOnline{arg: COnlineReq, seq: m.Seq, ch: ch})
 }
 
@@ -432,6 +498,7 @@ func (c *Comet) HandleSetOnline(m *msg.Msg, ch *Channel) {
 		}
 		if len(rt.Roomids) != 0 {
 			for _, roomid := range rt.Roomids[0].Roomid {
+
 				c.Bucket(roomid).PutChannel(roomid, ch)
 				// laneLog.Logger.Infoln("userid:", ch.id, "in room", roomid)
 			}
@@ -469,7 +536,7 @@ func (c *Comet) doSetOfflineBatch(in []*BatchStructSetOffline) {
 	// in[i].ch.Reply([]byte("ack"), in[i].seq, "offline")
 	c.DelChannelBatch(in)
 
-	laneLog.Logger.Debugln("total spand:", time.Since(start))
+	laneLog.Logger.Debugln("doSetOfflineBatch spand:", time.Since(start))
 }
 func (c *Comet) HandleSetOfflineBatch(m *msg.Msg, ch *Channel) {
 	COnlineReq := &msg.COfflineReq{}
@@ -500,7 +567,7 @@ func (c *Comet) HandleSetOffline(m *msg.Msg, ch *Channel) {
 	}
 
 	{ // del channel
-		c.DelChannel(ch, false)
+		c.DelChannel(ch)
 	}
 
 	// ch.Reply([]byte("ack"), m.Seq, m.Path)

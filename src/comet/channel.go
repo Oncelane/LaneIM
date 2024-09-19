@@ -33,6 +33,7 @@ func (c *Comet) serveIO(ch *Channel) {
 }
 
 func (c *Comet) recvRoutine(ch *Channel) {
+	// laneLog.Logger.Debugln("ch.id%d start receive", ch.id)
 	for {
 		message, err := ch.conn.ReadMsg()
 		if ch.done {
@@ -41,15 +42,15 @@ func (c *Comet) recvRoutine(ch *Channel) {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
 				laneLog.Logger.Infoln("faild to get ws message")
-				c.DelChannel(ch, true)
+				c.DelChannel(ch)
 				return
 			}
-			laneLog.Logger.Infoln("websocket close", ch.id)
-			c.DelChannel(ch, true)
+			// laneLog.Logger.Infoln("websocket close", ch.id)
+			c.DelChannel(ch)
 			return
 		}
 		for i := range message.Msgs {
-			// laneLog.Logger.Infoln("message.Path", message.Path)
+			// laneLog.Logger.Infoln("message.Path", message.Msgs[i].Path)
 			f := c.funcRout.Find(message.Msgs[i].Path)
 			if f == nil {
 				laneLog.Logger.Infoln("wrong method")
@@ -70,11 +71,11 @@ func (c *Comet) sendRoutine(ch *Channel) {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
 				laneLog.Logger.Infoln("faild to get ws message", err)
-				c.DelChannel(ch, true)
+				c.DelChannel(ch)
 				return
 			}
 			// laneLog.Logger.Infoln("websocket close", ch.id)
-			c.DelChannel(ch, true)
+			c.DelChannel(ch)
 			return
 		}
 	}

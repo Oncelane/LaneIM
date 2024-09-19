@@ -10,27 +10,37 @@ import (
 	"time"
 )
 
+var num int = 1000
+
 func TestManyUser(t *testing.T) {
-	num := 2
 	var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	g := client.NewClientGroup(num)
 
-	{ // new user
+	{ // connetc
 		start := time.Now()
 		g.Wait.Add(num)
 		for i, c := range g.Clients {
 			go func(i int, c *client.Client) {
 				// block
 				c.Connect(cometAddr[i%len(cometAddr)])
-				// block
+
+			}(i, c)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infof("all %d connect and newuser time %v", num, time.Since(start))
+	}
+	{ // new user
+		start := time.Now()
+		g.Wait.Add(num)
+		for i, c := range g.Clients {
+			go func(i int, c *client.Client) {
 				c.NewUser()
 			}(i, c)
 		}
 		g.Wait.Wait()
 		laneLog.Logger.Infof("all %d connect and newuser time %v", num, time.Since(start))
 	}
-
 	{ // new room
 		start := time.Now()
 		g.Wait.Add(1)
@@ -89,6 +99,8 @@ func TestManyUser(t *testing.T) {
 	g.Send(&msg)
 	msg = "33333"
 	g.Send(&msg)
+	msg = "我可不觉得这段话很长，算是一般长度"
+	g.Send(&msg)
 	{ // set offline
 		start := time.Now()
 		for i, c := range g.Clients {
@@ -102,7 +114,6 @@ func TestManyUser(t *testing.T) {
 	laneLog.Logger.Infoln("end")
 }
 func TestCacheUser(t *testing.T) {
-	num := 2
 	var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 	g := client.NewClientGroup(num)
 	{ // read user from disk
@@ -117,7 +128,7 @@ func TestCacheUser(t *testing.T) {
 		e.Decode(&userids)
 		for i, c := range g.Clients {
 			c.Userid = userids[i]
-			laneLog.Logger.Infoln("read userids ", userids[i])
+			// laneLog.Logger.Infoln("read userids ", userids[i])
 		}
 		laneLog.Logger.Infoln("all read userids success")
 	}
@@ -132,7 +143,19 @@ func TestCacheUser(t *testing.T) {
 			}(i, c)
 		}
 		g.Wait.Wait()
-		laneLog.Logger.Infof("all %d connect and newuser time %v", num, time.Since(start))
+		laneLog.Logger.Infof("all %d connect spand time %v", num, time.Since(start))
+	}
+
+	{ // query room
+		start := time.Now()
+		g.Wait.Add(num)
+		for i, c := range g.Clients {
+			go func(i int, c *client.Client) {
+				c.QueryRoom()
+			}(i, c)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infof("all %d query room spand time %v", num, time.Since(start))
 	}
 
 	{ // set online

@@ -62,6 +62,7 @@ func (c *ClientGroup) Send(msg *string) {
 			sum += c.ReceiveCount
 		}
 		time.Sleep(time.Millisecond * 1)
+		// laneLog.Logger.Debugln("receve count now=", sum, "expect =", c.TargetCount)
 		if sum == c.TargetCount {
 			laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
 			break
@@ -130,11 +131,14 @@ func (c *Client) Connect(cometAddr string) {
 	// 连接到WebSocket服务
 	conn, _, err := websocket.DefaultDialer.Dial(cometAddr, nil)
 	if err != nil {
-		log.Fatal("连接错误:", err)
+		laneLog.Logger.Fatalln("faild to connect comet:", err)
 		return
 	}
-	//laneLog.Logger.Infoln("连接到comet:", cometAddr)
+	// laneLog.Logger.Infoln("连接到comet:", cometAddr)
 	c.conn = pkg.NewConnWs(conn, pool)
+	if c.Mgr != nil {
+		c.Mgr.Wait.Done()
+	}
 	go c.Receive()
 	go c.Send()
 }
@@ -238,6 +242,7 @@ func (c *Client) Online() {
 	if err != nil {
 		laneLog.Logger.Infoln("send err:", err)
 	}
+	// laneLog.Logger.Debugln("send online message success", c.Userid)
 }
 
 func (c *Client) Offline() {
@@ -259,6 +264,10 @@ func (c *Client) Send() {
 	}
 }
 
+func (c *Client) Close() error {
+	return c.conn.Close()
+}
+
 func (c *Client) Receive() {
 	for {
 		message, err := c.conn.ReadMsg()
@@ -266,7 +275,7 @@ func (c *Client) Receive() {
 			if websocket.IsCloseError(err, 1000) {
 				// laneLog.Logger.Infoln("comet close normal:", err)
 			} else {
-				laneLog.Logger.Infoln("comet close error:", err)
+				// laneLog.Logger.Infoln("comet close error:", err)
 			}
 			c.conn.Close()
 			return
@@ -307,7 +316,7 @@ func (c *Client) Receive() {
 					c.Mgr.Wait.Done()
 				}
 			case "online":
-				//laneLog.Logger.Infoln("online:", c.Userid, string(message.Msgs[i].Data))
+				// laneLog.Logger.Infoln("online:", c.Userid, string(message.Msgs[i].Data))
 				if c.Mgr != nil {
 					c.Mgr.Wait.Done()
 				}
@@ -321,11 +330,18 @@ func (c *Client) Receive() {
 					continue
 				}
 				c.Roomids = roomResp.Roomid
-				//laneLog.Logger.Infoln("query room:", c.Roomids[0])
+				if c.Mgr != nil {
+					c.Mgr.Wait.Done()
+				}
+				// laneLog.Logger.Infoln("query room:", c.Roomids[0])
 			case "receive":
 
 				c.ReceiveCount++
-				//laneLog.Logger.Infof("ch.id[%d] roomMsg receive:%s\n", c.Userid, string(message.Msgs[i].Data))
+				// laneLog.Logger.Infof("ch.id[%d] roomMsg receive:%s\n", c.Userid, string(message.Msgs[i].Data))
+			case "offline":
+				if c.Mgr != nil {
+					c.Mgr.Wait.Done()
+				}
 			}
 		}
 	}

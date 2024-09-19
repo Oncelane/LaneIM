@@ -110,20 +110,29 @@ func (d *SqlDB) SetUserOnlineBatch(tx *gorm.DB, userids []int64, cometAddr strin
 		end = true
 		tx = d.DB.Begin()
 	}
-	for i := range userids {
-		err := tx.Model(&model.UserMgr{UserID: userids[i]}).Update("online", true).Error
-		if err != nil {
-			tx.Rollback()
-			laneLog.Logger.Infoln("faild to set user online rollback", err)
-			return err
-		}
+
+	// 构建 SQL 查询
+	if len(userids) == 0 {
+		return nil // 如果没有 userids，直接返回
 	}
 
+	// 使用 GORM 的 `Where` 和 `Updates` 方法进行批量更新
+	err := tx.Model(&model.UserMgr{}).
+		Where("user_id IN ?", userids).
+		Update("online", true).Error
+	if err != nil {
+		tx.Rollback()
+		laneLog.Logger.Infoln("failed to set user online rollback", err)
+		return err
+	}
+
+	// 调用 SetUserCometBatch 函数
 	d.SetUserCometBatch(tx, userids, cometAddr)
+
 	if end {
 		err := tx.Commit().Error
 		if err != nil {
-			laneLog.Logger.Infoln("faild to commit set user online", err.Error())
+			laneLog.Logger.Infoln("failed to commit set user online", err.Error())
 		}
 	}
 	return nil

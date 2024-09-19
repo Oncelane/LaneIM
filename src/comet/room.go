@@ -64,11 +64,12 @@ func (g *Room) SendBatch(m *msg.MsgBatch) {
 	g.chsMap.Range(func(key, value any) bool {
 		ch, ok := value.(*Channel)
 		if ok {
+
 			if ch.done {
 				g.DelChannel(ch)
 				return true
 			}
-			// laneLog.Logger.Infoln("message enter ch.sendch", ch.id)
+			// laneLog.Logger.Infoln("message enter ch.sendch pass3 ", key, ch.id, m.String())
 			ch.sendCh <- m
 		}
 		return true

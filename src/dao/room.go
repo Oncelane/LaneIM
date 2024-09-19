@@ -93,7 +93,7 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 	key := "room:comet" + strconv.FormatInt(roomid, 36)
 	r, err := localCache.RoomComet(cache, roomid)
 	if err == nil {
-		laneLog.Logger.Debugln("RoomComet命中localcache")
+		// laneLog.Logger.Debugln("RoomComet命中localcache")
 		// laneLog.Logger.Debugln("time on localcache user room spand ", time.Since(startTime))
 		return r, err
 	}

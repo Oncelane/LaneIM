@@ -76,6 +76,7 @@ type Comet struct {
 	BatcherSetOffline *batch.BatchArgs[BatchStructSetOffline]
 	BatcherJoinRoom   *batch.BatchArgs[BatchStructJoinRoom]
 	BatcherSendRoom   *batch.BatchArgs[BatchStructSendRoom]
+	BatcherQueryRoom  *batch.BatchArgs[BatchStructQueryRoom]
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
@@ -108,28 +109,31 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 }
 
 func (c *Comet) InitBatch() {
-	c.BatcherNewUser = batch.NewBatchArgs(1000, time.Millisecond*100, c.doNewUserBatch)
+	c.BatcherNewUser = batch.NewBatchArgs(10000, time.Millisecond*100, c.doNewUserBatch)
 	// 开启goroutine
 	c.BatcherNewUser.Start()
 
-	c.BatcherSetOnline = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSetOnlineBatch)
+	c.BatcherSetOnline = batch.NewBatchArgs(10000, time.Millisecond*100, c.doSetOnlineBatch)
 	c.BatcherSetOnline.Start()
 
-	c.BatcherSetOffline = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSetOfflineBatch)
+	c.BatcherSetOffline = batch.NewBatchArgs(10000, time.Millisecond*100, c.doSetOfflineBatch)
 	c.BatcherSetOffline.Start()
 
-	c.BatcherJoinRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doJoinRoomBatch)
+	c.BatcherJoinRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doJoinRoomBatch)
 	c.BatcherJoinRoom.Start()
 
-	c.BatcherSendRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSendRoomBatch)
+	c.BatcherSendRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doSendRoomBatch)
 	c.BatcherSendRoom.Start()
+
+	c.BatcherQueryRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doQueryRoomBatch)
+	c.BatcherQueryRoom.Start()
 }
 
 func (c *Comet) InitFunc() {
 	//func router
 	c.funcRout = NewWsFuncRouter()
 	c.funcRout.Use("sendRoom", c.HandleSendRoomBatch)
-	c.funcRout.Use("queryRoom", c.HandleRoom)
+	c.funcRout.Use("queryRoom", c.HandleQueryRoomBatch)
 	c.funcRout.Use("auth", c.HandleAuth)
 	c.funcRout.Use("newUser", c.HandleNewUserBatch)
 	c.funcRout.Use("newRoom", c.HandleNewRoom)
@@ -228,13 +232,8 @@ func (c *Comet) Bucket(roomid int64) *Bucket {
 }
 
 // delete channel from all room
-func (c *Comet) DelChannel(ch *Channel, force bool) {
+func (c *Comet) DelChannel(ch *Channel) {
 	c.mu.Lock()
-	if force {
-		ch.ForceClose()
-	} else {
-		ch.Close()
-	}
 	delete(c.channels, ch.id)
 	for i := range c.buckets {
 		c.buckets[i].DelChannelAll(ch)
@@ -288,6 +287,7 @@ func (c *Comet) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*comet
 	for i := range in.Msgs {
 		// laneLog.Logger.Debugln("! receive roomid", in.Msgs[i].Roomid, "message:", string(in.Msgs[i].Data))
 		if _, exist := roomMsgBatch[in.Msgs[i].Roomid]; !exist {
+			// laneLog.Logger.Debugln("pass1")
 			roomMsgBatch[in.Msgs[i].Roomid] = new(msg.MsgBatch)
 		}
 		roomMsgBatch[in.Msgs[i].Roomid].Msgs = append(roomMsgBatch[in.Msgs[i].Roomid].Msgs, &msg.Msg{
@@ -297,6 +297,7 @@ func (c *Comet) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*comet
 		})
 	}
 	for roomid, msg := range roomMsgBatch {
+		// laneLog.Logger.Debugln("pass2")
 		c.Bucket(roomid).GetRoom(roomid).SendBatch(msg)
 	}
 

@@ -2,10 +2,10 @@ package model
 
 import "time"
 
-type GroupMessage struct {
-	GroupId     int64     `gorm:"primary_key;not null"`
-	SenderId    int64     `gorm:"not null"`
-	MessageId   int64     `gorm:"not null"`
-	MessageDate time.Time `gorm:"not null"`
-	Content     string    `gorm:"type:text;not null"`
+type RoomMessage struct {
+	MessageId  int64     `gorm:"primary_key"`
+	RoomId     int64     `gorm:"not null"`
+	SenderId   int64     `gorm:"not null"`
+	SenderDate time.Time `gorm:"not null"`
+	Content    string    `gorm:"type:text;not null"`
 }
