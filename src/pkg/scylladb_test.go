@@ -2,7 +2,10 @@ package pkg
 
 import (
 	"fmt"
+	"laneIM/src/pkg/laneLog"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/scylladb/gocqlx/qb"
@@ -13,26 +16,25 @@ import (
 var keyspace string = "examples"
 
 // metadata specifies table name and columns it must be in sync with schema.
-var personMetadata = table.Metadata{
-	Name:    "persons",
-	Columns: []string{"id", "first_name", "last_name", "email"},
-	PartKey: []string{"id"},
-	SortKey: []string{"last_name"},
+var chatMessageMetadata = table.Metadata{
+	Name:    "examples.messages",
+	Columns: []string{"group_id", "user_id", "timestamp", "message_id", "content"},
+	PartKey: []string{"group_id"},
+	SortKey: []string{"timestamp", "message_id"},
 }
 
 // personTable allows for simple CRUD operations based on personMetadata.
-var personTable = table.New(personMetadata)
+var chatMessageTable = table.New(chatMessageMetadata)
 
 // Person represents a row in person table.
 // Field names are converted to snake case by default, no need to add special tags.
 // A field will not be persisted by adding the `db:"-"` tag or making it unexported.
-type Person struct {
-	Id        gocql.UUID
-	FirstName string
-	LastName  string
-	Email     []string
-	HairColor string `db:"-"` // exported and skipped
-	eyeColor  string // unexported also skipped
+type ChatMessage struct {
+	GroupID   int64
+	UserID    int64
+	Timestamp time.Time
+	MessageID int64
+	Content   []byte
 }
 
 func TestDB(t *testing.T) {
@@ -55,35 +57,112 @@ func TestDB(t *testing.T) {
 		t.Fatal("create keyspace:", err)
 	}
 
-	err = session.ExecStmt(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s.persons (
-		id uuid PRIMARY KEY,
-		first_name text,
-		last_name text,
-		email set<text>)`, keyspace))
+	err = session.ExecStmt(`CREATE TABLE examples.messages (
+    group_id bigint,
+    message_id bigint,
+    timestamp TIMESTAMP,
+    user_id bigint,
+    content BLOB,
+    PRIMARY KEY (group_id, message_id)
+) WITH CLUSTERING ORDER BY ( message_id DESC);`)
 	if err != nil {
 		t.Fatal("create table:", err)
 	}
+	groupID := 1005
+	var lastMessageID int64 // 上一页最后一条消息的消息id
 
-	p := Person{
-		mustParseUUID("756716f7-2e54-4715-9f00-91dcbea6cf50"),
-		"Michał",
-		"Matczuk",
-		[]string{"michal@scylladb.com"},
-		"red",   // not persisted
-		"hazel", // not persisted
+	// { // 单插
+
+	// 	// Insert 100 records.
+	// 	for i := 0; i < 100000; i++ {
+	// 		lastTimestamp = time.Now()
+	// 		p := ChatMessage{
+	// 			GroupID:   int64(groupID),
+	// 			UserID:    int64(i),
+	// 			Timestamp: lastTimestamp,
+	// 			MessageID: int64(i),
+	// 			Content:   []byte(strconv.FormatInt(int64(i), 10)),
+	// 		}
+	// 		q := session.Query(chatMessageTable.Insert()).BindStruct(p).Consistency(gocql.LocalOne)
+	// 		if err := q.ExecRelease(); err != nil {
+	// 			laneLog.Logger.Fatal(err)
+	// 		}
+	// 	}
+	// }
+
+	{ // 多插入
+		// 创建 Batch
+		batch := session.NewBatch(gocql.LoggedBatch)
+		// 创建 Batch
+		// batch := gocql.NewBatch(gocql.LoggedBatch)
+		batch.Cons = gocql.LocalOne
+
+		// Insert 100 records.
+		for i := 0; i < 100; i++ {
+			lastMessageID = int64(i)
+			data := ChatMessage{
+				GroupID:   int64(groupID),
+				UserID:    int64(i),
+				Timestamp: time.Now(),
+				MessageID: int64(i),
+				Content:   []byte(strconv.FormatInt(int64(i), 10)),
+			}
+
+			insertChatQryStmt, _ := qb.Insert("examples.messages").Columns(chatMessageTable.Metadata().Columns...).ToCql()
+			batch.Query(insertChatQryStmt,
+				PchatChatMessageToSlice(data)...)
+
+		}
+		lastMessageID++
+
+		if err := session.ExecuteBatch(batch); err != nil {
+			laneLog.Logger.Fatalln(err)
+		}
 	}
 
-	q := session.Query(personTable.Insert()).BindStruct(p)
-	if err := q.ExecRelease(); err != nil {
-		t.Fatal(err)
+	{ // 分页查询示例
+		var limit int = 10 // 每页限制
+		curpage := 0
+		for range 11 {
+
+			debugSql := fmt.Sprintf(`
+		SELECT *
+		FROM examples.messages
+		WHERE group_id = %s
+		AND message_id < %d
+		LIMIT %s`, strconv.FormatInt(int64(groupID), 10), lastMessageID, strconv.FormatInt(int64(limit), 10))
+			// laneLog.Logger.Debugln(debugSql)
+			// 假设你想获取第一页
+			iter := session.Query(debugSql, nil).Iter()
+
+			var oneMessage ChatMessage
+			// Scan(&oneMessage.GroupID, &oneMessage.Timestamp, &oneMessage.MessageID, &oneMessage.Content, &oneMessage.UserID)
+			for iter.StructScan(&oneMessage) {
+				fmt.Printf("Message: %s, User: %d, Timestamp: %s\n", string(oneMessage.Content), oneMessage.UserID, oneMessage.Timestamp.String())
+				lastMessageID = oneMessage.UserID // 更新最后一条消息的时间戳
+			}
+
+			if err := iter.Close(); err != nil {
+				laneLog.Logger.Fatalf("Error during iteration: %v", err)
+			}
+			laneLog.Logger.Infof("==============page %d===========", curpage)
+			curpage++
+		}
 	}
 
-	var people []Person
-	q = session.Query(personTable.Select()).BindMap(qb.M{"id": "756716f7-2e54-4715-9f00-91dcbea6cf50"})
-	if err := q.SelectRelease(&people); err != nil {
-		t.Fatal(err)
+	// {
+	// 	session.Query().PageSize()
+	// }
+}
+
+func PchatChatMessageToSlice(in ChatMessage) []any {
+	return []any{
+		in.GroupID,
+		in.UserID,
+		in.Timestamp,
+		in.MessageID,
+		in.Content,
 	}
-	t.Log(people)
 }
 
 func mustParseUUID(s string) gocql.UUID {
