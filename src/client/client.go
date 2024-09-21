@@ -1,11 +1,10 @@
 package client
 
 import (
-	"fmt"
 	"laneIM/proto/msg"
 	"laneIM/src/pkg"
 	"laneIM/src/pkg/laneLog"
-	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -14,14 +13,35 @@ import (
 )
 
 type Client struct {
-	Mgr          *ClientGroup
-	conn         *pkg.ConnWs
-	Userid       int64
-	Roomids      []int64
-	MsgCh        chan *string
+	//control
+	Mgr           *ClientGroup
+	conn          *pkg.ConnWs
+	Userid        int64
+	GroupSeq      int
+	Seq           int64
+	Roomids       []int64
+	LastMessageId int64
+
+	// statistics
+	SendByte         int64
+	ReceiveByte      int64
+	RoomReceiveBytes map[int64]int64
+
 	ReceiveCount int
-	Room         []int64
-	Seq          int64
+
+	// sync
+	waitNewRoom       chan int64
+	waitAuth          chan string
+	waitSendAck       chan string
+	waitQueryRoom     chan []int64
+	waitNewUser       chan int64
+	waitJoinRoom      chan string
+	waitOnline        chan string
+	waitOffline       chan string
+	waitLastMessageid chan int64
+	waitPaging        chan *msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs
+	waitSubOn         chan string
+	waitSubOff        chan string
 }
 
 // var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
@@ -49,25 +69,41 @@ type ClientGroup struct {
 	TargetCount int
 }
 
-func (c *ClientGroup) Send(msg *string) {
-	c.TargetCount += c.Num * c.Num
-	for _, client := range c.Clients {
-		//laneLog.Logger.Infoln("in ch")
-		client.MsgCh <- msg
-	}
+func (c *ClientGroup) WaitMessageCount(count int) {
+	c.TargetCount += count
 	timeStart := time.Now()
 	for {
 		sum := 0
 		for _, c := range c.Clients {
 			sum += c.ReceiveCount
 		}
-		time.Sleep(time.Millisecond * 1)
-		// laneLog.Logger.Debugln("receve count now=", sum, "expect =", c.TargetCount)
+		time.Sleep(time.Millisecond)
 		if sum == c.TargetCount {
-			laneLog.Logger.Infoln("receve message count: ", sum, " spand time ", time.Since(timeStart))
+			laneLog.Logger.Infoln("[client] receve message sum: ", sum, "target", c.TargetCount, " spand time ", time.Since(timeStart))
 			break
 		}
 	}
+}
+
+func (c *ClientGroup) ReceiveBytes() (totalBytes int64) {
+	for _, cl := range c.Clients {
+		totalBytes += cl.ReceiveBytes()
+	}
+	return totalBytes
+}
+
+func (c *Client) ReceiveBytes() int64 {
+	return c.ReceiveByte
+}
+func (c *ClientGroup) SendBytes() (totalBytes int64) {
+	for _, cl := range c.Clients {
+		totalBytes += cl.SendBytes()
+	}
+	return totalBytes
+}
+
+func (c *Client) SendBytes() int64 {
+	return c.SendByte
 }
 
 func NewClientGroup(num int) *ClientGroup {
@@ -79,14 +115,27 @@ func NewClientGroup(num int) *ClientGroup {
 	for i := range g.Clients {
 		g.Clients[i] = NewClient(-1)
 		g.Clients[i].AttachToGroup(g)
+		g.Clients[i].GroupSeq = i
 	}
 	return g
 }
 
 func NewClient(userid int64) *Client {
 	return &Client{
-		Userid: userid,
-		MsgCh:  make(chan *string, 10),
+		Userid:            userid,
+		waitNewRoom:       make(chan int64),
+		waitAuth:          make(chan string),
+		waitSendAck:       make(chan string),
+		waitQueryRoom:     make(chan []int64),
+		waitNewUser:       make(chan int64),
+		waitJoinRoom:      make(chan string),
+		waitOnline:        make(chan string),
+		waitOffline:       make(chan string),
+		waitLastMessageid: make(chan int64),
+		waitPaging:        make(chan *msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs),
+		waitSubOn:         make(chan string),
+		waitSubOff:        make(chan string),
+		RoomReceiveBytes:  make(map[int64]int64),
 	}
 }
 
@@ -96,7 +145,7 @@ func (c *Client) AttachToGroup(g *ClientGroup) {
 
 var pool = pkg.NewMsgPool()
 
-func (c *Client) SendCometSingle(path string, data []byte) error {
+func (c *Client) sendCometSingle(path string, data []byte) error {
 	err := c.conn.WriteMsg(&msg.MsgBatch{
 		Msgs: []*msg.Msg{
 			{
@@ -110,19 +159,9 @@ func (c *Client) SendCometSingle(path string, data []byte) error {
 	return err
 }
 
-func (c *Client) SendCometBatch(paths []string, datas [][]byte) error {
-	if len(paths) != len(datas) {
-		return fmt.Errorf("wrong send format, paths.length != datas.lenght")
-	}
-	msgs := make([]*msg.Msg, len(paths))
-	for i := range paths {
-		msgs[i].Path = paths[i]
-		msgs[i].Data = datas[i]
-		msgs[i].Seq = c.Seq
-		c.Seq++
-	}
+func (c *Client) SendCometBatch(in []*msg.Msg) error {
 	err := c.conn.WriteMsg(&msg.MsgBatch{
-		Msgs: msgs,
+		Msgs: in,
 	})
 	return err
 }
@@ -136,14 +175,10 @@ func (c *Client) Connect(cometAddr string) {
 	}
 	// laneLog.Logger.Infoln("连接到comet:", cometAddr)
 	c.conn = pkg.NewConnWs(conn, pool)
-	if c.Mgr != nil {
-		c.Mgr.Wait.Done()
-	}
 	go c.Receive()
-	go c.Send()
 }
 
-func (c *Client) Auth(str string) {
+func (c *Client) Auth(str string) string {
 	// 发送消息到服务器
 	token := &msg.CAuthReq{
 		Params: []string{str},
@@ -151,98 +186,127 @@ func (c *Client) Auth(str string) {
 	}
 	tokenDate, err := proto.Marshal(token)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to encode token")
+		laneLog.Logger.Infoln("[client] faild to encode token")
 	}
-	err = c.SendCometSingle("auth", tokenDate)
+	err = c.sendCometSingle("auth", tokenDate)
 	if err != nil {
-		laneLog.Logger.Infoln("发送消息错误:", err)
+		laneLog.Logger.Fatalln("[client] 发送消息错误:", err)
 	}
+	return <-c.waitAuth
 }
 
-func (c *Client) SendRoomMsg(message *string) {
+func (c *Client) SendRoomMsg(roomid int64, message string) string {
+
 	sendRoomReq := &msg.CSendRoomReq{
 		Userid: c.Userid,
-		Roomid: c.Roomids[0],
-		Msg:    *message,
+		Roomid: roomid,
+		Msg:    message,
 	}
 	data, err := proto.Marshal(sendRoomReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to proto marshal", err)
+		laneLog.Logger.Fatalln("[client] faild to proto marshal", err)
 	}
-	//laneLog.Logger.Infoln("发送房间消息")
-	err = c.SendCometSingle("sendRoom", data)
+	//laneLog.Logger.Infoln("[client] 发送房间消息")
+	err = c.sendCometSingle("sendRoom", data)
 	if err != nil {
-		laneLog.Logger.Infoln("send err", err)
+		laneLog.Logger.Infoln("[client] send err", err)
 	}
+	c.SendByte += int64(len(data))
+	return <-c.waitSendAck
+}
+func (c *Client) Subon(roomid int64) string {
+
+	err := c.sendCometSingle("subon", []byte(strconv.FormatInt(roomid, 10)))
+	if err != nil {
+		laneLog.Logger.Fatalln("[client] send err:", err)
+	}
+	return <-c.waitSubOn
+}
+func (c *Client) Suboff(roomid int64) string {
+
+	err := c.sendCometSingle("suboff", []byte(strconv.FormatInt(roomid, 10)))
+	if err != nil {
+		laneLog.Logger.Fatalln("[client] send err:", err)
+	}
+	return <-c.waitSubOff
 }
 
-func (c *Client) QueryRoom() {
+func (c *Client) QueryRoom() []int64 {
 	cRoomidReq := &msg.CRoomidReq{
 		Userid: c.Userid,
 	}
 	data, err := proto.Marshal(cRoomidReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to marhal")
-		return
+		laneLog.Logger.Fatalln("[client] faild to marhal")
+		return nil
 	}
-	err = c.SendCometSingle("queryRoom", data)
+	err = c.sendCometSingle("queryRoom", data)
 	if err != nil {
-		laneLog.Logger.Infoln("send err:", err)
+		laneLog.Logger.Fatalln("[client] send err:", err)
 	}
+	return <-c.waitQueryRoom
 }
 
-func (c *Client) NewUser() {
+func (c *Client) NewUser() int64 {
 	data, err := proto.Marshal(&msg.CNewUserReq{})
 	if err != nil {
-		log.Panicln("faild to encode")
+		laneLog.Logger.Fatalln("faild to encode")
 	}
-	err = c.SendCometSingle("newUser", data)
+	err = c.sendCometSingle("newUser", data)
 	if err != nil {
-		laneLog.Logger.Infoln("send err:", err)
+		laneLog.Logger.Fatalln("[client] send err:", err)
 	}
+	return <-c.waitNewUser
 }
 
-func (c *Client) NewRoom() {
+func (c *Client) LoadUser(userid int64) {
+	c.Userid = userid
+}
+
+func (c *Client) NewRoom() int64 {
 	data, err := proto.Marshal(&msg.CNewRoomReq{
 		Userid: c.Userid,
 	})
 	if err != nil {
-		log.Panicln("faild to encode")
+		laneLog.Logger.Fatalln("[client] faild to encode")
 	}
-	err = c.SendCometSingle("newRoom", data)
+	err = c.sendCometSingle("newRoom", data)
 	if err != nil {
-		laneLog.Logger.Infoln("send err:", err)
+		laneLog.Logger.Fatalln("[client] send err:", err)
 	}
+	return <-c.waitNewRoom
 }
 
-func (c *Client) JoinRoom(roomid int64) {
+func (c *Client) JoinRoom(roomid int64) string {
 	data, err := proto.Marshal(&msg.CJoinRoomReq{
 		Userid: c.Userid,
 		Roomid: roomid,
 	})
 	// laneLog.Logger.Warnf("client[%d] join roomid%d", c.Userid, roomid)
 	if err != nil {
-		log.Panicln("faild to encode")
+		laneLog.Logger.Fatalln("[client] faild to encode")
 	}
-	err = c.SendCometSingle("joinRoom", data)
+	err = c.sendCometSingle("joinRoom", data)
 	if err != nil {
-		laneLog.Logger.Infoln("send err:", err)
+		laneLog.Logger.Fatalln("[client] send err:", err)
 	}
 	c.Roomids = append(c.Roomids, roomid)
+	return <-c.waitJoinRoom
 }
 
-func (c *Client) Online() {
+func (c *Client) Online() string {
 	data, err := proto.Marshal(&msg.COnlineReq{
 		Userid: c.Userid,
 	})
 	if err != nil {
-		log.Panicln("faild to encode")
+		laneLog.Logger.Fatalln("[client] faild to encode")
 	}
-	err = c.SendCometSingle("online", data)
+	err = c.sendCometSingle("online", data)
 	if err != nil {
-		laneLog.Logger.Infoln("send err:", err)
+		laneLog.Logger.Fatalln("[client] send err:", err)
 	}
 	// laneLog.Logger.Debugln("send online message success", c.Userid)
+	return <-c.waitOnline
 }
 
 func (c *Client) Offline() {
@@ -250,18 +314,38 @@ func (c *Client) Offline() {
 		Userid: c.Userid,
 	})
 	if err != nil {
-		log.Panicln("faild to encode")
+		laneLog.Logger.Fatalln("[client] faild to encode")
 	}
-	err = c.SendCometSingle("offline", data)
+	err = c.sendCometSingle("offline", data)
 	if err != nil {
-		laneLog.Logger.Infoln("send err:", err)
+		laneLog.Logger.Fatalln("[client] send err:", err)
 	}
+	// return <-c.waitOffline
 }
 
-func (c *Client) Send() {
-	for msg := range c.MsgCh {
-		c.SendRoomMsg(msg)
+func (c *Client) QueryLastMessageId(roomid int64) (int64, error) {
+	err := c.sendCometSingle("last", []byte(strconv.FormatInt(roomid, 10)))
+	if err != nil {
+		laneLog.Logger.Fatalln("[client] send err:", err)
+		return 0, err
 	}
+	return <-c.waitLastMessageid, nil
+}
+func (c *Client) QueryPaging(roomid int64, lastMsgId int64, limit int64) (*msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs, error) {
+	data, err := proto.Marshal(&msg.CQueryStoreMessageReq{
+		Roomid:    roomid,
+		MessageId: lastMsgId,
+		Size:      limit,
+	})
+	if err != nil {
+		laneLog.Logger.Fatalln(err)
+	}
+	err = c.sendCometSingle("his", data)
+	if err != nil {
+		laneLog.Logger.Fatalln("[client] send err:", err)
+		return nil, err
+	}
+	return <-c.waitPaging, nil
 }
 
 func (c *Client) Close() error {
@@ -280,68 +364,87 @@ func (c *Client) Receive() {
 			c.conn.Close()
 			return
 		}
-		for i := range message.Msgs {
+		for i, m := range message.Msgs {
 			// laneLog.Logger.Infof("comet reply: %s", message.Msgs[i].GetPath())
-			switch message.Msgs[i].Path {
+			switch m.Path {
 			case "newUser":
 				rt := &msg.CNewUserResp{}
-				err := proto.Unmarshal(message.Msgs[i].Data, rt)
+				err := proto.Unmarshal(m.Data, rt)
 				if err != nil {
-					laneLog.Logger.Infoln("faild proto", message.Msgs[i].Path, err)
+					laneLog.Logger.Fatalln("[client] faild proto", message.Msgs[i].Path, err)
 					continue
 				}
 				c.Userid = rt.Userid
+				c.waitNewUser <- rt.Userid
 				//laneLog.Logger.Infoln("newUser:", c.Userid)
-				if c.Mgr != nil {
-					c.Mgr.Wait.Done()
-				}
 			case "newRoom":
 				rt := &msg.CNewRoomResp{}
 				err := proto.Unmarshal(message.Msgs[i].Data, rt)
 				if err != nil {
-					laneLog.Logger.Infoln("faild proto", message.Msgs[i].Path, err)
+					laneLog.Logger.Fatalln("[client] faild proto", message.Msgs[i].Path, err)
 					continue
 				}
-				c.Room = append(c.Room, rt.Roomid)
-				laneLog.Logger.Infoln("client [0] get roomid", rt.Roomid)
-				if c.Mgr != nil {
-					c.Mgr.Wait.Done()
-				}
+				c.Roomids = append(c.Roomids, rt.Roomid)
+				laneLog.Logger.Infoln("[client] get roomid", rt.Roomid)
+				c.waitNewRoom <- rt.Roomid
 			case "auth":
 				//laneLog.Logger.Infoln("auth:", c.Userid, string(message.Msgs[i].Data))
-				c.QueryRoom()
+				// c.QueryRoom()
+				c.waitAuth <- string(m.Data)
 			case "joinRoom":
 				//laneLog.Logger.Infoln("joinRoom:", c.Userid, string(message.Msgs[i].Data))
-				if c.Mgr != nil {
-					c.Mgr.Wait.Done()
-				}
+				c.waitJoinRoom <- string(m.Data)
 			case "online":
 				// laneLog.Logger.Infoln("online:", c.Userid, string(message.Msgs[i].Data))
-				if c.Mgr != nil {
-					c.Mgr.Wait.Done()
-				}
+				c.waitOnline <- string(m.Data)
 			case "sendRoom":
 				//laneLog.Logger.Infoln("send room:", string(message.Msgs[i].Data))
+				c.waitSendAck <- string(m.Data)
 			case "queryRoom":
 				roomResp := &msg.CRoomidResp{}
 				err := proto.Unmarshal(message.Msgs[i].Data, roomResp)
 				if err != nil {
-					laneLog.Logger.Infoln("faild proto", message.Msgs[i].Path, err)
+					laneLog.Logger.Fatalln("[client] faild proto", message.Msgs[i].Path, err)
 					continue
 				}
 				c.Roomids = roomResp.Roomid
-				if c.Mgr != nil {
-					c.Mgr.Wait.Done()
-				}
-				// laneLog.Logger.Infoln("query room:", c.Roomids[0])
-			case "receive":
+				c.waitQueryRoom <- roomResp.Roomid
+				laneLog.Logger.Infoln("query room:", c.Roomids[0])
 
-				c.ReceiveCount++
-				// laneLog.Logger.Infof("ch.id[%d] roomMsg receive:%s\n", c.Userid, string(message.Msgs[i].Data))
 			case "offline":
-				if c.Mgr != nil {
-					c.Mgr.Wait.Done()
+				// c.waitOffline <- string(m.Data)
+			case "last":
+				msgId, err := strconv.ParseInt(string(message.Msgs[i].Data), 10, 64)
+				if err != nil {
+					laneLog.Logger.Fatalln(err)
 				}
+				c.LastMessageId = msgId
+				c.waitLastMessageid <- msgId
+			case "his":
+				msgs := new(msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs)
+				err := proto.Unmarshal(message.Msgs[i].Data, msgs)
+				if err != nil {
+					laneLog.Logger.Fatalln(err)
+				}
+				c.waitPaging <- msgs
+				// laneLog.Logger.Infof("user[%d] receive his msg {==-%v-==}", c.Userid, msgs.String())
+			case "receive": //online message
+				// laneLog.Logger.Infof("ch.id[%d] roomMsg receive:%s\n", c.GroupSeq, string(message.Msgs[i].Data))
+				c.ReceiveByte += int64(len(m.Data))
+				c.ReceiveCount++
+			case "onlyCount":
+				countMsg := new(msg.COnlyCountMessage)
+				err := proto.Unmarshal(m.Data, countMsg)
+				if err != nil {
+					laneLog.Logger.Fatalln(err)
+				}
+				// laneLog.Logger.Infof("[onlyCount] user[%d] roomid[%d], receive count[%d]", c.GroupSeq, countMsg.Roomid, countMsg.Count)
+				c.RoomReceiveBytes[countMsg.Roomid] += int64(len(m.Data))
+				c.ReceiveByte += int64(len(m.Data))
+			case "subon":
+				c.waitSubOn <- string(m.Data)
+			case "suboff":
+				c.waitSubOff <- string(m.Data)
 			}
 		}
 	}

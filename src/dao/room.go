@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/allegro/bigcache"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 // func (d *Dao) AllRoomid(rdb *redis.ClusterClient, db *sql.SqlDB) ([]int64, error) {
@@ -52,7 +52,7 @@ func (d *Dao) RoomUserid(cache *bigcache.BigCache, rdb *redis.ClusterClient, db 
 	}
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
 
-		laneLog.Logger.Infoln("room user query redis")
+		laneLog.Logger.Infoln("[dao] room user query redis")
 		rt, err := rds.RoomMgrUserid(rdb, roomid)
 		if err != nil {
 			if err != redis.Nil {
@@ -99,20 +99,20 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 	}
 
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
-		rt, err := rds.RoomMgrComet(rdb, roomid)
+		rtt, err := rds.RoomCometBatch(rdb, []int64{roomid})
 		if err != nil {
 			if err != redis.Nil {
-				return rt, err
+				return rtt[0], err
 			}
 		} else {
 			laneLog.Logger.Debugln("RoomComet命中redis")
 			laneLog.Logger.Debugln("time on redis user room spand ", time.Since(startTime))
 			//laneLog.Logger.Infoln("同步到本地cache:", rt)
-			localCache.SetRoomComet(cache, roomid, rt)
-			return rt, nil
+			localCache.SetRoomComet(cache, roomid, rtt[0])
+			return rtt[0], nil
 		}
 		//laneLog.Logger.Infoln("触发sql查询")
-		rt, err = db.RoomComet(roomid)
+		rt, err := db.RoomComet(roomid)
 		if err != nil {
 			return rt, err
 		}
@@ -121,7 +121,7 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 		localCache.SetRoomComet(cache, roomid, rt)
 		//TODO 单独同步到redis
 		//laneLog.Logger.Infoln("同步到redis", rt)
-		rds.SetNERoomMgrComet(rdb, roomid, rt)
+		rds.SetNERoomComet(rdb, roomid, rt)
 		return rt, nil
 	})
 	laneLog.Logger.Debugln("time on sql user room spand ", time.Since(startTime))

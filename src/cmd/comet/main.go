@@ -22,20 +22,20 @@ func main() {
 
 	laneLog.InitLogger("comet"+conf.Name, true)
 
-	laneLog.Logger.Infof("comet server start")
+	laneLog.Logger.Infoln("[servre] comet server start")
 	c := comet.NewSerivceComet(conf)
 
 	// 启动websocket服务
 	http.HandleFunc("/ws", c.ServeHTTP)
-	laneLog.Logger.Infoln("listening websocket", conf.WebsocketAddr)
+	laneLog.Logger.Infoln("[server] listening websocket", conf.WebsocketAddr)
 	go http.ListenAndServe(conf.WebsocketAddr, nil)
 
 	// 等待信号
-	laneLog.Logger.Infoln("wait ctrl+c")
+	laneLog.Logger.Infoln("[server]  wait ctrl+c")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan // 阻塞等待信号
-	laneLog.Logger.Infoln("close comet")
+	laneLog.Logger.Infoln("[server] close comet")
 	c.Close()
 
 }

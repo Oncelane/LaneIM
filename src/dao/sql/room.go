@@ -3,12 +3,14 @@ package sql
 import (
 	"fmt"
 	"laneIM/src/config"
+	"laneIM/src/dao/rds"
 	"laneIM/src/model"
 	"laneIM/src/pkg/laneLog"
 	"laneIM/src/pkg/mergewrite"
 	"log"
 	"strconv"
 
+	"github.com/go-redis/redis/v8"
 	mysql2 "github.com/go-sql-driver/mysql"
 	"golang.org/x/sync/singleflight"
 	"gorm.io/driver/mysql"
@@ -280,6 +282,24 @@ func (d *SqlDB) RoomComet(roomid int64) ([]string, error) {
 	return rt, nil
 }
 
+func (d *SqlDB) RoomCometBatch(roomids []int64) ([][]string, error) {
+	var rooms []model.RoomMgr
+	err := d.DB.Preload("Comets").Where("room_id IN ?", roomids).Find(&rooms).Error
+	if err != nil {
+		laneLog.Logger.Infoln("failed to query room comets", err)
+		return nil, err
+	}
+
+	rt := make([][]string, len(rooms))
+	for i, room := range rooms {
+		rt[i] = make([]string, len(room.Comets))
+		for j, comet := range room.Comets {
+			rt[i][j] = comet.CometAddr
+		}
+	}
+	return rt, nil
+}
+
 func (d *SqlDB) AddRoomComet(roomid int64, comet string) error {
 	err := d.DB.Model(&model.RoomMgr{RoomID: roomid}).Association("Comets").Append(&model.CometMgr{CometAddr: comet})
 	if err != nil {
@@ -292,75 +312,89 @@ func (d *SqlDB) AddRoomComet(roomid int64, comet string) error {
 		return err
 	}
 	return err
-
 }
 
-func (d *SqlDB) AddRoomCometWithUserid(userid int64, cometAddr string) error {
-	query := `
-INSERT IGNORE INTO
-    room_comets (
-        room_mgr_room_id,
-        comet_mgr_comet_addr
-    )
-SELECT room_mgr_room_id, ?
-FROM room_users
-    JOIN room_mgrs ON room_users.room_mgr_room_id = room_mgrs.room_id
-WHERE
-    room_users.user_mgr_user_id = ?
-`
-	err := d.DB.Exec(query, cometAddr, userid).Error
-	if err != nil {
-		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
-			if sqlerr.Number == 1062 {
-				return nil
-			}
-		}
-		laneLog.Logger.Infoln("faild to add comet to room", err)
-		return err
-	}
-	return nil
+func (d *SqlDB) AddRoomCometBatch(roomids []int64, comet string) error {
+	tx := d.DB.Begin()
+	for _, roomid := range roomids {
 
-}
-
-func (d *SqlDB) AddRoomCometWithUseridBatch(tx *gorm.DB, userids []int64, cometAddr string) error {
-	var end bool
-	if tx == nil {
-		end = true
-		tx = d.DB.Begin()
-	}
-
-	query := `
-INSERT IGNORE INTO
-    room_comets (
-        room_mgr_room_id,
-        comet_mgr_comet_addr
-    )
-SELECT room_mgr_room_id, ?
-FROM room_users
-    JOIN room_mgrs ON room_users.room_mgr_room_id = room_mgrs.room_id
-WHERE
-    room_users.user_mgr_user_id = ?
-`
-	for i := range userids {
-		err := tx.Exec(query, cometAddr, userids[i]).Error
+		err := tx.Model(&model.RoomMgr{RoomID: roomid}).Association("Comets").Append(&model.CometMgr{CometAddr: comet})
 		if err != nil {
 			if sqlerr, ok := err.(*mysql2.MySQLError); ok {
 				if sqlerr.Number == 1062 {
-					return nil
+					// 发生重复键错误时跳过
+					continue
 				}
 			}
-			laneLog.Logger.Infoln("faild to add comet to room", err)
+			laneLog.Logger.Fatalln("failed to add room comet for room ID:", roomid, "comet:", comet, "error:", err)
 			return err
 		}
-	}
 
-	if end {
-		err := tx.Commit()
-		if err != nil {
-			laneLog.Logger.Infoln("faild to commit add room user's comet", err)
+	}
+	err := tx.Commit().Error
+	return err
+}
+
+// func (d *SqlDB) AddRoomCometWithUserid(userid int64, cometAddr string) error {
+// 	query := `
+// INSERT IGNORE INTO
+//     room_comets (
+//         room_mgr_room_id,
+//         comet_mgr_comet_addr
+//     )
+// SELECT room_mgr_room_id, ?
+// FROM room_users
+//     JOIN room_mgrs ON room_users.room_mgr_room_id = room_mgrs.room_id
+// WHERE
+//     room_users.user_mgr_user_id = ?
+// `
+// 	err := d.DB.Exec(query, cometAddr, userid).Error
+// 	if err != nil {
+// 		if sqlerr, ok := err.(*mysql2.MySQLError); ok {
+// 			if sqlerr.Number == 1062 {
+// 				return nil
+// 			}
+// 		}
+// 		laneLog.Logger.Infoln("faild to add comet to room", err)
+// 		return err
+// 	}
+
+// 	return nil
+
+// }
+
+func (d *SqlDB) AddRoomCometWithUseridBatch(rdb *redis.ClusterClient, userids []int64, cometAddr string) error {
+	// start := time.Now()
+
+	rooms, err := d.UserRoomBatch(userids)
+	// laneLog.Logger.Debugln("userids", userids)
+	// laneLog.Logger.Debugln("rooms:", rooms)
+	if err != nil {
+		laneLog.Logger.Fatalln("faild to UserRoomBatch ", err)
+	}
+	r := make(map[int64]struct{})
+	for _, roomss := range rooms {
+		for _, room := range roomss {
+			r[room] = struct{}{}
 		}
 	}
+	rr := make([]int64, 0)
+	for roomid := range r {
+		rr = append(rr, roomid)
+	}
+	// laneLog.Logger.Debugln("r", r)
+	// laneLog.Logger.Debugln("rr", rr)
+	rds.AddRoomcometBatch(rdb, rr, cometAddr)
+	if err != nil {
+		laneLog.Logger.Fatalln("faild to commit add room user's comet", err)
+		return err
+	}
 
+	err = d.AddRoomCometBatch(rr, cometAddr)
+	if err != nil {
+		laneLog.Logger.Fatalln("faild to commit add room user's comet", err)
+		return err
+	}
 	return nil
 
 }

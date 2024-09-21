@@ -1,6 +1,6 @@
+id: 0
 addr: 127.0.0.1:50060
 name: "0"
-id: 0
 kafkaproducer:
   addr:
     - 127.0.0.1:9092
@@ -10,12 +10,19 @@ etcd:
     - 127.0.0.1:51241
     - 127.0.0.1:51242
 mysql:
-  type: ""
   name: "0"
   username: debian-sys-maint
   password: FJho5xokpFqZygL5
   addr: 127.0.0.1:3306
   database: laneIM
+  batchwriter:
+    maxtime: 100
+    maxcount: 1000
+scylladb:
+  clustername: laneIM
+  addrs:
+    - "127.0.0.1"
+  keyspace: laneIM
   batchwriter:
     maxtime: 100
     maxcount: 1000

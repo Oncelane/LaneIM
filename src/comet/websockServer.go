@@ -44,7 +44,7 @@ func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// laneLog.Logger.Infoln("receive ws connect")
 	ws, err := upGrader.Upgrade(w, r, nil)
 	if err != nil {
-		laneLog.Logger.Infoln("upGrader fail", err)
+		laneLog.Logger.Fatalln("[server] upGrader fail", err)
 		return
 	}
 

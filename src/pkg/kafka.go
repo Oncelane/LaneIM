@@ -19,6 +19,7 @@ type KafkaComsumer struct {
 func NewKafkaProducer(conf config.KafkaProducer) *KafkaProducer {
 	kp := &KafkaProducer{}
 	config := sarama.NewConfig()
+	config.Producer.MaxMessageBytes = 9437184
 	// config.Producer.RequiredAcks = sarama.WaitForAll
 	// config.Producer.Retry.Max = 10
 	config.Producer.Return.Successes = true
@@ -28,7 +29,7 @@ func NewKafkaProducer(conf config.KafkaProducer) *KafkaProducer {
 		return kp
 	}
 	kp.Client = producer
-	laneLog.Logger.Infoln("create kafka producer:", conf.Addr)
+	laneLog.Logger.Infoln("[kafka] create kafka producer:", conf.Addr)
 	return kp
 }
 

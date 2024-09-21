@@ -2,24 +2,25 @@ package dao_test
 
 import (
 	"laneIM/src/config"
+	"laneIM/src/dao"
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/rds"
 	"laneIM/src/dao/sql"
-	"laneIM/src/model"
 	"laneIM/src/pkg"
 	"laneIM/src/pkg/laneLog"
 	"testing"
 	"time"
 
 	"github.com/allegro/bigcache"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 func TestCahce(t *testing.T) {
 	lcache := localCache.Cache(time.Millisecond * 1)
 	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001", "127.0.0.1:7002", "127.0.0.1:7003"}})
 	db := sql.NewDB(config.DefaultMysql())
-	model.Init(db.DB)
+
+	dao.Init(db.DB, nil)
 	num := 100
 	userids := make([]int64, num)
 	for i := range num {

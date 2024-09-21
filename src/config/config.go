@@ -38,13 +38,9 @@ func (c *Canal) Default() {
 		IdleTimeOut:      60 * 60 * 1000,
 		Subscribe:        ".*\\..*",
 		MsgChSize:        128,
-		KafkaProducer: KafkaProducer{
-			Addr: []string{"127.0.0.1" + ":9092"},
-		},
-		Redis: Redis{
-			Addr: []string{"127.0.0.1" + ":7001", "127.0.0.1" + ":7002", "127.0.0.1" + ":7003"},
-		},
-		Mysql: mysqlC,
+		KafkaProducer:    DefaultKafkaProducer(),
+		Redis:            DefaultRedis(),
+		Mysql:            mysqlC,
 	}
 }
 
@@ -55,6 +51,7 @@ type Logic struct {
 	KafkaProducer KafkaProducer
 	Etcd          Etcd
 	Mysql         Mysql
+	ScyllaDB      ScyllaDB
 }
 
 func (c *Logic) Default() {
@@ -62,8 +59,6 @@ func (c *Logic) Default() {
 	if err != nil {
 		log.Panicln("faild to get outbound ip:", err)
 	}
-	mysqlC := Mysql{}
-	mysqlC.Default()
 	*c = Logic{
 		Id:   0,
 		Addr: ip + ":50060",
@@ -71,17 +66,14 @@ func (c *Logic) Default() {
 		KafkaProducer: KafkaProducer{
 			Addr: []string{ip + ":9092"},
 		},
-		Etcd: Etcd{
-			Addr: []string{
-				"127.0.0.1:51240",
-				"127.0.0.1:51241",
-				"127.0.0.1:51242"},
-		},
-		Mysql: mysqlC,
+		Etcd:     DefaultEtcd(),
+		Mysql:    DefaultMysql(),
+		ScyllaDB: DefaultScyllaDB(),
 	}
 }
 
 type Comet struct {
+	Id            int
 	Addr          string
 	Name          string
 	Etcd          Etcd
@@ -96,14 +88,10 @@ func (c *Comet) Default() {
 		log.Panicln("faild to get outbound ip:", err)
 	}
 	*c = Comet{
-		Addr: ip + ":50050",
-		Name: "0",
-		Etcd: Etcd{
-			Addr: []string{
-				"127.0.0.1:51240",
-				"127.0.0.1:51241",
-				"127.0.0.1:51242"},
-		},
+		Id:            100,
+		Addr:          ip + ":50050",
+		Name:          "0",
+		Etcd:          DefaultEtcd(),
 		BucketSize:    32,
 		WebsocketAddr: ip + ":40050",
 	}
@@ -128,22 +116,11 @@ func (c *Job) Default() {
 	mysqlC := Mysql{}
 	mysqlC.Default()
 	*c = Job{
-		Addr: ip + ":50070",
-		Name: "0",
-		KafkaComsumer: KafkaComsumer{
-			Addr:    []string{ip + ":9092"},
-			Topics:  []string{"laneIM"},
-			GroupId: "job",
-		},
-		Etcd: Etcd{
-			Addr: []string{
-				"127.0.0.1:51240",
-				"127.0.0.1:51241",
-				"127.0.0.1:51242"},
-		},
-		Redis: Redis{
-			[]string{ip + ":7001", ip + ":7002", ip + ":7003"},
-		},
+		Addr:             ip + ":50070",
+		Name:             "0",
+		KafkaComsumer:    DefaultKafkaComsumer(),
+		Etcd:             DefaultEtcd(),
+		Redis:            DefaultRedis(),
 		BucketSize:       32,
 		CometRoutineSize: 32,
 		Mysql:            mysqlC,
@@ -154,12 +131,33 @@ type Etcd struct {
 	Addr []string
 }
 
+func DefaultEtcd() Etcd {
+	return Etcd{
+		Addr: []string{
+			"127.0.0.1:51240",
+			"127.0.0.1:51241",
+			"127.0.0.1:51242"},
+	}
+}
+
 type KafkaProducer struct {
 	Addr []string
 }
 
+func DefaultKafkaProducer() KafkaProducer {
+	return KafkaProducer{
+		Addr: []string{"127.0.0.1" + ":9092"},
+	}
+}
+
 type Redis struct {
 	Addr []string
+}
+
+func DefaultRedis() Redis {
+	return Redis{
+		[]string{"127.0.0.1:7001", "127.0.0.1:7002", "127.0.0.1:7003"},
+	}
 }
 
 type KafkaComsumer struct {
@@ -168,8 +166,15 @@ type KafkaComsumer struct {
 	GroupId string
 }
 
+func DefaultKafkaComsumer() KafkaComsumer {
+	return KafkaComsumer{
+		Addr:    []string{"127.0.0.1:9092"},
+		Topics:  []string{"laneIM"},
+		GroupId: "job",
+	}
+}
+
 type Mysql struct {
-	Type        string
 	Name        string
 	Username    string
 	Password    string
@@ -179,8 +184,7 @@ type Mysql struct {
 }
 
 func (c *Mysql) Default() {
-	batch := BatchWriter{}
-	batch.Default()
+	batch := DefaultBatchWriter()
 	*c = Mysql{
 		Name:        "0",
 		Username:    "debian-sys-maint",

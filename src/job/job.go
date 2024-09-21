@@ -33,9 +33,7 @@ type Job struct {
 func NewJob(conf config.Job) *Job {
 	e := pkg.NewEtcd(conf.Etcd)
 
-	// connect to redis
-	addrs := e.GetAddr("redis")
-	laneLog.Logger.Infof("job starting...\n get redis addrs: %v", addrs)
+	laneLog.Logger.Infof("[server] job start")
 
 	j := &Job{
 		etcd:          e,
@@ -70,7 +68,7 @@ func (j *Job) WatchComet() {
 			}
 
 			// discovery comet
-			laneLog.Logger.Infoln("discovery comet:", addr)
+			laneLog.Logger.Infoln("[server] discovery comet:", addr)
 			j.NewComet(addr)
 		}
 		for addr, c := range j.comets {
@@ -81,7 +79,7 @@ func (j *Job) WatchComet() {
 				for range j.conf.CometRoutineSize {
 					c.done <- struct{}{}
 				}
-				laneLog.Logger.Infoln("remove comet:", addr)
+				laneLog.Logger.Infoln("[server] remove comet:", addr)
 				j.mu.Unlock()
 			}
 
@@ -92,7 +90,7 @@ func (j *Job) WatchComet() {
 }
 
 func (j *Job) Close() {
-	laneLog.Logger.Infoln("job exit", j.conf.Addr)
+	laneLog.Logger.Infoln("[server] job exit", j.conf.Addr)
 }
 
 func (j *Job) RunGroupComsumer() {
@@ -102,5 +100,5 @@ func (j *Job) RunGroupComsumer() {
 	if err := j.kafkaComsumer.Consume(context.Background(), j.conf.KafkaComsumer.Topics, handler); err != nil {
 		log.Fatalf("Error from consumer group: %v", err)
 	}
-	laneLog.Logger.Infoln("group comsumer exit")
+	laneLog.Logger.Warnln("[server] group comsumer exit")
 }

@@ -33,11 +33,11 @@ type Logic struct {
 func NewLogic(addr string) *Logic {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		laneLog.Logger.Infoln("Dail faild ", err.Error())
+		laneLog.Logger.Fatalln("[server] Dail faild ", err.Error())
 		return nil
 	}
 	c := logic.NewLogicClient(conn)
-	laneLog.Logger.Infoln("connet to logic:", addr)
+	laneLog.Logger.Infoln("[server] connet to logic:", addr)
 	return &Logic{
 		Addr:   addr,
 		Client: c,
@@ -55,7 +55,6 @@ func (l *Logic) Close() {
 
 type Comet struct {
 	mu     sync.RWMutex
-	userId int64
 	etcd   *pkg.EtcdClient
 	logics map[string]*Logic
 	conf   config.Comet
@@ -70,6 +69,8 @@ type Comet struct {
 	funcRout *WsFuncRouter
 	cache    *bigcache.BigCache
 
+	msgUUIDGenerator *pkg.UuidGenerator
+
 	//batch
 	BatcherNewUser    *batch.BatchArgs[BatchStructNewUser]
 	BatcherSetOnline  *batch.BatchArgs[BatchStructSetOnline]
@@ -77,15 +78,18 @@ type Comet struct {
 	BatcherJoinRoom   *batch.BatchArgs[BatchStructJoinRoom]
 	BatcherSendRoom   *batch.BatchArgs[BatchStructSendRoom]
 	BatcherQueryRoom  *batch.BatchArgs[BatchStructQueryRoom]
+	BatcherHis        *batch.BatchArgs[BatchStructQueryStoreMsg]
+	BatcherLast       *batch.BatchArgs[BatcheStructLast]
 }
 
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 	ret = &Comet{
-		conf:     conf,
-		pool:     pkg.NewMsgPool(),
-		cache:    localCache.Cache(time.Minute),
-		channels: make(map[int64]*Channel),
+		conf:             conf,
+		pool:             pkg.NewMsgPool(),
+		cache:            localCache.Cache(time.Minute),
+		channels:         make(map[int64]*Channel),
+		msgUUIDGenerator: pkg.NewUuidGenerator(int64(conf.Id)),
 	}
 
 	ret.InitBatch()
@@ -122,11 +126,17 @@ func (c *Comet) InitBatch() {
 	c.BatcherJoinRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doJoinRoomBatch)
 	c.BatcherJoinRoom.Start()
 
-	c.BatcherSendRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doSendRoomBatch)
+	c.BatcherSendRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSendRoomBatch)
 	c.BatcherSendRoom.Start()
 
 	c.BatcherQueryRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doQueryRoomBatch)
 	c.BatcherQueryRoom.Start()
+
+	c.BatcherHis = batch.NewBatchArgs(1000, time.Millisecond*100, c.doQueryStoreMsgBatch)
+	c.BatcherHis.Start()
+
+	c.BatcherLast = batch.NewBatchArgs(10000, time.Millisecond*100, c.doQueryLast)
+	c.BatcherLast.Start()
 }
 
 func (c *Comet) InitFunc() {
@@ -140,6 +150,10 @@ func (c *Comet) InitFunc() {
 	c.funcRout.Use("joinRoom", c.HandleJoinRoomBatch)
 	c.funcRout.Use("online", c.HandleSetOnlineBatch)
 	c.funcRout.Use("offline", c.HandleSetOfflineBatch)
+	c.funcRout.Use("his", c.HandleHisMsg)
+	c.funcRout.Use("last", c.HandleLast)
+	c.funcRout.Use("subon", c.HandleSubscribe)
+	c.funcRout.Use("suboff", c.HandleSubscribeOff)
 }
 
 func (c *Comet) InitBucket() {
@@ -156,7 +170,7 @@ func (c *Comet) ServeGrpc() {
 	}
 	gServer := grpc.NewServer()
 	comet.RegisterCometServer(gServer, c)
-	laneLog.Logger.Infoln("comet serivce is running on port")
+	laneLog.Logger.Infoln("[server] comet serivce is running on port")
 	c.grpc = gServer
 	go func() {
 		if err := gServer.Serve(lis); err != nil {
@@ -168,7 +182,7 @@ func (c *Comet) ServeGrpc() {
 func (c *Comet) Close() {
 	c.etcd.DelAddr("grpc:comet:"+c.conf.Name, c.conf.Addr)
 	c.grpc.Stop()
-	laneLog.Logger.Infoln("exit comet")
+	laneLog.Logger.Infoln("[server] exit comet")
 }
 
 func (c *Comet) WatchLogic() {
@@ -204,14 +218,6 @@ func (c *Comet) WatchLogic() {
 
 		time.Sleep(time.Second)
 	}
-}
-
-func (c *Comet) GenUserID() (ret int64) {
-	c.mu.Lock()
-	ret = c.userId
-	c.userId++
-	c.mu.Unlock()
-	return
 }
 
 func (c *Comet) pickLogic() *Logic {
@@ -256,7 +262,7 @@ func (c *Comet) DelChannelBatch(in []*BatchStructSetOffline) {
 func (c *Comet) LogictSendMsgBatch(message *msg.SendMsgBatchReq) error {
 	_, err := c.pickLogic().Client.SendMsgBatch(context.Background(), message)
 	if err != nil {
-		laneLog.Logger.Infoln(err)
+		laneLog.Logger.Fatalln("[server]", err)
 	}
 	return err
 }
@@ -281,7 +287,7 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 
 func (c *Comet) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*comet.NoResp, error) {
 	//消息处理，userid关注哪些room是需要知道的,由调用loigc的quryroom时得知
-	// laneLog.Logger.Infoln("recv from job", in.Roomid)
+	// laneLog.Logger.Infoln("recv from job", in.String())
 	//整合消息，以roomid为单位
 	roomMsgBatch := make(map[int64]*msg.MsgBatch)
 	for i := range in.Msgs {
@@ -297,6 +303,7 @@ func (c *Comet) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*comet
 		})
 	}
 	for roomid, msg := range roomMsgBatch {
+
 		// laneLog.Logger.Debugln("pass2")
 		c.Bucket(roomid).GetRoom(roomid).SendBatch(msg)
 	}

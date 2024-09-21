@@ -1,12 +1,7 @@
 package job
 
 import (
-	"laneIM/src/dao"
-	"laneIM/src/dao/sql"
-	"laneIM/src/pkg"
 	"sync"
-
-	"github.com/allegro/bigcache"
 )
 
 // 得有一个结构存储 userid->comet
@@ -30,9 +25,9 @@ type Room struct {
 // 	}
 // }
 
-func (r *Room) UpdateFromCache(cache *bigcache.BigCache, rds *pkg.RedisClient, db *sql.SqlDB, d *dao.Dao) {
-	d.RoomComet(cache, rds.Client, db, r.roomid)
-}
+// func (r *Room) UpdateFromCache(cache *bigcache.BigCache, rds *pkg.RedisClient, db *sql.SqlDB, d *dao.Dao) {
+// 	comet := d.RoomComet(cache, rds.Client, db, r.roomid)
+// }
 
 // func (r *Room) UpdateFromCache(cache *bigcache.BigCache, rds *pkg.RedisClient, db *sql.SqlDB, d *dao.Dao) error {
 // 	serversMap := make(map[string]bool)

@@ -1,28 +1,5 @@
 package model
 
-import (
-	"log"
-
-	"gorm.io/gorm"
-)
-
-func Init(db *gorm.DB) {
-
-	// 自动迁移
-	err := db.AutoMigrate(
-		&RoomMgr{},
-		&UserMgr{},
-		&CometMgr{},
-		&RoomMessage{},
-
-		// &RoomComet{},
-		// &RoomUser{},
-	)
-	if err != nil {
-		log.Fatalf("failed to migrate database: %v", err)
-	}
-}
-
 // RoomMgr 模型
 type RoomMgr struct {
 	RoomID      int64      `gorm:"primary_key"`

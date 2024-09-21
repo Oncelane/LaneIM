@@ -41,7 +41,7 @@ func (e *EtcdClient) SetAddr(key, addr string) {
 		log.Fatalln("failed to set etcd:", err.Error())
 		return
 	}
-	laneLog.Logger.Infof("registe %s:%s\n", key, addr)
+	laneLog.Logger.Infof("[laneEtcd] registe %s:%s\n", key, addr)
 }
 
 func (e *EtcdClient) DelAddr(key, addr string) {

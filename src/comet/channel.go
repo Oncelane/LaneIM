@@ -41,7 +41,7 @@ func (c *Comet) recvRoutine(ch *Channel) {
 		}
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
-				laneLog.Logger.Infoln("faild to get ws message")
+				laneLog.Logger.Fatalln("[websocket] faild to get ws message")
 				c.DelChannel(ch)
 				return
 			}
@@ -53,7 +53,7 @@ func (c *Comet) recvRoutine(ch *Channel) {
 			// laneLog.Logger.Infoln("message.Path", message.Msgs[i].Path)
 			f := c.funcRout.Find(message.Msgs[i].Path)
 			if f == nil {
-				laneLog.Logger.Infoln("wrong method")
+				laneLog.Logger.Fatalln("[websocket] wrong method")
 				continue
 			}
 			go f(message.Msgs[i], ch)
@@ -70,7 +70,7 @@ func (c *Comet) sendRoutine(ch *Channel) {
 		err := ch.conn.WriteMsg(message)
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); !ok {
-				laneLog.Logger.Infoln("faild to get ws message", err)
+				laneLog.Logger.Fatalln("[server] faild to get ws message", err)
 				c.DelChannel(ch)
 				return
 			}

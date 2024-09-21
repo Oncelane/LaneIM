@@ -4,6 +4,7 @@ package lane.logic;
 option go_package = "laneIM/proto/logic;logic";
 import "proto/msg/msg.proto";
 
+message NoReq {}
 message NoResp {}
 
 message SetOnlineReq {
@@ -31,7 +32,8 @@ message JoinRoomReq {
   int64 roomid = 3;
 }
 message JoinRoomBatchReq {
-  repeated int64 userid = 1;
+  string comet = 1;
+  repeated int64 userid = 2;
   repeated int64 roomid = 3;
 }
 
@@ -80,9 +82,16 @@ message AuthReq {
 
 message AuthResp { bool pass = 1; }
 
+message QueryLastReq { repeated int64 roomid = 1; }
+message QueryLastRelpy { repeated int64 messageId = 1; }
+
 service logic {
   rpc SendMsg(lane.msg.SendMsgReq) returns (NoResp);
   rpc SendMsgBatch(lane.msg.SendMsgBatchReq) returns (NoResp);
+
+  rpc QueryLast(QueryLastReq) returns (QueryLastRelpy);
+  rpc QueryStoreMsgBatch(lane.msg.QueryMultiRoomPagesReq)
+      returns (lane.msg.QueryMultiRoomPagesReply);
 
   rpc SetOnline(SetOnlineReq) returns (NoResp);
   rpc SetOnlineBatch(SetOnlineBatchReq) returns (NoResp);

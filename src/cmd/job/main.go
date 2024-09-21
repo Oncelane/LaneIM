@@ -22,7 +22,7 @@ func main() {
 
 	laneLog.InitLogger("job"+conf.Name, true)
 
-	laneLog.Logger.Infof("job server start")
+	laneLog.Logger.Infoln("[server] job server start")
 	j := job.NewJob(conf)
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)

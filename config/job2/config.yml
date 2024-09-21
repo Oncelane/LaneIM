@@ -19,7 +19,6 @@ redis:
 bucketsize: 32
 cometroutinesize: 32
 mysql:
-  type: ""
   name: "0"
   username: debian-sys-maint
   password: FJho5xokpFqZygL5

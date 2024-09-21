@@ -20,22 +20,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Logic_SendMsg_FullMethodName         = "/lane.logic.logic/SendMsg"
-	Logic_SendMsgBatch_FullMethodName    = "/lane.logic.logic/SendMsgBatch"
-	Logic_SetOnline_FullMethodName       = "/lane.logic.logic/SetOnline"
-	Logic_SetOnlineBatch_FullMethodName  = "/lane.logic.logic/SetOnlineBatch"
-	Logic_SetOffline_FullMethodName      = "/lane.logic.logic/SetOffline"
-	Logic_SetOfflineBatch_FullMethodName = "/lane.logic.logic/SetOfflineBatch"
-	Logic_NewUser_FullMethodName         = "/lane.logic.logic/NewUser"
-	Logic_NewUserBatch_FullMethodName    = "/lane.logic.logic/NewUserBatch"
-	Logic_DelUser_FullMethodName         = "/lane.logic.logic/DelUser"
-	Logic_NewRoom_FullMethodName         = "/lane.logic.logic/NewRoom"
-	Logic_JoinRoom_FullMethodName        = "/lane.logic.logic/JoinRoom"
-	Logic_JoinRoomBatch_FullMethodName   = "/lane.logic.logic/JoinRoomBatch"
-	Logic_QuitRoom_FullMethodName        = "/lane.logic.logic/QuitRoom"
-	Logic_QueryRoom_FullMethodName       = "/lane.logic.logic/QueryRoom"
-	Logic_QueryServer_FullMethodName     = "/lane.logic.logic/QueryServer"
-	Logic_Auth_FullMethodName            = "/lane.logic.logic/Auth"
+	Logic_SendMsg_FullMethodName            = "/lane.logic.logic/SendMsg"
+	Logic_SendMsgBatch_FullMethodName       = "/lane.logic.logic/SendMsgBatch"
+	Logic_QueryLast_FullMethodName          = "/lane.logic.logic/QueryLast"
+	Logic_QueryStoreMsgBatch_FullMethodName = "/lane.logic.logic/QueryStoreMsgBatch"
+	Logic_SetOnline_FullMethodName          = "/lane.logic.logic/SetOnline"
+	Logic_SetOnlineBatch_FullMethodName     = "/lane.logic.logic/SetOnlineBatch"
+	Logic_SetOffline_FullMethodName         = "/lane.logic.logic/SetOffline"
+	Logic_SetOfflineBatch_FullMethodName    = "/lane.logic.logic/SetOfflineBatch"
+	Logic_NewUser_FullMethodName            = "/lane.logic.logic/NewUser"
+	Logic_NewUserBatch_FullMethodName       = "/lane.logic.logic/NewUserBatch"
+	Logic_DelUser_FullMethodName            = "/lane.logic.logic/DelUser"
+	Logic_NewRoom_FullMethodName            = "/lane.logic.logic/NewRoom"
+	Logic_JoinRoom_FullMethodName           = "/lane.logic.logic/JoinRoom"
+	Logic_JoinRoomBatch_FullMethodName      = "/lane.logic.logic/JoinRoomBatch"
+	Logic_QuitRoom_FullMethodName           = "/lane.logic.logic/QuitRoom"
+	Logic_QueryRoom_FullMethodName          = "/lane.logic.logic/QueryRoom"
+	Logic_QueryServer_FullMethodName        = "/lane.logic.logic/QueryServer"
+	Logic_Auth_FullMethodName               = "/lane.logic.logic/Auth"
 )
 
 // LogicClient is the client API for Logic service.
@@ -44,6 +46,8 @@ const (
 type LogicClient interface {
 	SendMsg(ctx context.Context, in *msg.SendMsgReq, opts ...grpc.CallOption) (*NoResp, error)
 	SendMsgBatch(ctx context.Context, in *msg.SendMsgBatchReq, opts ...grpc.CallOption) (*NoResp, error)
+	QueryLast(ctx context.Context, in *QueryLastReq, opts ...grpc.CallOption) (*QueryLastRelpy, error)
+	QueryStoreMsgBatch(ctx context.Context, in *msg.QueryMultiRoomPagesReq, opts ...grpc.CallOption) (*msg.QueryMultiRoomPagesReply, error)
 	SetOnline(ctx context.Context, in *SetOnlineReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOnlineBatch(ctx context.Context, in *SetOnlineBatchReq, opts ...grpc.CallOption) (*NoResp, error)
 	SetOffline(ctx context.Context, in *SetOfflineReq, opts ...grpc.CallOption) (*NoResp, error)
@@ -82,6 +86,26 @@ func (c *logicClient) SendMsgBatch(ctx context.Context, in *msg.SendMsgBatchReq,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(NoResp)
 	err := c.cc.Invoke(ctx, Logic_SendMsgBatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *logicClient) QueryLast(ctx context.Context, in *QueryLastReq, opts ...grpc.CallOption) (*QueryLastRelpy, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryLastRelpy)
+	err := c.cc.Invoke(ctx, Logic_QueryLast_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *logicClient) QueryStoreMsgBatch(ctx context.Context, in *msg.QueryMultiRoomPagesReq, opts ...grpc.CallOption) (*msg.QueryMultiRoomPagesReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(msg.QueryMultiRoomPagesReply)
+	err := c.cc.Invoke(ctx, Logic_QueryStoreMsgBatch_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +258,8 @@ func (c *logicClient) Auth(ctx context.Context, in *AuthReq, opts ...grpc.CallOp
 type LogicServer interface {
 	SendMsg(context.Context, *msg.SendMsgReq) (*NoResp, error)
 	SendMsgBatch(context.Context, *msg.SendMsgBatchReq) (*NoResp, error)
+	QueryLast(context.Context, *QueryLastReq) (*QueryLastRelpy, error)
+	QueryStoreMsgBatch(context.Context, *msg.QueryMultiRoomPagesReq) (*msg.QueryMultiRoomPagesReply, error)
 	SetOnline(context.Context, *SetOnlineReq) (*NoResp, error)
 	SetOnlineBatch(context.Context, *SetOnlineBatchReq) (*NoResp, error)
 	SetOffline(context.Context, *SetOfflineReq) (*NoResp, error)
@@ -262,6 +288,12 @@ func (UnimplementedLogicServer) SendMsg(context.Context, *msg.SendMsgReq) (*NoRe
 }
 func (UnimplementedLogicServer) SendMsgBatch(context.Context, *msg.SendMsgBatchReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendMsgBatch not implemented")
+}
+func (UnimplementedLogicServer) QueryLast(context.Context, *QueryLastReq) (*QueryLastRelpy, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryLast not implemented")
+}
+func (UnimplementedLogicServer) QueryStoreMsgBatch(context.Context, *msg.QueryMultiRoomPagesReq) (*msg.QueryMultiRoomPagesReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryStoreMsgBatch not implemented")
 }
 func (UnimplementedLogicServer) SetOnline(context.Context, *SetOnlineReq) (*NoResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetOnline not implemented")
@@ -357,6 +389,42 @@ func _Logic_SendMsgBatch_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LogicServer).SendMsgBatch(ctx, req.(*msg.SendMsgBatchReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Logic_QueryLast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryLastReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).QueryLast(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_QueryLast_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).QueryLast(ctx, req.(*QueryLastReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Logic_QueryStoreMsgBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(msg.QueryMultiRoomPagesReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogicServer).QueryStoreMsgBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Logic_QueryStoreMsgBatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogicServer).QueryStoreMsgBatch(ctx, req.(*msg.QueryMultiRoomPagesReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -627,6 +695,14 @@ var Logic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendMsgBatch",
 			Handler:    _Logic_SendMsgBatch_Handler,
+		},
+		{
+			MethodName: "QueryLast",
+			Handler:    _Logic_QueryLast_Handler,
+		},
+		{
+			MethodName: "QueryStoreMsgBatch",
+			Handler:    _Logic_QueryStoreMsgBatch_Handler,
 		},
 		{
 			MethodName: "SetOnline",

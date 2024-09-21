@@ -57,7 +57,7 @@ func TestDB(t *testing.T) {
 		t.Fatal("create keyspace:", err)
 	}
 
-	err = session.ExecStmt(`CREATE TABLE examples.messages (
+	err = session.ExecStmt(`CREATE TABLE IF NOT EXISTS examples.messages  (
     group_id bigint,
     message_id bigint,
     timestamp TIMESTAMP,
@@ -89,7 +89,7 @@ func TestDB(t *testing.T) {
 	// 		}
 	// 	}
 	// }
-
+	start := time.Now()
 	{ // 多插入
 		// 创建 Batch
 		batch := session.NewBatch(gocql.LoggedBatch)
@@ -98,7 +98,7 @@ func TestDB(t *testing.T) {
 		batch.Cons = gocql.LocalOne
 
 		// Insert 100 records.
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 10000; i++ {
 			lastMessageID = int64(i)
 			data := ChatMessage{
 				GroupID:   int64(groupID),
@@ -119,7 +119,7 @@ func TestDB(t *testing.T) {
 			laneLog.Logger.Fatalln(err)
 		}
 	}
-
+	laneLog.Logger.Debugln("batch insert spand time:", time.Since(start))
 	{ // 分页查询示例
 		var limit int = 10 // 每页限制
 		curpage := 0
@@ -154,7 +154,6 @@ func TestDB(t *testing.T) {
 	// 	session.Query().PageSize()
 	// }
 }
-
 func PchatChatMessageToSlice(in ChatMessage) []any {
 	return []any{
 		in.GroupID,

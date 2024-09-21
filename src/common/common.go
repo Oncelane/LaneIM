@@ -37,7 +37,7 @@ func StringTo64(in string) int64 {
 
 	out, err := strconv.ParseInt(in, 36, 64)
 	if err != nil {
-		laneLog.Logger.Infof("wrong string%s to int64:%v\n", in, err)
+		laneLog.Logger.Fatalln("[server] wrong string%s to int64:%v\n", in, err)
 		return 404
 	}
 	return out

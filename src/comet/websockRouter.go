@@ -19,13 +19,13 @@ func NewWsFuncRouter() *WsFuncRouter {
 
 func (w *WsFuncRouter) Use(path string, f WsHandler) {
 	w.fmap[path] = f
-	laneLog.Logger.Infoln("registe method:", path)
+	laneLog.Logger.Infoln("[server] registe method:", path)
 }
 
 func (w *WsFuncRouter) Find(path string) WsHandler {
 	if rt, exist := w.fmap[path]; exist {
 		return rt
 	}
-	laneLog.Logger.Infoln("faild to find method:", path)
+	laneLog.Logger.Fatalln("[server] faild to find method:", path)
 	return nil
 }

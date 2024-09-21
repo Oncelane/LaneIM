@@ -9,9 +9,10 @@ import (
 	"laneIM/src/pkg/laneLog"
 	"laneIM/src/pkg/mergewrite"
 	"strconv"
+	"time"
 
 	"github.com/allegro/bigcache"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 type Dao struct {
@@ -32,26 +33,26 @@ func (d *Dao) UserRoom(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *s
 	}
 	rt, err := d.msergeWriter.Do(key, func() (any, error) {
 		// laneLog.Logger.Infoln("user room query redis")
-		rt, err := rds.UserMgrRoom(rdb, userid)
-		if err != nil {
-			if err != redis.Nil {
-				return rt, err
-			}
-		} else {
-			//laneLog.Logger.Infoln("同步到本地cache", rt)
-			localCache.SetUserRoomid(cache, userid, rt)
-			return rt, nil
-		}
-		//laneLog.Logger.Infoln("触发sql查询")
-		rt, err = db.UserRoom(userid)
+		// rt, err := rds.UserMgrRoom(rdb, userid)
+		// if err != nil {
+		// 	if err != redis.Nil {
+		// 		return rt, err
+		// 	}
+		// } else {
+		// 	//laneLog.Logger.Infoln("同步到本地cache", rt)
+		// 	localCache.SetUserRoomid(cache, userid, rt)
+		// 	return rt, nil
+		// }
+		sqlStart := time.Now()
+		rt, err := db.UserRoom(userid)
 		if err != nil {
 			return rt, err
 		}
-
+		laneLog.Logger.Infoln("[sql] [userRoom] spand time:", time.Since(sqlStart))
 		//laneLog.Logger.Infoln("同步到本地cache", rt)
 		localCache.SetUserRoomid(cache, userid, rt)
 		//laneLog.Logger.Infoln("同步到redis", rt)
-		rds.SetNEUSerMgrRoom(rdb, userid, rt)
+		// rds.SetNEUSerMgrRoom(rdb, userid, rt)
 		return rt, nil
 	})
 	if r, ok := rt.([]int64); ok {
@@ -61,65 +62,73 @@ func (d *Dao) UserRoom(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *s
 	}
 }
 
-func (d *Dao) UserRoomBatch(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *sql.SqlDB, userids []int64) ([][]int64, error) {
-	rt, nonexists := localCache.UserRoomidBatch(cache, userids)
+// with redis
+// func (d *Dao) UserRoomBatch(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *sql.SqlDB, userids []int64) ([][]int64, error) {
+// 	rt, nonexists := localCache.UserRoomidBatch(cache, userids)
 
-	var redisUseris []int64
-	for i, e := range nonexists {
-		if e {
-			redisUseris = append(redisUseris, userids[i])
-		}
-	}
-	// laneLog.Logger.Infof("命中本地缓存UserRoomBatch [%d/%d]", len(rt)-len(redisUseris), len(rt))
+// 	var redisUseris []int64
+// 	for i, e := range nonexists {
+// 		if e {
+// 			redisUseris = append(redisUseris, userids[i])
+// 		}
+// 	}
+// 	laneLog.Logger.Infof("[cache] [UserRoom] hit localcache[%d/%d]", len(rt)-len(redisUseris), len(rt))
 
-	if len(redisUseris) == 0 {
-		return rt, nil
-	}
+// 	if len(redisUseris) == 0 {
+// 		return rt, nil
+// 	}
+// 	redisStart := time.Now()
+// 	redisrt, nonexistsRedis := rds.UserMgrRoomBatch(rdb, redisUseris)
+// 	laneLog.Logger.Warnln("[cache] [UserRoom] query redis spand time", time.Since(redisStart))
+// 	var sqlUserids []int64
 
-	redisrt, nonexistsRedis := rds.UserMgrRoomBatch(rdb, redisUseris)
-	var sqlUserids []int64
+// 	for i, e := range nonexistsRedis {
+// 		if e {
+// 			sqlUserids = append(sqlUserids, redisUseris[i])
+// 		}
+// 	}
+// 	laneLog.Logger.Infof("[cache] [UserRoom] hit redis[%d/%d]", len(redisrt)-len(sqlUserids), len(redisrt))
+// 	if len(redisrt)-len(sqlUserids) != 0 {
+// 		var redisIndex = 0
+// 		for i, e := range nonexists {
+// 			if e {
+// 				rt[i] = redisrt[redisIndex]
+// 				nonexists[i] = false
+// 				redisIndex++
+// 			}
+// 		}
+// 		localCache.SetUserRoomidBatch(cache, redisUseris, redisrt)
+// 		if len(sqlUserids) == 0 {
+// 			return rt, nil
+// 		}
+// 	}
 
-	for i, e := range nonexistsRedis {
-		if e {
-			sqlUserids = append(sqlUserids, redisUseris[i])
-		}
-	}
-	// laneLog.Logger.Infof("命中redis缓存UserRoomBatch [%d/%d]", len(redisrt)-len(sqlUserids), len(redisrt))
-	if len(redisrt)-len(sqlUserids) != 0 {
-		var redisIndex = 0
-		for i, e := range nonexists {
-			if e {
-				rt[i] = redisrt[redisIndex]
-				nonexists[i] = false
-				redisIndex++
-			}
-		}
-		localCache.SetUserRoomidBatch(cache, redisUseris, redisrt)
-		if len(sqlUserids) == 0 {
-			return rt, nil
-		}
-	}
+//		laneLog.Logger.Infof("[sql] [UserRoom] sql[%drows]", len(sqlUserids))
+//		sqlStart := time.Now()
+//		sqlrt, err := db.UserRoomBatch(sqlUserids)
+//		laneLog.Logger.Infoln("[sql] [UserRoom] sql spand time", time.Since(sqlStart))
+//		if err != nil {
+//			laneLog.Logger.Errorln("faild to sql user room batch", err)
+//			return rt, err
+//		}
+//		var sqlindex = 0
+//		for i, e := range nonexists {
+//			if e {
+//				// laneLog.Logger.Debugf("sql 补全 userid[%d] roomids[%v] ", userids[i], sqlrt[sqlindex])
+//				rt[i] = sqlrt[sqlindex]
+//				nonexists[i] = false
+//				sqlindex++
+//			}
+//		}
+//		localCache.SetUserRoomidBatch(cache, sqlUserids, sqlrt)
+//		// start := time.Now()
+//		go rds.SetNEUSerMgrRoomBatch(rdb, sqlUserids, sqlrt)
+//		// laneLog.Logger.Debugln("go SetNEUSerMgrRoomBatch spand", time.Since(start))
+//		return rt, nil
+//	}
+func (d *Dao) UserRoomBatch(_ *bigcache.BigCache, _ *redis.ClusterClient, db *sql.SqlDB, userids []int64) ([][]int64, error) {
+	return db.UserRoomBatch(userids)
 
-	// laneLog.Logger.Errorf("触发sql查询UserRoom [%d条] [%v]", len(sqlUserids), sqlUserids)
-	sqlrt, err := db.UserRoomBatch(sqlUserids)
-	if err != nil {
-		laneLog.Logger.Errorln("faild to sql user room batch", err)
-		return rt, err
-	}
-	var sqlindex = 0
-	for i, e := range nonexists {
-		if e {
-			// laneLog.Logger.Debugf("sql 补全 userid[%d] roomids[%v] ", userids[i], sqlrt[sqlindex])
-			rt[i] = sqlrt[sqlindex]
-			nonexists[i] = false
-			sqlindex++
-		}
-	}
-	localCache.SetUserRoomidBatch(cache, sqlUserids, sqlrt)
-	// start := time.Now()
-	go rds.SetNEUSerMgrRoomBatch(rdb, sqlUserids, sqlrt)
-	// laneLog.Logger.Debugln("go SetNEUSerMgrRoomBatch spand", time.Since(start))
-	return rt, nil
 }
 
 func (d *Dao) UserComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *sql.SqlDB, userid int64) (string, error) {

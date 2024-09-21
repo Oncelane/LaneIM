@@ -2,10 +2,13 @@ package comet
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"laneIM/proto/logic"
 	"laneIM/proto/msg"
 	"laneIM/src/dao/localCache"
 	"laneIM/src/pkg/laneLog"
+	"strconv"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -19,7 +22,7 @@ func (c *Comet) HandleAuth(m *msg.Msg, ch *Channel) {
 	authReq := &msg.CAuthReq{}
 	err := proto.Unmarshal(m.Data, authReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to get token")
+		laneLog.Logger.Fatalln("[server] faild to get token")
 		ch.conn.Close()
 		return
 	}
@@ -29,12 +32,12 @@ func (c *Comet) HandleAuth(m *msg.Msg, ch *Channel) {
 		Userid:    authReq.Userid,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to auth logic")
+		laneLog.Logger.Fatalln("[server] faild to auth logic")
 		return
 	}
 
 	if !rt.Pass {
-		laneLog.Logger.Infoln("reject auth")
+		laneLog.Logger.Infoln("[server] reject auth")
 		ch.Reply([]byte("false"), m.Seq, m.Path)
 		return
 	}
@@ -49,7 +52,7 @@ func (c *Comet) HandleAuth(m *msg.Msg, ch *Channel) {
 // 	in := &logic.NewUserReq{}
 // 	rt, err := c.pickLogic().Client.NewUser(context.Background(), in)
 // 	if err != nil {
-// 		laneLog.Logger.Infoln("faild to new user", err)
+// 		laneLog.Logger.Fatalln("[server] faild to new user", err)
 // 		return
 // 	}
 // 	newUserJson := UserJson{Userid: rt.Userid}
@@ -61,14 +64,14 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 	croomidReq := &msg.CRoomidReq{}
 	err := proto.Unmarshal(m.Data, croomidReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode userid", err)
+		laneLog.Logger.Fatalln("[server] faild to decode userid", err)
 		return
 	}
 	rt, err := c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
 		Userid: []int64{croomidReq.Userid},
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to query logic room", err)
+		laneLog.Logger.Fatalln("[server] faild to query logic room", err)
 		return
 	}
 	ch.id = croomidReq.Userid
@@ -86,7 +89,7 @@ func (c *Comet) HandleRoom(m *msg.Msg, ch *Channel) {
 
 	outData, err := proto.Marshal(outstruct)
 	if err != nil {
-		laneLog.Logger.Infoln("marchal err", err)
+		laneLog.Logger.Fatalln("[server] marchal err", err)
 		return
 	}
 	ch.Reply(outData, m.Seq, m.Path)
@@ -108,7 +111,7 @@ func (c *Comet) doQueryRoomBatch(in []*BatchStructQueryRoom) {
 		Userid: userids,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to query logic room", err)
+		laneLog.Logger.Fatalln("[server] faild to query logic room", err)
 		return
 	}
 	for i := range in {
@@ -124,7 +127,7 @@ func (c *Comet) doQueryRoomBatch(in []*BatchStructQueryRoom) {
 		// comet初始化已加入的room
 		outData, err := proto.Marshal(outstruct)
 		if err != nil {
-			laneLog.Logger.Infoln("marchal err", err)
+			laneLog.Logger.Fatalln("[server] marchal err", err)
 			return
 		}
 		in[i].ch.Reply(outData, in[i].seq, "queryRoom")
@@ -136,7 +139,7 @@ func (c *Comet) HandleQueryRoomBatch(m *msg.Msg, ch *Channel) {
 	croomidReq := &msg.CRoomidReq{}
 	err := proto.Unmarshal(m.Data, croomidReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode userid", err)
+		laneLog.Logger.Fatalln("[server] faild to decode userid", err)
 		return
 	}
 	ch.id = croomidReq.Userid
@@ -151,7 +154,7 @@ func (c *Comet) HandleQueryRoomBatch(m *msg.Msg, ch *Channel) {
 // 	cSendRoomReq := &msg.CSendRoomReq{}
 // 	err := proto.Unmarshal(m.Data, cSendRoomReq)
 // 	if err != nil {
-// 		laneLog.Logger.Infoln("faild to decode proto", err)
+// 		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 // 		return
 // 	}
 
@@ -163,7 +166,7 @@ func (c *Comet) HandleQueryRoomBatch(m *msg.Msg, ch *Channel) {
 // 		Roomid: cSendRoomReq.Roomid,
 // 	})
 // 	if err != nil {
-// 		laneLog.Logger.Infoln("faild to send logic", err)
+// 		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 // 		return
 // 	}
 // 	ch.Reply([]byte("ack"), m.Seq, m.Path)
@@ -181,13 +184,14 @@ func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
 	msgs := make([]*msg.SendMsgReq, len(in))
 	for i := range in {
 		msgs[i] = &msg.SendMsgReq{
-			Data:     []byte(in[i].arg.Msg),
-			Path:     "sendRoom",
-			Addr:     c.conf.Addr,
-			Userid:   in[i].arg.Userid,
-			Roomid:   in[i].arg.Roomid,
-			Roomseq:  in[i].seq,
-			Timeunix: in[i].timeunix,
+			Data:      []byte(in[i].arg.Msg),
+			Path:      "sendRoom",
+			Addr:      c.conf.Addr,
+			Userid:    in[i].arg.Userid,
+			Roomid:    in[i].arg.Roomid,
+			Userseq:   in[i].seq,
+			Timeunix:  in[i].timeunix,
+			Messageid: c.msgUUIDGenerator.Generator(),
 		}
 	}
 
@@ -195,7 +199,7 @@ func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
 		Msgs: msgs,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
 	for i := range in {
@@ -208,7 +212,7 @@ func (c *Comet) HandleSendRoomBatch(m *msg.Msg, ch *Channel) {
 	cSendRoomReq := &msg.CSendRoomReq{}
 	err := proto.Unmarshal(m.Data, cSendRoomReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 	c.BatcherSendRoom.Add(&BatchStructSendRoom{
@@ -223,20 +227,20 @@ func (c *Comet) HandleNewUser(m *msg.Msg, ch *Channel) {
 	cNewUserReq := &msg.CNewUserReq{}
 	err := proto.Unmarshal(m.Data, cNewUserReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 
 	rt, err := c.pickLogic().Client.NewUser(context.Background(), &logic.NewUserReq{})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
 	reply, err := proto.Marshal(&msg.CNewUserResp{
 		Userid: rt.Userid,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to encode proto")
+		laneLog.Logger.Fatalln("[server] faild to encode proto")
 		return
 	}
 	ch.id = rt.Userid
@@ -253,7 +257,7 @@ func (c *Comet) doNewUserBatch(in []*BatchStructNewUser) {
 	start := time.Now()
 	rt, err := c.pickLogic().Client.NewUserBatch(context.Background(), &logic.NewUserBatchReq{Count: int64(len(in))})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
 
@@ -262,7 +266,7 @@ func (c *Comet) doNewUserBatch(in []*BatchStructNewUser) {
 			Userid: rt.Userid[i],
 		})
 		if err != nil {
-			laneLog.Logger.Infoln("faild to encode proto")
+			laneLog.Logger.Fatalln("[server] faild to encode proto")
 			return
 		}
 		in[i].ch.id = rt.Userid[i]
@@ -275,7 +279,7 @@ func (c *Comet) HandleNewUserBatch(m *msg.Msg, ch *Channel) {
 	cNewUserReq := &msg.CNewUserReq{}
 	err := proto.Unmarshal(m.Data, cNewUserReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 	c.BatcherNewUser.Add(&BatchStructNewUser{arg: cNewUserReq, ch: ch, seq: m.Seq})
@@ -285,7 +289,7 @@ func (c *Comet) HandleNewRoom(m *msg.Msg, ch *Channel) {
 	cNewRoomReq := &msg.CNewRoomReq{}
 	err := proto.Unmarshal(m.Data, cNewRoomReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 
@@ -294,14 +298,14 @@ func (c *Comet) HandleNewRoom(m *msg.Msg, ch *Channel) {
 		CometAddr: c.conf.Addr,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
 	reply, err := proto.Marshal(&msg.CNewRoomResp{
 		Roomid: rt.Roomid,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to encode proto")
+		laneLog.Logger.Fatalln("[server] faild to encode proto")
 		return
 	}
 	ch.Reply(reply, m.Seq, m.Path)
@@ -326,12 +330,17 @@ func (c *Comet) doJoinRoomBatch(in []*BatchStructJoinRoom) {
 	_, err := c.pickLogic().Client.JoinRoomBatch(context.Background(), &logic.JoinRoomBatchReq{
 		Userid: userid,
 		Roomid: roomid,
+		Comet:  c.conf.Addr,
 	})
 
 	// laneLog.Logger.Debugln("join room spand:", time.Since(join))
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err, "addr", c.conf.Addr)
 		return
+	}
+	for i, rid := range roomid {
+		// laneLog.Logger.Debugln("put channel ch.id=", in[i].ch.id)
+		c.Bucket(rid).PutChannel(rid, in[i].ch)
 	}
 	for i := range in {
 		in[i].ch.Reply([]byte("ack"), in[i].seq, "joinRoom")
@@ -343,7 +352,7 @@ func (c *Comet) HandleJoinRoomBatch(m *msg.Msg, ch *Channel) {
 	cJoinRoomReq := &msg.CJoinRoomReq{}
 	err := proto.Unmarshal(m.Data, cJoinRoomReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 	// laneLog.Logger.Warnf("client msg req[%d] HandleJoinRoomBatch: userid[%d] join room[%d]", m.Seq, cJoinRoomReq.Userid, cJoinRoomReq.Roomid)
@@ -359,7 +368,7 @@ func (c *Comet) HandleJoinRoom(m *msg.Msg, ch *Channel) {
 	cJoinRoomReq := &msg.CJoinRoomReq{}
 	err := proto.Unmarshal(m.Data, cJoinRoomReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 
@@ -368,7 +377,7 @@ func (c *Comet) HandleJoinRoom(m *msg.Msg, ch *Channel) {
 		Roomid: cJoinRoomReq.Roomid,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
 	ch.Reply([]byte("ack"), m.Seq, m.Path)
@@ -393,10 +402,10 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 	})
 	// laneLog.Logger.Debugln("setonline batch spand:", time.Since(start))
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
-	// query := time.Now()
+	query := time.Now()
 	// 缓存中不存在的才查询
 	mayExist, localnonexist := localCache.UserRoomidBatch(c.cache, userid)
 	var needQueryUserid []int64
@@ -413,9 +422,9 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 		rt, err = c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
 			Userid: needQueryUserid,
 		})
-		// laneLog.Logger.Debugln("doQueryRoom spand:", time.Since(query))
+		laneLog.Logger.Debugln("doQueryRoom spand:", time.Since(query))
 		if err != nil {
-			laneLog.Logger.Infoln("faild to query logic room", err)
+			laneLog.Logger.Fatalln("[server] faild to query logic room", err)
 			return
 		}
 	}
@@ -461,7 +470,7 @@ func (c *Comet) HandleSetOnlineBatch(m *msg.Msg, ch *Channel) {
 	COnlineReq := &msg.COnlineReq{}
 	err := proto.Unmarshal(m.Data, COnlineReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 	ch.id = COnlineReq.Userid
@@ -473,7 +482,7 @@ func (c *Comet) HandleSetOnline(m *msg.Msg, ch *Channel) {
 	COnlineReq := &msg.COnlineReq{}
 	err := proto.Unmarshal(m.Data, COnlineReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
 
@@ -482,18 +491,18 @@ func (c *Comet) HandleSetOnline(m *msg.Msg, ch *Channel) {
 		Server: c.conf.Addr,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
 
+	ch.id = COnlineReq.Userid
 	{ // putchannel
-		ch.id = COnlineReq.Userid
 
 		rt, err := c.pickLogic().Client.QueryRoom(context.Background(), &logic.QueryRoomReq{
 			Userid: []int64{COnlineReq.Userid},
 		})
 		if err != nil {
-			laneLog.Logger.Infoln("faild to query logic room", err)
+			laneLog.Logger.Fatalln("[server] faild to query logic room", err)
 			return
 		}
 		if len(rt.Roomids) != 0 {
@@ -527,7 +536,7 @@ func (c *Comet) doSetOfflineBatch(in []*BatchStructSetOffline) {
 	})
 	// laneLog.Logger.Debugln("setonline batch spand:", time.Since(start))
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
 		return
 	}
 
@@ -542,7 +551,7 @@ func (c *Comet) HandleSetOfflineBatch(m *msg.Msg, ch *Channel) {
 	COnlineReq := &msg.COfflineReq{}
 	err := proto.Unmarshal(m.Data, COnlineReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faildto decode proto", err)
 		return
 	}
 	ch.id = COnlineReq.Userid
@@ -553,7 +562,7 @@ func (c *Comet) HandleSetOffline(m *msg.Msg, ch *Channel) {
 	COnlineReq := &msg.COfflineReq{}
 	err := proto.Unmarshal(m.Data, COnlineReq)
 	if err != nil {
-		laneLog.Logger.Infoln("faild to decode proto", err)
+		laneLog.Logger.Fatalln("[server] faildto decode proto", err)
 		return
 	}
 
@@ -562,7 +571,7 @@ func (c *Comet) HandleSetOffline(m *msg.Msg, ch *Channel) {
 		Server: c.conf.Addr,
 	})
 	if err != nil {
-		laneLog.Logger.Infoln("faild to send logic", err)
+		laneLog.Logger.Fatalln("[server] faildto send logic", err)
 		return
 	}
 
@@ -571,4 +580,142 @@ func (c *Comet) HandleSetOffline(m *msg.Msg, ch *Channel) {
 	}
 
 	// ch.Reply([]byte("ack"), m.Seq, m.Path)
+}
+
+type ChAndSeq struct {
+	ch  *Channel
+	seq int64
+}
+
+type BatchStructQueryStoreMsg struct {
+	arg      *msg.CQueryStoreMessageReq
+	chAndSeq *ChAndSeq
+}
+
+func (c *Comet) doQueryStoreMsgBatch(in []*BatchStructQueryStoreMsg) {
+	// start := time.Now()
+	multiPageInfos := make([]*msg.QueryMultiRoomPagesReq_RoomMultiPageInfo, 0)
+
+	// roomid,messageid,size -> ch
+	hashToCh := make(map[string]*ChAndSeq)
+	// 聚合同一个room的pageinfos
+	roomInfosMap := make(map[int64][]*msg.QueryMultiRoomPagesReq_RoomMultiPageInfo_PageInfo)
+	for _, a := range in {
+		roomInfosMap[a.arg.Roomid] = append(roomInfosMap[a.arg.Roomid], &msg.QueryMultiRoomPagesReq_RoomMultiPageInfo_PageInfo{
+			MessageId: a.arg.MessageId,
+			Size:      a.arg.Size,
+		})
+		// laneLog.Logger.Debugln("hash:", HashRoomidMessageidSize(a.arg.Roomid, a.arg.MessageId, int(a.arg.Roomid)), "roomid=", a.arg.Roomid, "msgid=", a.arg.MessageId, "")
+		hashToCh[HashRoomidMessageidSize(a.arg.Roomid, a.arg.MessageId, int(a.arg.Size))] = a.chAndSeq
+	}
+	for roomid, pageinfo := range roomInfosMap {
+		multiPageInfos = append(multiPageInfos, &msg.QueryMultiRoomPagesReq_RoomMultiPageInfo{
+			Roomid:    roomid,
+			PageInfos: pageinfo,
+		})
+	}
+
+	rt, err := c.pickLogic().Client.QueryStoreMsgBatch(context.Background(), &msg.QueryMultiRoomPagesReq{
+		RoomMultiPageInfos: multiPageInfos,
+	})
+	for i, pages := range rt.RoomMultiPageMsgs {
+		roomid := multiPageInfos[i].Roomid
+		pageInfos := multiPageInfos[i].PageInfos
+		pageMsgs := pages.PagesMsgs
+		for i, page := range pageInfos {
+			CH := hashToCh[HashRoomidMessageidSize(roomid, page.MessageId, int(page.Size))]
+			data, err := proto.Marshal(pageMsgs[i])
+			if err != nil {
+				laneLog.Logger.Fatalln(err)
+			}
+			CH.ch.Reply(data, CH.ch.id, "his")
+		}
+	}
+	// laneLog.Logger.Debugln("setonline batch spand time :", time.Since(start))
+
+	// 再次分发给不同的user
+
+	if err != nil {
+		laneLog.Logger.Fatalln("[server] faild to send logic", err)
+		return
+	}
+}
+
+func (c *Comet) HandleHisMsg(m *msg.Msg, ch *Channel) {
+	CHisMsgReq := &msg.CQueryStoreMessageReq{}
+	err := proto.Unmarshal(m.Data, CHisMsgReq)
+	if err != nil {
+		laneLog.Logger.Fatalln("[server] faildto decode proto", err)
+		return
+	}
+	c.BatcherHis.Add(&BatchStructQueryStoreMsg{arg: CHisMsgReq, chAndSeq: &ChAndSeq{
+		ch:  ch,
+		seq: m.Seq,
+	}})
+}
+
+func HashRoomidMessageidSize(roomid, messageid int64, size int) string {
+	// 将参数转换为字符串并拼接
+	data := strconv.FormatInt(roomid, 36) + strconv.FormatInt(messageid, 36) + strconv.Itoa(size)
+
+	// 创建 SHA-256 哈希对象
+	hash := sha256.New()
+	// 写入数据
+	hash.Write([]byte(data))
+	// 计算哈希值
+	hashBytes := hash.Sum(nil)
+
+	// 返回十六进制编码的哈希值
+	return hex.EncodeToString(hashBytes)
+}
+
+type BatcheStructLast struct {
+	roomid int64
+	ch     *Channel
+	seq    int64
+}
+
+func (c *Comet) doQueryLast(in []*BatcheStructLast) {
+	roomids := make([]int64, len(in))
+	for i := range in {
+		roomids[i] = in[i].roomid
+	}
+	rt, err := c.pickLogic().Client.QueryLast(context.Background(), &logic.QueryLastReq{
+		Roomid: roomids,
+	})
+	if err != nil {
+		laneLog.Logger.Fatalln("[server] faildto decode proto", err)
+		return
+	}
+	for i := range rt.MessageId {
+		in[i].ch.Reply([]byte(strconv.FormatInt(rt.MessageId[i], 10)), in[i].seq, "last")
+	}
+}
+
+func (c *Comet) HandleLast(m *msg.Msg, ch *Channel) {
+	roomid, _ := strconv.ParseInt(string(m.Data), 10, 64)
+	c.BatcherLast.Add(&BatcheStructLast{
+		ch:     ch,
+		roomid: roomid,
+		seq:    m.Seq,
+	})
+}
+
+func (c *Comet) HandleSubscribe(m *msg.Msg, ch *Channel) {
+	// laneLog.Logger.Debugln("pass")
+	roomid, err := strconv.ParseInt(string(m.Data), 10, 64)
+	if err != nil {
+		laneLog.Logger.Fatalln(err)
+	}
+	c.Bucket(roomid).PutFullChannel(roomid, ch)
+	ch.Reply([]byte("ack"), m.Seq, "subon")
+}
+
+func (c *Comet) HandleSubscribeOff(m *msg.Msg, ch *Channel) {
+	roomid, err := strconv.ParseInt(string(m.Data), 10, 64)
+	if err != nil {
+		laneLog.Logger.Fatalln(err)
+	}
+	c.Bucket(roomid).DelFullChannel(roomid, ch)
+	ch.Reply([]byte("ack"), m.Seq, "suboff")
 }

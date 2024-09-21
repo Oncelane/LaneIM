@@ -27,21 +27,62 @@ message CSendRoomReq {
 }
 message CSendRoomResp { bool ack = 1; }
 
+message CQueryStoreMessageReq {
+  int64 roomid = 1;
+  int64 messageId = 2;
+  int64 size = 3;
+}
+
+message COnlyCountMessage {
+  int64 roomid = 1;
+  int32 count = 2;
+}
+
 message SendMsgReq {
-  bytes data = 1;
+  int64 messageid = 1;
   string path = 2;
   // from which server
   string addr = 3;
   // from which user
   int64 userid = 4;
   int64 roomid = 5;
-  int64 roomseq = 6;
+  int64 userseq = 6;
   int64 timeunix = 7;
   int64 toUserid = 8;
+  bytes data = 9;
 }
 
+message RoomStoreChatMessage {
+  int64 messageid = 1;
+  int64 userid = 2;
+  int64 userseq = 3;
+  int64 timeunix = 4;
+  bytes data = 5;
+}
 // comet->logic->kafka->job
 message SendMsgBatchReq { repeated SendMsgReq msgs = 1; }
+
+message QueryMultiRoomPagesReq { // 对应某房间
+  message RoomMultiPageInfo {
+    // 对应某一段
+    message PageInfo {
+      int64 messageId = 1;
+      int64 size = 2;
+    }
+    int64 roomid = 1;
+    repeated PageInfo pageInfos = 2;
+  }
+  repeated RoomMultiPageInfo roomMultiPageInfos = 1;
+}
+message QueryMultiRoomPagesReply {
+  message RoomMultiPageMsg { // 对应某房间
+    message PageMsgs {       //对应每一段
+      repeated RoomStoreChatMessage msgs = 1;
+    }
+    repeated PageMsgs pagesMsgs = 1;
+  }
+  repeated RoomMultiPageMsg roomMultiPageMsgs = 1;
+}
 
 message UserInfo {
   int64 userid = 1;

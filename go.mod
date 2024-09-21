@@ -20,7 +20,7 @@ require (
 )
 
 require (
-	github.com/Oncelane/laneEtcd v0.0.0-20240918053010-967711e73b76
+	github.com/Oncelane/laneEtcd v1.1.1
 	github.com/gocql/gocql v1.6.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/scylladb/gocqlx v1.5.0
@@ -31,10 +31,13 @@ require github.com/derekparker/trie v0.0.0-20230829180723-39f4de51ef7d // indire
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-zookeeper/zk v1.0.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect

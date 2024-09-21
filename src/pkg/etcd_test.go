@@ -9,7 +9,7 @@ import (
 
 var etcd pkg.EtcdClient
 
-func init() {
+func Init() {
 	conf := config.Etcd{
 		Addr: []string{"127.0.0.1:51240", "127.0.0.1:51241", "127.0.0.1:51242"},
 	}
@@ -17,6 +17,7 @@ func init() {
 }
 
 func TestEtcd(t *testing.T) {
+	Init()
 	etcd.SetAddr("test1", "1")
 
 	etcd.SetAddr("test2", "2")

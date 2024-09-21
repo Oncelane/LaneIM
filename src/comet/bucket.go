@@ -47,16 +47,29 @@ func (m *Bucket) PutChannel(roomid int64, c *Channel) {
 		room.PutChannel(c)
 	}
 }
+func (m *Bucket) PutFullChannel(roomid int64, c *Channel) {
+	if room := m.GetRoom(roomid); room != nil {
+		room.PutFullChannel(c)
+	}
+}
+
+func (m *Bucket) DelFullChannel(roomid int64, c *Channel) {
+	if room := m.GetRoom(roomid); room != nil {
+		room.DelFullChannel(c)
+	}
+}
 
 func (m *Bucket) DelChannel(roomid int64, c *Channel) {
 	if room := m.GetRoom(roomid); room != nil {
 		room.DelChannel(c)
+		room.DelFullChannel(c)
 	}
 }
 
 func (m *Bucket) DelChannelAll(c *Channel) {
 	for _, room := range m.rooms {
 		room.DelChannel(c)
+		room.DelFullChannel(c)
 	}
 }
 func (m *Bucket) DelChannelAllBatch(in []*BatchStructSetOffline) {

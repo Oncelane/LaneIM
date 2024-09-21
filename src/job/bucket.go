@@ -53,7 +53,7 @@ func (b *Bucket) NewRoom(roomid int64) *Room {
 		roomid: roomid,
 	}
 	laneLog.Logger.Infoln("create new room:", roomid)
-	newRoom.UpdateFromCache(b.job.cache, b.job.redis, b.job.db, b.job.daoo)
+	// newRoom.UpdateFromCache(b.job.cache, b.job.redis, b.job.db, b.job.daoo)
 	// laneLog.Logger.Infoln("sync room from redis:", roomid, "comets:", newRoom.info.Server)
 	b.rooms[roomid] = newRoom
 
