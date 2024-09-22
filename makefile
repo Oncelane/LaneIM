@@ -7,6 +7,12 @@ GOTEST=$(GOCMD) test
 Njob ?= 4
 Ncomet ?= 2
 
+Njobp ?= 1
+Ncometp ?= 1
+
+Nlogic ?= 1
+Nlogicp ?= 1
+
 # Build all jobs
 all: stop-job stop-comet build-job build-comet
 
@@ -21,6 +27,11 @@ run-job:
 	for i in $(shell seq 1 $(Njob)); do \
 		echo "Running job$$i..."; \
 		(cd bin/job && ./job -c ../../config/job$$i/config.yml) & \
+	done
+run-jobp:
+	for i in $(shell seq 1 $(Njobp)); do \
+		echo "Running job$$i..."; \
+		(cd bin/job && ./job -c ../../pConfig/job$$i/config.yml) & \
 	done
 
 stop-job:
@@ -39,11 +50,35 @@ run-comet:
 		echo "Running comet$$i..."; \
 		(cd bin/comet && ./comet -c ../../config/comet$$i/config.yml) & \
 	done
+run-cometp:
+	for i in $(shell seq 1 $(Ncometp)); do \
+		echo "Running comet$$i..."; \
+		(cd bin/comet && ./comet -c ../../pConfig/comet$$i/config.yml) & \
+	done
 
 stop-comet:
 	pkill -f ./comet
 
+build-logic:
+	mkdir -p bin/logic; \
+	rm -rf bin/logic/logic; \
+	$(GOBUILD) -o bin/logic/logic ./src/cmd/logic/main.go; \
 
+# Run all logics
+run-logic:
+	for i in $(shell seq 1 $(Nlogic)); do \
+		echo "Running logic$$i..."; \
+		(cd bin/logic && ./logic -c ../../config/logic$$i/config.yml) & \
+	done
+run-logicp:
+	for i in $(shell seq 1 $(Nlogicp)); do \
+		echo "Running logic$$i..."; \
+		(cd bin/logic && ./logic -c ../../pConfig/logic$$i/config.yml) & \
+	done
+
+stop-logic:
+	pkill -f ./logic
+	
 test:
 	$(GOTEST) -v ./...
 
