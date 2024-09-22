@@ -40,6 +40,7 @@ func (g *Room) PutChannel(channel *Channel) {
 func (g *Room) DelChannel(channel *Channel) {
 	g.Online--
 	g.chsMap.Delete(channel.id)
+	channel.ForceClose()
 }
 
 func (g *Room) PutFullChannel(channel *Channel) {
@@ -55,6 +56,7 @@ func (g *Room) DelChannelBatch(in []*BatchStructSetOffline) {
 	g.Online -= int64(len(in))
 	for _, c := range in {
 		g.chsMap.Delete(c.ch.id)
+		c.ch.ForceClose()
 	}
 }
 
@@ -79,7 +81,6 @@ func (g *Room) SendBatch(m *msg.MsgBatch) {
 		if ok {
 
 			if ch.done {
-				g.DelFullChannel(ch)
 				return true
 			}
 			// laneLog.Logger.Infoln("message enter ch.sendch pass3 ", key, ch.id, m.String())
@@ -105,10 +106,10 @@ func (g *Room) SendBatch(m *msg.MsgBatch) {
 		if ok {
 
 			if ch.done {
-				g.DelFullChannel(ch)
 				return true
 			}
 			// laneLog.Logger.Infoln("message enter ch.sendch pass3 ", key, ch.id, m.String())
+
 			ch.sendCh <- onlyCountM
 		}
 		return true

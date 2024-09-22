@@ -54,7 +54,7 @@ func (j *Job) NewComet(addr string) *CometClient {
 	}
 
 	// 启动batcher
-	c.BatcherSendRoomMsg = batch.NewBatchArgs(1000, time.Millisecond*100, c.generaDoPushComet())
+	c.BatcherSendRoomMsg = batch.NewBatchArgs(3000, time.Millisecond*100, c.generaDoPushComet())
 	c.BatcherSendRoomMsg.Start()
 	return c
 }

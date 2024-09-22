@@ -38,7 +38,7 @@ func InitLogger(name string, enableConsole bool) {
 
 func getConsoleEncoder() zapcore.Encoder {
 	encoderCfg := zap.NewProductionEncoderConfig()
-	encoderCfg.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05")
+	encoderCfg.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05.000")
 	encoderCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	return zapcore.NewConsoleEncoder(encoderCfg)
 }

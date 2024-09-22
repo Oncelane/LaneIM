@@ -1,11 +1,16 @@
 package client_test
 
 import (
+	"bytes"
+	"encoding/gob"
 	"laneIM/src/client"
 	"laneIM/src/pkg/laneLog"
+	"os"
 	"testing"
 	"time"
 )
+
+// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws"}
 
 var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 var snum = 10
@@ -14,16 +19,16 @@ func TestSimulate(t *testing.T) {
 	g := client.NewClientGroup(snum)
 
 	g.Wait.Add(snum)
-	for i, c := range g.Clients {
+	for _, c := range g.Clients {
 		go func() {
 			defer g.Wait.Done()
-			c.Connect(cometAddr[i%2])
+			c.Connect(cometAddr[0])
 			c.NewUser()
 			c.Online()
 		}()
 	}
 	g.Wait.Wait()
-
+	select {}
 	g.Wait.Add(snum)
 	roomid := g.Clients[0].NewRoom()
 	for _, c := range g.Clients {
@@ -64,7 +69,157 @@ func TestSimulate(t *testing.T) {
 	laneLog.Logger.Infoln("recevie bytes:", receiveBytes)
 }
 
-var tnum = 1000
+var tnum = 10000
+
+func TestCreateUsers(t *testing.T) {
+	g := client.NewClientGroup(tnum)
+
+	var limit = 1000
+	i := 0
+	userids := make([]int64, tnum)
+	for {
+		left := tnum - i
+		var end int
+		if left > limit {
+			end = i + limit
+		} else if left == 0 {
+			break
+		} else {
+			end = i + left
+		}
+		var count = end - i
+		g.Wait.Add(count)
+
+		for ; i < end; i++ {
+			go func(i int) {
+				defer g.Wait.Done()
+				g.Clients[i].Connect(cometAddr[0])
+				userids[i] = g.Clients[i].NewUser()
+				// c.Online()
+			}(i)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infoln("new user", count)
+	}
+
+	roomid := g.Clients[0].NewRoom()
+	i = 0
+	for {
+		left := tnum - i
+		var end int
+		if left > limit {
+			end = i + limit
+		} else if left == 0 {
+			break
+		} else {
+			end = i + left
+		}
+		var count = end - i
+		g.Wait.Add(count)
+
+		for ; i < end; i++ {
+			go func(i int) {
+				defer g.Wait.Done()
+				g.Clients[i].JoinRoom(roomid)
+				// c.Online()
+			}(i)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infoln("join room", count)
+	}
+
+	{ // save user to disk
+		file, err := os.Create("userids")
+		if err != nil {
+			laneLog.Logger.Fatalln("save error", err)
+			t.Error(err)
+		}
+		b := new(bytes.Buffer)
+		e := gob.NewEncoder(b)
+		e.Encode(roomid)
+		e.Encode(userids)
+		file.Write(b.Bytes())
+		laneLog.Logger.Infoln("roomid and userids save in disk")
+	}
+}
+
+func GetUseridAndRoomidFromDisk() (int64, []int64) {
+	// read user from disk
+	userids := make([]int64, tnum)
+	var roomid int64
+	data, err := os.ReadFile("userids")
+	if err != nil {
+		laneLog.Logger.Fatalln("save error", err)
+	}
+	b := bytes.NewBuffer(data)
+	e := gob.NewDecoder(b)
+	e.Decode(&roomid)
+	e.Decode(&userids)
+	laneLog.Logger.Infoln("read userids success")
+	return roomid, userids
+}
+func TestOneRoomConstentlySend(t *testing.T) {
+	g := client.NewClientGroup(tnum)
+
+	roomid, userids := GetUseridAndRoomidFromDisk()
+	for i, c := range g.Clients {
+		c.Userid = userids[i]
+	}
+	laneLog.Logger.Infoln("init userids")
+
+	g.Wait.Add(tnum)
+	for i, c := range g.Clients {
+		go func() {
+			defer g.Wait.Done()
+			c.Connect(cometAddr[i%2])
+			c.Online()
+			c.Subon(roomid)
+		}()
+	}
+	g.Wait.Wait()
+	laneLog.Logger.Infoln("Subon userids")
+	start := time.Now()
+	done := make(chan struct{})
+	sendCount := 0
+	go func() {
+		for {
+			if time.Since(start).Seconds() > 30 {
+				done <- struct{}{}
+				break
+			}
+			time.Sleep(time.Millisecond * 100)
+
+			sendUser := 300
+			g.Wait.Add(sendUser)
+			// laneLog.Logger.Infoln("send count =", sendUser)
+			for i := range sendUser {
+				go func() {
+					defer g.Wait.Done()
+					sendCount++
+					g.Clients[i].SendRoomMsg(roomid, "hello")
+				}()
+			}
+			g.Wait.Wait()
+			// laneLog.Logger.Infoln("send ack =", sendUser, "averavg ack =", g.AverageAck(sendUser))
+		}
+	}()
+	go g.ReceiveCount(time.Second)
+	go func() {
+		lastCount := 0
+		for {
+			time.Sleep(time.Second)
+			laneLog.Logger.Infoln("send count=", sendCount-lastCount)
+			lastCount = sendCount
+		}
+	}()
+	<-done
+	for _, c := range g.Clients {
+		go func() {
+			c.Offline()
+		}()
+	}
+	time.Sleep(time.Second * 2)
+}
 
 func TestSimulateMany(t *testing.T) {
 	g := client.NewClientGroup(tnum)
@@ -74,26 +229,24 @@ func TestSimulateMany(t *testing.T) {
 		go func() {
 			defer g.Wait.Done()
 			c.Connect(cometAddr[i%2])
-			c.NewUser()
-			c.Online()
+			// c.Online()
 		}()
 	}
 	g.Wait.Wait()
-
-	g.Wait.Add(tnum)
-	roomid := g.Clients[0].NewRoom()
-	for _, c := range g.Clients {
-		go func() {
-			defer g.Wait.Done()
-			c.JoinRoom(roomid)
-		}()
+	roomid, userids := GetUseridAndRoomidFromDisk()
+	for i, c := range g.Clients {
+		c.Userid = userids[i]
 	}
-	g.Wait.Wait()
+	laneLog.Logger.Infoln("init userids")
 
 	for _, c := range g.Clients {
-		go func() {
-			c.SendRoomMsg(roomid, "hello")
-		}()
+		time.Sleep(time.Millisecond * 20)
+		c.SendRoomMsg(roomid, "hello")
+	}
+	laneLog.Logger.Infoln("subscibe roomid")
+	for _, c := range g.Clients {
+		time.Sleep(time.Millisecond * 20)
+		c.SendRoomMsg(roomid, "hello")
 	}
 
 	time.Sleep(time.Second * 2)

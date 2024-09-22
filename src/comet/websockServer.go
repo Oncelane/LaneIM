@@ -51,8 +51,8 @@ func (c *Comet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ch := c.NewChannel(ws)
 
 	// add to channels
-	c.chmu.Lock()
-	c.channels[ch.id] = ch
-	c.chmu.Unlock()
+	// c.chmu.Lock()
+	// c.channels[ch.id] = ch
+	// c.chmu.Unlock()
 	c.serveIO(ch)
 }

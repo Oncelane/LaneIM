@@ -164,10 +164,10 @@ func PchatChatMessageToSlice(in ChatMessage) []any {
 	}
 }
 
-func mustParseUUID(s string) gocql.UUID {
-	u, err := gocql.ParseUUID(s)
-	if err != nil {
-		panic(err)
-	}
-	return u
-}
+// func mustParseUUID(s string) gocql.UUID {
+// 	u, err := gocql.ParseUUID(s)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return u
+// }

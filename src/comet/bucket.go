@@ -67,13 +67,17 @@ func (m *Bucket) DelChannel(roomid int64, c *Channel) {
 }
 
 func (m *Bucket) DelChannelAll(c *Channel) {
+	m.mu.Lock()
 	for _, room := range m.rooms {
 		room.DelChannel(c)
 		room.DelFullChannel(c)
 	}
+	m.mu.Unlock()
 }
 func (m *Bucket) DelChannelAllBatch(in []*BatchStructSetOffline) {
+	m.mu.Lock()
 	for _, room := range m.rooms {
 		room.DelChannelBatch(in)
 	}
+	m.mu.Unlock()
 }

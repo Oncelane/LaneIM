@@ -196,7 +196,7 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 				}
 
 				// updata setex
-				err = rds.SetEXRoomMgrComet(c.redis.Client, roomid, comets)
+				err = rds.SetEXRoomCometBatch(c.redis.Client, roomid, comets)
 				if err != nil {
 					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
 				}

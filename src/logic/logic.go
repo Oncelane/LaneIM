@@ -165,11 +165,11 @@ func (s *Logic) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*pb.No
 	}
 	s.scyllaDB.AddChatMessageBatch(in)
 	_, _, err = s.kafka.Client.SendMessage(msg)
-	laneLog.Logger.Infof("[kafka] [sendMsg] %d bytes", len(data))
+	// laneLog.Logger.Infof("[kafka] [sendMsg] %d bytes", len(data))
 	if err != nil {
 		laneLog.Logger.Fatalln("[server] faild to send kafka:", err)
 	}
-	// laneLog.Logger.Debugln("SendMsgBatch spand time :", time.Since(start))
+	// laneLog.Logger.Debugf("send message count %d spand time :%v", len(in.Msgs), time.Since(start))
 	return nil, nil
 }
 

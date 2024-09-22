@@ -19,22 +19,24 @@ func (d *SqlDB) NewUser(userid int64) error {
 	return nil
 }
 
-func (d *SqlDB) NewUserBatch(tx *gorm.DB, userids []int64) error {
-	var end bool
-	if tx == nil {
-		end = true
-		tx = d.DB.Begin()
-	}
+func (d *SqlDB) NewUserBatch(_ *gorm.DB, userids []int64) error {
 
-	users := make([]model.UserMgr, len(userids))
-	for i := range userids {
-		users[i] = model.UserMgr{
-			UserID: userids[i],
+	var users []model.UserMgr
+	i := 0
+	for {
+		tx := d.DB.Begin()
+		left := len(userids) - i
+		if left > 2000 {
+			users = make([]model.UserMgr, 2000)
+		} else if left != 0 {
+			users = make([]model.UserMgr, left)
+		} else {
+			break
 		}
-	}
-	tx.Save(&users)
-
-	if end {
+		for ; i < len(users); i++ {
+			users[i].UserID = userids[i]
+		}
+		tx.Save(&users)
 		err := tx.Commit().Error
 		if err != nil {
 			laneLog.Logger.Fatalln("[server] faild to commit new user comet", err.Error())

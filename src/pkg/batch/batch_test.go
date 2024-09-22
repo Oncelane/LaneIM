@@ -8,7 +8,7 @@ import (
 )
 
 func TestBatch(t *testing.T) {
-	b := batch.NewBatchArgs[int](15, time.Millisecond*100, func(in []*int) {
+	b := batch.NewBatchArgs[int](15, time.Second*10, func(in []*int) {
 		for i := range in {
 			laneLog.Logger.Infof("%d ", *in[i])
 		}
@@ -16,7 +16,7 @@ func TestBatch(t *testing.T) {
 	})
 	b.Start()
 	for i := range 100 {
-		time.Sleep(time.Millisecond * 50)
+		// time.Sleep(time.Millisecond * 50)
 		t := i
 		b.Add(&t)
 	}

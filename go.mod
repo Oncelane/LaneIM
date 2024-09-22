@@ -6,7 +6,6 @@ require (
 	github.com/IBM/sarama v1.43.3
 	github.com/allegro/bigcache v1.2.1
 	github.com/bwmarrin/snowflake v0.3.0
-	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/withlin/canal-go v1.1.2
@@ -21,6 +20,7 @@ require (
 
 require (
 	github.com/Oncelane/laneEtcd v1.1.1
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gocql/gocql v1.6.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/scylladb/gocqlx v1.5.0
@@ -37,7 +37,6 @@ require (
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-zookeeper/zk v1.0.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -52,7 +51,6 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.34.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect

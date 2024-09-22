@@ -4,7 +4,7 @@ GOBUILD=$(GOCMD) build
 GOTEST=$(GOCMD) test
 
 # Default number of clusters
-Njob ?= 2
+Njob ?= 4
 Ncomet ?= 2
 
 # Build all jobs

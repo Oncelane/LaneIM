@@ -63,8 +63,8 @@ type Comet struct {
 	pool    *pkg.MsgPool
 	buckets []*Bucket
 
-	chmu     sync.RWMutex
-	channels map[int64]*Channel
+	// chmu sync.RWMutex
+	// channels map[int64]*Channel
 
 	funcRout *WsFuncRouter
 	cache    *bigcache.BigCache
@@ -85,10 +85,10 @@ type Comet struct {
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 	ret = &Comet{
-		conf:             conf,
-		pool:             pkg.NewMsgPool(),
-		cache:            localCache.Cache(time.Minute),
-		channels:         make(map[int64]*Channel),
+		conf:  conf,
+		pool:  pkg.NewMsgPool(),
+		cache: localCache.Cache(time.Minute),
+		// channels:         make(map[int64]*Channel),
 		msgUUIDGenerator: pkg.NewUuidGenerator(int64(conf.Id)),
 	}
 
@@ -126,13 +126,13 @@ func (c *Comet) InitBatch() {
 	c.BatcherJoinRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doJoinRoomBatch)
 	c.BatcherJoinRoom.Start()
 
-	c.BatcherSendRoom = batch.NewBatchArgs(1000, time.Millisecond*100, c.doSendRoomBatch)
+	c.BatcherSendRoom = batch.NewBatchArgs(3000, time.Millisecond*100, c.doSendRoomBatch)
 	c.BatcherSendRoom.Start()
 
 	c.BatcherQueryRoom = batch.NewBatchArgs(10000, time.Millisecond*100, c.doQueryRoomBatch)
 	c.BatcherQueryRoom.Start()
 
-	c.BatcherHis = batch.NewBatchArgs(1000, time.Millisecond*100, c.doQueryStoreMsgBatch)
+	c.BatcherHis = batch.NewBatchArgs(3000, time.Millisecond*100, c.doQueryStoreMsgBatch)
 	c.BatcherHis.Start()
 
 	c.BatcherLast = batch.NewBatchArgs(10000, time.Millisecond*100, c.doQueryLast)
@@ -239,24 +239,21 @@ func (c *Comet) Bucket(roomid int64) *Bucket {
 
 // delete channel from all room
 func (c *Comet) DelChannel(ch *Channel) {
-	c.mu.Lock()
-	delete(c.channels, ch.id)
+	// delete(c.channels, ch.id)
+	ch.ForceClose()
 	for i := range c.buckets {
 		c.buckets[i].DelChannelAll(ch)
 	}
-	c.mu.Unlock()
 }
 
 func (c *Comet) DelChannelBatch(in []*BatchStructSetOffline) {
-	c.mu.Lock()
-	for i := range in {
-		in[i].ch.Close()
-		delete(c.channels, in[i].ch.id)
-	}
+	// for i := range in {
+	// 	delete(c.channels, in[i].ch.id)
+	// }
 	for i := range c.buckets {
+		in[i].ch.ForceClose()
 		c.buckets[i].DelChannelAllBatch(in)
 	}
-	c.mu.Unlock()
 }
 
 func (c *Comet) LogictSendMsgBatch(message *msg.SendMsgBatchReq) error {
@@ -287,7 +284,7 @@ func (c *Comet) Brodcast(context.Context, *comet.BrodcastReq) (*comet.NoResp, er
 
 func (c *Comet) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*comet.NoResp, error) {
 	//消息处理，userid关注哪些room是需要知道的,由调用loigc的quryroom时得知
-	// laneLog.Logger.Infoln("recv from job", in.String())
+
 	//整合消息，以roomid为单位
 	roomMsgBatch := make(map[int64]*msg.MsgBatch)
 	for i := range in.Msgs {
@@ -302,6 +299,7 @@ func (c *Comet) SendMsgBatch(_ context.Context, in *msg.SendMsgBatchReq) (*comet
 			Data: in.Msgs[i].Data,
 		})
 	}
+	// laneLog.Logger.Infoln("recv from job message count", len(in.Msgs))
 	for roomid, msg := range roomMsgBatch {
 
 		// laneLog.Logger.Debugln("pass2")

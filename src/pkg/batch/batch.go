@@ -60,7 +60,7 @@ func (b *BatchArgs[T]) Start() {
 			if b.stop {
 				break
 			}
-			b.Do()
+			go b.Do()
 			time.Sleep(b.Time)
 		}
 	}()

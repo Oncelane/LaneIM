@@ -28,6 +28,7 @@ type Client struct {
 	RoomReceiveBytes map[int64]int64
 
 	ReceiveCount int
+	ackSpandTime time.Duration
 
 	// sync
 	waitNewRoom       chan int64
@@ -85,11 +86,36 @@ func (c *ClientGroup) WaitMessageCount(count int) {
 	}
 }
 
+func (c *ClientGroup) ReceiveCount(interval time.Duration) {
+	var lastBytes int64 = 0
+	sum := 0
+	for {
+		var tmp = 0
+		for _, c := range c.Clients {
+			tmp += c.ReceiveCount
+		}
+
+		receiveByte := c.ReceiveBytes()
+		laneLog.Logger.Infoln("[client] receve message count: ", tmp-sum, "bytes:", receiveByte-lastBytes)
+		sum = tmp
+		lastBytes = receiveByte
+		time.Sleep(interval)
+	}
+}
+
 func (c *ClientGroup) ReceiveBytes() (totalBytes int64) {
 	for _, cl := range c.Clients {
 		totalBytes += cl.ReceiveBytes()
 	}
 	return totalBytes
+}
+
+func (c *ClientGroup) AverageAck(num int) (averageSpandMillisecond int64) {
+	var averageSpand time.Duration
+	for i := 0; i < num; i++ {
+		averageSpand += c.Clients[i].ackSpandTime
+	}
+	return averageSpand.Milliseconds() / int64(num)
 }
 
 func (c *Client) ReceiveBytes() int64 {
@@ -207,12 +233,16 @@ func (c *Client) SendRoomMsg(roomid int64, message string) string {
 		laneLog.Logger.Fatalln("[client] faild to proto marshal", err)
 	}
 	//laneLog.Logger.Infoln("[client] 发送房间消息")
+	sendTime := time.Now()
+
 	err = c.sendCometSingle("sendRoom", data)
 	if err != nil {
 		laneLog.Logger.Infoln("[client] send err", err)
 	}
 	c.SendByte += int64(len(data))
-	return <-c.waitSendAck
+	s := <-c.waitSendAck
+	c.ackSpandTime = time.Since(sendTime)
+	return s
 }
 func (c *Client) Subon(roomid int64) string {
 
@@ -320,6 +350,8 @@ func (c *Client) Offline() {
 	if err != nil {
 		laneLog.Logger.Fatalln("[client] send err:", err)
 	}
+	// 被动关闭，协商让服务器关闭
+	// c.conn.ForceClose()
 	// return <-c.waitOffline
 }
 
@@ -348,8 +380,12 @@ func (c *Client) QueryPaging(roomid int64, lastMsgId int64, limit int64) (*msg.Q
 	return <-c.waitPaging, nil
 }
 
-func (c *Client) Close() error {
-	return c.conn.Close()
+func (c *Client) PassiveClose() error {
+	return c.conn.ForceClose()
+}
+
+func (c *Client) ForceClose() error {
+	return c.conn.ForceClose()
 }
 
 func (c *Client) Receive() {
@@ -361,7 +397,7 @@ func (c *Client) Receive() {
 			} else {
 				// laneLog.Logger.Infoln("comet close error:", err)
 			}
-			c.conn.Close()
+			c.ForceClose()
 			return
 		}
 		for i, m := range message.Msgs {
@@ -399,6 +435,7 @@ func (c *Client) Receive() {
 				c.waitOnline <- string(m.Data)
 			case "sendRoom":
 				//laneLog.Logger.Infoln("send room:", string(message.Msgs[i].Data))
+
 				c.waitSendAck <- string(m.Data)
 			case "queryRoom":
 				roomResp := &msg.CRoomidResp{}

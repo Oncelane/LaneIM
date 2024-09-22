@@ -23,7 +23,7 @@ func (c *Comet) HandleAuth(m *msg.Msg, ch *Channel) {
 	err := proto.Unmarshal(m.Data, authReq)
 	if err != nil {
 		laneLog.Logger.Fatalln("[server] faild to get token")
-		ch.conn.Close()
+		ch.ForceClose()
 		return
 	}
 	rt, err := c.pickLogic().Client.Auth(context.Background(), &logic.AuthReq{
@@ -180,7 +180,7 @@ type BatchStructSendRoom struct {
 }
 
 func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
-	start := time.Now()
+	// start := time.Now()
 	msgs := make([]*msg.SendMsgReq, len(in))
 	for i := range in {
 		msgs[i] = &msg.SendMsgReq{
@@ -200,12 +200,16 @@ func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
 	})
 	if err != nil {
 		laneLog.Logger.Fatalln("[server] faild to send logic", err)
+		// for i := range in {
+		// 	in[i].ch.Reply([]byte("not ack"), in[i].seq, "sendRoom")
+		// }
+		// laneLog.Logger.Debugf("doSendRoomBatch not ack count = %d spand %v", len(in), time.Since(start))
 		return
 	}
-	for i := range in {
-		in[i].ch.Reply([]byte("ack"), in[i].seq, "sendRoom")
-	}
-	laneLog.Logger.Debugln("doSendRoomBatch spand", time.Since(start))
+	// for i := range in {
+	// 	in[i].ch.Reply([]byte("ack"), in[i].seq, "sendRoom")
+	// }
+	// laneLog.Logger.Debugf("doSendRoomBatch count = %d spand %v", len(in), time.Since(start))
 }
 
 func (c *Comet) HandleSendRoomBatch(m *msg.Msg, ch *Channel) {
@@ -220,7 +224,7 @@ func (c *Comet) HandleSendRoomBatch(m *msg.Msg, ch *Channel) {
 		ch:  ch,
 		seq: m.Seq,
 	})
-
+	ch.Reply([]byte("ack"), m.Seq, "sendRoom")
 }
 
 func (c *Comet) HandleNewUser(m *msg.Msg, ch *Channel) {
@@ -541,8 +545,6 @@ func (c *Comet) doSetOfflineBatch(in []*BatchStructSetOffline) {
 	}
 
 	// del channel
-
-	// in[i].ch.Reply([]byte("ack"), in[i].seq, "offline")
 	c.DelChannelBatch(in)
 
 	laneLog.Logger.Debugln("doSetOfflineBatch spand:", time.Since(start))
