@@ -107,7 +107,7 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 	ret.ServeGrpc()
 
 	// register
-	ret.etcd.SetAddr("grpc:comet:"+conf.Name, conf.Addr)
+	ret.etcd.SetAddr("grpc:comet:"+conf.Name, conf.WindowIP+conf.GrpcPort)
 
 	return ret
 }
@@ -164,7 +164,7 @@ func (c *Comet) InitBucket() {
 }
 
 func (c *Comet) ServeGrpc() {
-	lis, err := net.Listen("tcp", c.conf.Addr)
+	lis, err := net.Listen("tcp", c.conf.UbuntuIP+c.conf.GrpcPort)
 	if err != nil {
 		laneLog.Logger.Errorln("error: comet start faild", err)
 	}
@@ -180,7 +180,7 @@ func (c *Comet) ServeGrpc() {
 }
 
 func (c *Comet) Close() {
-	c.etcd.DelAddr("grpc:comet:"+c.conf.Name, c.conf.Addr)
+	c.etcd.DelAddr("grpc:comet:"+c.conf.Name, c.conf.WindowIP+c.conf.GrpcPort)
 	c.grpc.Stop()
 	laneLog.Logger.Infoln("[server] exit comet")
 }

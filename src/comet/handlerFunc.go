@@ -28,7 +28,7 @@ func (c *Comet) HandleAuth(m *msg.Msg, ch *Channel) {
 	}
 	rt, err := c.pickLogic().Client.Auth(context.Background(), &logic.AuthReq{
 		Params:    authReq.Params,
-		CometAddr: c.conf.Addr,
+		CometAddr: c.conf.WindowIP + c.conf.GrpcPort,
 		Userid:    authReq.Userid,
 	})
 	if err != nil {
@@ -161,7 +161,7 @@ func (c *Comet) HandleQueryRoomBatch(m *msg.Msg, ch *Channel) {
 // 	err = c.LogictSendMsg(&logic.SendMsgReq{
 // 		Data:   []byte(cSendRoomReq.Msg),
 // 		Path:   m.Path,
-// 		Addr:   c.conf.Addr,
+// 		Addr:   c.conf.WindowIP+c.conf.GrpcPort,
 // 		Userid: cSendRoomReq.Userid,
 // 		Roomid: cSendRoomReq.Roomid,
 // 	})
@@ -186,7 +186,7 @@ func (c *Comet) doSendRoomBatch(in []*BatchStructSendRoom) {
 		msgs[i] = &msg.SendMsgReq{
 			Data:      []byte(in[i].arg.Msg),
 			Path:      "sendRoom",
-			Addr:      c.conf.Addr,
+			Addr:      c.conf.WindowIP + c.conf.GrpcPort,
 			Userid:    in[i].arg.Userid,
 			Roomid:    in[i].arg.Roomid,
 			Userseq:   in[i].seq,
@@ -299,7 +299,7 @@ func (c *Comet) HandleNewRoom(m *msg.Msg, ch *Channel) {
 
 	rt, err := c.pickLogic().Client.NewRoom(context.Background(), &logic.NewRoomReq{
 		Userid:    cNewRoomReq.Userid,
-		CometAddr: c.conf.Addr,
+		CometAddr: c.conf.WindowIP + c.conf.GrpcPort,
 	})
 	if err != nil {
 		laneLog.Logger.Fatalln("[server] faild to send logic", err)
@@ -334,12 +334,12 @@ func (c *Comet) doJoinRoomBatch(in []*BatchStructJoinRoom) {
 	_, err := c.pickLogic().Client.JoinRoomBatch(context.Background(), &logic.JoinRoomBatchReq{
 		Userid: userid,
 		Roomid: roomid,
-		Comet:  c.conf.Addr,
+		Comet:  c.conf.WindowIP + c.conf.GrpcPort,
 	})
 
 	// laneLog.Logger.Debugln("join room spand:", time.Since(join))
 	if err != nil {
-		laneLog.Logger.Fatalln("[server] faild to send logic", err, "addr", c.conf.Addr)
+		laneLog.Logger.Fatalln("[server] faild to send logic", err, "addr", c.conf.WindowIP+c.conf.GrpcPort)
 		return
 	}
 	for i, rid := range roomid {
@@ -402,7 +402,7 @@ func (c *Comet) doSetOnlineBatch(in []*BatchStructSetOnline) {
 
 	_, err := c.pickLogic().Client.SetOnlineBatch(context.Background(), &logic.SetOnlineBatchReq{
 		Userid: userid,
-		Server: c.conf.Addr,
+		Server: c.conf.WindowIP + c.conf.GrpcPort,
 	})
 	// laneLog.Logger.Debugln("setonline batch spand:", time.Since(start))
 	if err != nil {
@@ -492,7 +492,7 @@ func (c *Comet) HandleSetOnline(m *msg.Msg, ch *Channel) {
 
 	_, err = c.pickLogic().Client.SetOnline(context.Background(), &logic.SetOnlineReq{
 		Userid: COnlineReq.Userid,
-		Server: c.conf.Addr,
+		Server: c.conf.WindowIP + c.conf.GrpcPort,
 	})
 	if err != nil {
 		laneLog.Logger.Fatalln("[server] faild to send logic", err)
@@ -536,7 +536,7 @@ func (c *Comet) doSetOfflineBatch(in []*BatchStructSetOffline) {
 
 	_, err := c.pickLogic().Client.SetOfflineBatch(context.Background(), &logic.SetOfflineBatchReq{
 		Userid: userid,
-		Server: c.conf.Addr,
+		Server: c.conf.WindowIP + c.conf.GrpcPort,
 	})
 	// laneLog.Logger.Debugln("setonline batch spand:", time.Since(start))
 	if err != nil {
@@ -570,7 +570,7 @@ func (c *Comet) HandleSetOffline(m *msg.Msg, ch *Channel) {
 
 	_, err = c.pickLogic().Client.SetOffline(context.Background(), &logic.SetOfflineReq{
 		Userid: COnlineReq.Userid,
-		Server: c.conf.Addr,
+		Server: c.conf.WindowIP + c.conf.GrpcPort,
 	})
 	if err != nil {
 		laneLog.Logger.Fatalln("[server] faildto send logic", err)

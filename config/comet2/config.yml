@@ -1,10 +1,12 @@
 id: 101
-addr: 127.0.0.1:50051
+ubuntuip: "172.29.178.158"
+windowip: "192.168.141.254"
+grpcport: :50051
+websocketport: :40051
 name: "1"
 etcd:
   addr:
     - 127.0.0.1:51240
     - 127.0.0.1:51241
     - 127.0.0.1:51242
-websocketaddr: 127.0.0.1:40051
 bucketsize: 32

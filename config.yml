@@ -1,0 +1,30 @@
+id: 0
+ubuntuip: "172.29.178.158"
+windowip: "192.168.141.254"
+grpcport: :50060
+name: "0"
+kafkaproducer:
+  addr:
+    - 127.0.0.1:9092
+etcd:
+  addr:
+    - 172.29.178.158:51240
+    - 172.29.178.158:51241
+    - 192.168.141.235:51242
+mysql:
+  name: "0"
+  username: debian-sys-maint
+  password: FJho5xokpFqZygL5
+  addr: 127.0.0.1:3306
+  database: laneIM
+  batchwriter:
+    maxtime: 100
+    maxcount: 1000
+scylladb:
+  clustername: laneIM
+  addrs:
+    - "127.0.0.1"
+  keyspace: "laneIM"
+  batchwriter:
+    maxtime: 100
+    maxcount: 1000

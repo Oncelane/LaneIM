@@ -27,8 +27,8 @@ func main() {
 
 	// 启动websocket服务
 	http.HandleFunc("/ws", c.ServeHTTP)
-	laneLog.Logger.Infoln("[server] listening websocket", conf.WebsocketAddr)
-	go http.ListenAndServe(conf.WebsocketAddr, nil)
+	laneLog.Logger.Infoln("[server] listening websocket", conf.UbuntuIP+conf.WebsocketPort)
+	go http.ListenAndServe(conf.UbuntuIP+conf.WebsocketPort, nil)
 
 	// 等待信号
 	laneLog.Logger.Infoln("[server]  wait ctrl+c")

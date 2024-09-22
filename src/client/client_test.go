@@ -11,8 +11,9 @@ import (
 )
 
 // var cometAddr []string = []string{"ws://127.0.0.1:40050/ws"}
+var cometAddr []string = []string{"ws://172.29.178.158:40050/ws"}
 
-var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
+// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
 var snum = 10
 
 func TestSimulate(t *testing.T) {
@@ -28,7 +29,7 @@ func TestSimulate(t *testing.T) {
 		}()
 	}
 	g.Wait.Wait()
-	select {}
+	// select {}
 	g.Wait.Add(snum)
 	roomid := g.Clients[0].NewRoom()
 	for _, c := range g.Clients {

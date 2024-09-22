@@ -67,7 +67,7 @@ func NewLogic(conf config.Logic) *Logic {
 	s.kafka = pkg.NewKafkaProducer(conf.KafkaProducer)
 
 	// server grpc
-	lis, err := net.Listen("tcp", conf.Addr)
+	lis, err := net.Listen("tcp", conf.UbuntuIP+conf.GrpcPort)
 	if err != nil {
 		log.Fatalln("error: logic start faild", err)
 	}
@@ -82,13 +82,13 @@ func NewLogic(conf config.Logic) *Logic {
 	}()
 	// register etcd
 	go s.WatchComet()
-	s.etcd.SetAddr("grpc:logic:"+s.conf.Name, s.conf.Addr)
+	s.etcd.SetAddr("grpc:logic:"+s.conf.Name, s.conf.WindowIP+s.conf.GrpcPort)
 	return s
 }
 
 func (l *Logic) Close() {
-	laneLog.Logger.Infoln("logic exit:", l.conf.Addr)
-	l.etcd.DelAddr("grpc:logic:"+l.conf.Name, l.conf.Addr)
+	laneLog.Logger.Infoln("logic exit:", l.conf.WindowIP+l.conf.GrpcPort)
+	l.etcd.DelAddr("grpc:logic:"+l.conf.Name, l.conf.WindowIP+l.conf.GrpcPort)
 	l.grpc.Stop()
 }
 

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"laneIM/src/pkg/util"
 	"log"
 	"os"
 
@@ -40,89 +39,6 @@ func (c *Canal) Default() {
 		MsgChSize:        128,
 		KafkaProducer:    DefaultKafkaProducer(),
 		Redis:            DefaultRedis(),
-		Mysql:            mysqlC,
-	}
-}
-
-type Logic struct {
-	Id            int
-	Addr          string
-	Name          string
-	KafkaProducer KafkaProducer
-	Etcd          Etcd
-	Mysql         Mysql
-	ScyllaDB      ScyllaDB
-}
-
-func (c *Logic) Default() {
-	ip, err := util.GetOutBoundIP()
-	if err != nil {
-		log.Panicln("faild to get outbound ip:", err)
-	}
-	*c = Logic{
-		Id:   0,
-		Addr: ip + ":50060",
-		Name: "0",
-		KafkaProducer: KafkaProducer{
-			Addr: []string{ip + ":9092"},
-		},
-		Etcd:     DefaultEtcd(),
-		Mysql:    DefaultMysql(),
-		ScyllaDB: DefaultScyllaDB(),
-	}
-}
-
-type Comet struct {
-	Id            int
-	Addr          string
-	Name          string
-	Etcd          Etcd
-	WebsocketAddr string
-
-	BucketSize int
-}
-
-func (c *Comet) Default() {
-	ip, err := util.GetOutBoundIP()
-	if err != nil {
-		log.Panicln("faild to get outbound ip:", err)
-	}
-	*c = Comet{
-		Id:            100,
-		Addr:          ip + ":50050",
-		Name:          "0",
-		Etcd:          DefaultEtcd(),
-		BucketSize:    32,
-		WebsocketAddr: ip + ":40050",
-	}
-}
-
-type Job struct {
-	Addr             string
-	Name             string
-	KafkaComsumer    KafkaComsumer
-	Etcd             Etcd
-	Redis            Redis
-	BucketSize       int
-	CometRoutineSize int
-	Mysql            Mysql
-}
-
-func (c *Job) Default() {
-	ip, err := util.GetOutBoundIP()
-	if err != nil {
-		log.Panicln("faild to get outbound ip:", err)
-	}
-	mysqlC := Mysql{}
-	mysqlC.Default()
-	*c = Job{
-		Addr:             ip + ":50070",
-		Name:             "0",
-		KafkaComsumer:    DefaultKafkaComsumer(),
-		Etcd:             DefaultEtcd(),
-		Redis:            DefaultRedis(),
-		BucketSize:       32,
-		CometRoutineSize: 32,
 		Mysql:            mysqlC,
 	}
 }

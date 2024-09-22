@@ -21,7 +21,7 @@ func main() {
 
 	laneLog.InitLogger("logic"+conf.Name, true)
 
-	laneLog.Logger.Infoln("[server] logic server start on ", conf.Addr)
+	laneLog.Logger.Infoln("[server] logic server start on ", conf.UbuntuIP+conf.GrpcPort)
 	l := logic.NewLogic(conf)
 	// 等待信号
 	sigChan := make(chan os.Signal, 1)
