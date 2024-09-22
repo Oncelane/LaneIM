@@ -72,7 +72,9 @@ func TestSimulate(t *testing.T) {
 
 var tnum = 10000
 
-func TestCreateUsers(t *testing.T) {
+// 创建10000个用户，并加入新房间
+
+func TestCreateUsersAndJoinNewRoom(t *testing.T) {
 	g := client.NewClientGroup(tnum)
 
 	var limit = 1000
@@ -144,6 +146,81 @@ func TestCreateUsers(t *testing.T) {
 	}
 }
 
+// 创建10000个用户，并加入指定房间
+func TestCreateUsersAndJoinGivenRoom(t *testing.T) {
+
+	var roomid int64 = 1837561315430760448
+
+	g := client.NewClientGroup(tnum)
+
+	var limit = 1000
+	i := 0
+	userids := make([]int64, tnum)
+	for {
+		left := tnum - i
+		var end int
+		if left > limit {
+			end = i + limit
+		} else if left == 0 {
+			break
+		} else {
+			end = i + left
+		}
+		var count = end - i
+		g.Wait.Add(count)
+
+		for ; i < end; i++ {
+			go func(i int) {
+				defer g.Wait.Done()
+				g.Clients[i].Connect(cometAddr[0])
+				userids[i] = g.Clients[i].NewUser()
+				// c.Online()
+			}(i)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infoln("new user", count)
+	}
+
+	i = 0
+	for {
+		left := tnum - i
+		var end int
+		if left > limit {
+			end = i + limit
+		} else if left == 0 {
+			break
+		} else {
+			end = i + left
+		}
+		var count = end - i
+		g.Wait.Add(count)
+
+		for ; i < end; i++ {
+			go func(i int) {
+				defer g.Wait.Done()
+				g.Clients[i].JoinRoom(roomid)
+				// c.Online()
+			}(i)
+		}
+		g.Wait.Wait()
+		laneLog.Logger.Infoln("join room", count)
+	}
+
+	{ // save user to disk
+		file, err := os.Create("userids")
+		if err != nil {
+			laneLog.Logger.Fatalln("save error", err)
+			t.Error(err)
+		}
+		b := new(bytes.Buffer)
+		e := gob.NewEncoder(b)
+		e.Encode(roomid)
+		e.Encode(userids)
+		file.Write(b.Bytes())
+		laneLog.Logger.Infoln("roomid and userids save in disk")
+	}
+}
+
 func GetUseridAndRoomidFromDisk() (int64, []int64) {
 	// read user from disk
 	userids := make([]int64, tnum)
@@ -159,10 +236,12 @@ func GetUseridAndRoomidFromDisk() (int64, []int64) {
 	laneLog.Logger.Infoln("read userids success")
 	return roomid, userids
 }
+
 func TestOneRoomConstentlySend(t *testing.T) {
 	g := client.NewClientGroup(tnum)
 
 	roomid, userids := GetUseridAndRoomidFromDisk()
+	laneLog.Logger.Infoln("roomid:", roomid)
 	for i, c := range g.Clients {
 		c.Userid = userids[i]
 	}
