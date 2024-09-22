@@ -70,7 +70,7 @@ func TestSimulate(t *testing.T) {
 	laneLog.Logger.Infoln("recevie bytes:", receiveBytes)
 }
 
-var tnum = 10000
+var tnum = 5000
 
 // 创建10000个用户，并加入新房间
 
@@ -106,6 +106,7 @@ func TestCreateUsersAndJoinNewRoom(t *testing.T) {
 	}
 
 	roomid := g.Clients[0].NewRoom()
+	laneLog.Logger.Infoln("roomid = ", roomid)
 	i = 0
 	for {
 		left := tnum - i
@@ -248,16 +249,20 @@ func TestOneRoomConstentlySend(t *testing.T) {
 	laneLog.Logger.Infoln("init userids")
 
 	g.Wait.Add(tnum)
-	for i, c := range g.Clients {
+	for _, c := range g.Clients {
 		go func() {
 			defer g.Wait.Done()
-			c.Connect(cometAddr[i%2])
+			c.Connect(cometAddr[0])
 			c.Online()
 			c.Subon(roomid)
 		}()
 	}
 	g.Wait.Wait()
 	laneLog.Logger.Infoln("Subon userids")
+
+	laneLog.Logger.Infof("等待%d秒后开始传输", (60 - time.Now().Second()))
+	time.Sleep(time.Second * time.Duration((60 - time.Now().Second())))
+
 	start := time.Now()
 	done := make(chan struct{})
 	sendCount := 0

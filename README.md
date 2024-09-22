@@ -8,6 +8,31 @@ kafka 集群 消息推送队列
 etcd 集群 服务注册发现（后续换成手搓的 raft）
 grpc+protobuf 微服务通讯
 
+| 项目            | 数据                                   |
+| --------------- | -------------------------------------- |
+| 类型            | 10000 人群推送                         |
+| 推送内容        | "hello"                                |
+| 持续推送数据量  | 1340 条/秒                             |
+| 推送到达        | 1340 万/秒                             |
+| 接收流量 (eth0) | 124 KB/s (server1) 218 KB/s (server2)  |
+| 发送流量 (eth0) | 98 KB/s (server1) 298 KB/s (server2)   |
+| 客户端接收流量  | 32.8MB/s (server1) 33.4 MB/s (server2) |
+| 接收流量 (回环) | 185 MB/s (server1) 231 MB/s (server2)  |
+| 发送流量 (回环) | 185 MB/s (server1) 231 MB/s (server2)  |
+
+# 项目依赖
+
+- laneEtcd (本人另一个项目，性能相当的 etcd 实现)
+- gRpc
+- protobuf
+- mysql
+- kafka
+- canal
+- redis
+- scylla
+
+# 依赖安装
+
 安装 protobuf grpc complier
 sudo apt-get install protobuf-compiler
 
