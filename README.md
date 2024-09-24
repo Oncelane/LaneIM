@@ -1,12 +1,22 @@
-# laneIM
+# discord 大群组高并发分布式 IM
 
-集群部署的分布式 IM，主要使用到的组件：etcd，kafka，redis，canal，mysql，grpc，protobuf
+以 discord 万人群组为目标设计，架构设计参考 bilibili 开源 goim，分为 comet（网关），job（数据推送），logic（业务）三大模块，均为无状态节点，模块均可弹性集群部署；集群通讯使用 grpc+protobuf 和 kafka；
 
-分为三个模块，comet 集群（网关/代理）， job 集群（消息推送），logic（业务服务器：登录，上下线）
-mysql+canel+redis 集群（用户状态，房间信息，路由）
-kafka 集群 消息推送队列
-etcd 集群 服务注册发现（后续换成手搓的 raft）
-grpc+protobuf 微服务通讯
+comet 网关采用 websocket 长连接，内存池优化消息结构体；logic 业务模块接收 comet 信息，负责消息存储/用户状态查询/网关查询/群成员变动等等；job 推送模块缓存网关信息，转发群消息至 comet；
+
+redis 缓存用户状态，网关路由等信息；kafka 消息队列，解耦业务与网络 IO；laneEtcd 集群服务注册发现；
+
+二级缓存设计，设置 bigcache 一级本地缓存，redis 二级远程缓存；canal 维持 redis 数据一致性；redis 的 sub/pub 维持本地缓存一致性；
+
+sycllaDB 海量消息存储和高效分页拉取; zap+lumberjack 异步日志和日志轮转;singleflight 优化高并发读；请求合并+batch APi 优化高并发读写：以可控较少延迟为代价减少网络请求次数
+
+用户订阅消息机制，对不关心的群聊只推送消息未读数，解决扩散读问题；
+
+# 压测：
+
+两台笔记本的 WSL 虚拟机上分别运行一个 comet 实例，其余 job 和 logic 均分
+
+每个 comet 长连接 5000 个用户，总共一万个在线用户，加入同一个房间，并持续推送消息
 
 | 项目            | 数据                                   |
 | --------------- | -------------------------------------- |
@@ -20,9 +30,17 @@ grpc+protobuf 微服务通讯
 | 接收流量 (回环) | 185 MB/s (server1) 231 MB/s (server2)  |
 | 发送流量 (回环) | 185 MB/s (server1) 231 MB/s (server2)  |
 
+server1 中的客户端监控数据
+
+![测试截图1](./docs/压测server2客户端数据.png)
+
+server2 网卡统计数据
+
+![测试截图2](./docs/压测server2网卡.png)
+
 # 项目依赖
 
-- laneEtcd (本人另一个项目，性能相当的 etcd 实现)
+- [laneEtcd](<(https://github.com/Oncelane/laneEtcd)>) (本人另一个项目，性能相当的 etcd 实现)
 - gRpc
 - protobuf
 - mysql
@@ -31,27 +49,100 @@ grpc+protobuf 微服务通讯
 - redis
 - scylla
 
+# 编译
+
+```sh
+make all -i
+
+# 也可以分别编译
+make build-comet
+make build-job
+make build-logic
+```
+
+修改 makefile 中的集群数目
+
+```sh
+# Default number of clusters
+
+# local Cluster
+Ncomet ?= 2
+Njob ?= 1
+Nlogic ?= 1
+
+# network Cluster
+Ncometp ?= 1
+Njobp ?= 1
+Nlogicp ?= 1
+
+```
+
+# 启动：
+
+首先要检查有无启动 kafka，canal，redis，laneEtcd（请查看[此项目地址](https://github.com/Oncelane/laneEtcd)）
+
+本地集群方式（推荐）:
+
+打开三个终端，分别运行三个命令以启动三个集群
+
+logic 集群
+
+```sh
+make run-logic
+```
+
+comet 集群
+
+```sh
+make run-comet
+```
+
+job 集群
+
+```sh
+make run-job
+```
+
+canal 服务器是可选的，它可以用于保障 sql 和 redis 之间，以及 redis 和 localcache 之间的数据一致性，但是有一定的延迟
+
+```sh
+cd src/cmd/canal/
+go run main.go
+```
+
+# 测试
+
+```sh
+# 进入src/cmd
+cd src/client
+# 使用vscode之类的ide手动运行测试项目即可
+```
+
 # 依赖安装
 
 安装 protobuf grpc complier
 sudo apt-get install protobuf-compiler
 
 gRPC Go 插件
+
+```sh
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+```
 
-protoc 命令
+# protoc 命令
+
+```sh
 protoc --go_out=.. --go-grpc_out=.. --go-grpc_opt=require_unimplemented_servers=false -I. -Iproto proto/msg/msg.proto proto/comet/comet.proto proto/logic/logic.proto
+```
 
 # scylla 集群
 
-安装
+安装：
 
-```sh
-https://www.scylladb.com/download/?platform=ubuntu-20.04&version=scylla-6.1#open-source
-```
+[官网网址](https://www.scylladb.com/download/?platform=ubuntu-20.04&version=scylla-6.1#open-source)
 
-配置
+配置:
 
 ```sh
 scylla_setup accepts command line arguments as well! For easily provisioning in a similar environment than this, type:
@@ -63,7 +154,7 @@ Also, to avoid the time-consuming I/O tuning you can add --no-io-setup and copy 
 Only do that if you are moving the files into machines with the exact same hardware
 ```
 
-# 启动 redis 集群
+# redis 集群
 
 redis-server ./redis.conf
 
@@ -112,7 +203,7 @@ sudo make install
 export PKG_CONFIG_PATH=/usr/lib/pkgconfig
 ```
 
-# 启动 kafka 集群
+# kafka 集群
 
 确保 Kafka 版本支持 Kraft 模式（Kafka 2.8.0 及以上版本）
 
@@ -128,9 +219,9 @@ export PATH=${JAVA_HOME}/bin:$PATH
 下载
 
 ```sh
-   wget https://downloads.apache.org/kafka/3.7.1/kafka_2.12-3.7.1.tgz
-   tar -xzf kafka_2.13-3.0.0.tgz
-   cd kafka_2.13-3.0.0
+wget https://downloads.apache.org/kafka/3.7.1/kafka_2.12-3.7.1.tgz
+tar -xzf kafka_2.13-3.0.0.tgz
+cd kafka_2.13-3.0.0
 ```
 
 编辑 server.properties 配置文件
@@ -222,16 +313,12 @@ export PATH="$PATH:$GOPATH/src/github.com/etcd-io/etcd/bin"
 source ~/.bashrc
 ```
 
-删除所有键
-
 列出所有键：
 使用 etcdctl 列出所有键：
 
 ```bash
 etcdctl get "" --prefix --keys-only
 ```
-
-这会列出所有键。
 
 删除所有键：
 使用 etcdctl del 命令删除所有键：
@@ -254,7 +341,7 @@ sudo cat /etc/mysql/debian.cnf
 
 ```bash
 # 创建数据库laneIM
-# 运行room_test.go
+# 先启动logic会自动建表
 ```
 
 # canal 安装
@@ -356,29 +443,6 @@ canal.instance.multi.stream.on=false
 bash bin/startup.sh
 ```
 
-# Room design
-
-in redis
-
-RoomMgr: 使用一个 Redis 哈希（hash）来存储 RoomMgr 的基本信息。可以设置字段如 RoomID、OnlineCount。用户和 Comet 的信息可以存储为集合。
-
-Key: room:{RoomID}
-Fields: OnlineCount
-Members: users_set（存储 UserID 集合）、comets_set（存储 CometAddr 集合）
-
-UserMgr: 使用一个 Redis 哈希来存储 UserMgr 的基本信息和它所关联的房间。可以设置字段如 CometAddr 和 Online。房间的信息可以存储为集合。
-
-Key: user:{UserID}
-Fields: CometAddr, Online
-Members: rooms_set（存储 RoomID 集合）
-
-CometMgr: 使用一个 Redis 哈希来存储 CometMgr 的基本信息和它所关联的房间。房间的信息可以存储为集合。
-
-Key: comet:{CometAddr}
-Fields: 无需额外字段
-Members: rooms_set（存储 RoomID 集合）
-示例操作:
-
 ```sh
 #设置RoomMgr信息：
 HMSET room:{RoomID} OnlineCount 10
@@ -394,11 +458,3 @@ SADD comet:{CometAddr}:rooms_set {RoomID}
 ```
 
 # next
-
-## comet
-
-room 模块
-websocekt 长连接模块
-
-job 集群部署
-comet 集群部署

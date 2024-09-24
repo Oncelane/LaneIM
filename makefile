@@ -4,17 +4,19 @@ GOBUILD=$(GOCMD) build
 GOTEST=$(GOCMD) test
 
 # Default number of clusters
-Njob ?= 1
+
+# local Cluster
 Ncomet ?= 2
-
-Njobp ?= 1
-Ncometp ?= 1
-
+Njob ?= 1
 Nlogic ?= 1
+
+# network Cluster
+Ncometp ?= 1
+Njobp ?= 1
 Nlogicp ?= 1
 
 # Build all jobs
-all: stop-job stop-comet build-job build-comet
+all: stop-job stop-comet stop-logic build-job build-comet build-logic
 
 # Build job directories and binaries
 build-job:
