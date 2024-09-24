@@ -3,7 +3,7 @@ package canal
 import (
 	"fmt"
 	"laneIM/src/config"
-	"laneIM/src/dao/rds"
+	"laneIM/src/dao"
 	"laneIM/src/dao/sql"
 	"laneIM/src/pkg"
 	"laneIM/src/pkg/laneLog"
@@ -19,12 +19,13 @@ import (
 )
 
 type Canal struct {
-	connector     *client.SimpleCanalConnector
-	msgCh         chan *protocol.Message
-	redis         *pkg.RedisClient
-	db            *sql.SqlDB
-	kafkaProducer *pkg.KafkaProducer
-	conf          config.Canal
+	connector *client.SimpleCanalConnector
+	msgCh     chan *protocol.Message
+	redis     *pkg.RedisClient
+	db        *sql.SqlDB
+	daoo      *dao.Dao
+	// kafkaProducer *pkg.KafkaProducer
+	conf config.Canal
 }
 
 func NewCanal(conf config.Canal) *Canal {
@@ -40,13 +41,14 @@ func NewCanal(conf config.Canal) *Canal {
 	// connector.RollBack(-1)
 	connector.Subscribe(conf.Subscribe)
 	c := &Canal{
-		connector:     connector,
-		msgCh:         make(chan *protocol.Message, conf.MsgChSize),
-		redis:         pkg.NewRedisClient(conf.Redis),
-		kafkaProducer: pkg.NewKafkaProducer(conf.KafkaProducer),
-		conf:          conf,
+		connector: connector,
+		msgCh:     make(chan *protocol.Message, conf.MsgChSize),
+		redis:     pkg.NewRedisClient(conf.Redis),
+		// kafkaProducer: pkg.NewKafkaProducer(conf.KafkaProducer),
+		conf: conf,
 	}
 	c.db = sql.NewDB(conf.Mysql)
+	c.daoo = dao.NewDao(conf.Mysql.BatchWriter)
 	laneLog.Logger.Infoln("start canal")
 	return c
 
@@ -138,98 +140,95 @@ func (c *Canal) HandleInsert(col []*pbe.Column, redisKey string) {
 	case "room":
 		switch rediskey1 {
 		case "mgr":
-			roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
-			if err != nil {
-				laneLog.Logger.Infoln("fomat err")
-				return
-			}
-			go c.db.MergeWriter.Do(redisKey, func() (any, error) {
-				// sql
-				room, err := c.db.RoomMgr(roomid)
-				if err != nil {
-					laneLog.Logger.Infoln("faild to sql roommgr")
-				}
-				// updata setex
-				err = rds.SetEXRoomMgr(c.redis.Client, room)
-				if err != nil {
-					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
-				}
+			// roomid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			// if err != nil {
+			// 	laneLog.Logger.Infoln("fomat err")
+			// 	return
+			// }
+			// go c.db.MergeWriter.Do(redisKey, func() (any, error) {
+			// 	// sql
+			// 	room, err := c.db.RoomMgr(roomid)
+			// 	if err != nil {
+			// 		laneLog.Logger.Infoln("faild to sql roommgr")
+			// 	}
+			// 	// updata setex
+			// 	err = rds.SetEXRoomMgr(c.redis.Client, room)
+			// 	if err != nil {
+			// 		laneLog.Logger.Infoln("faild to sync ", redisKey, err)
+			// 	}
 
-				laneLog.Logger.Infoln("sync", redisKey)
-				return nil, nil
-			})
+			// 	laneLog.Logger.Infoln("sync", redisKey)
+			// 	return nil, nil
+			// })
 
 		case "user":
-			roomid, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
-			if err != nil {
-				laneLog.Logger.Infoln("fomat err")
-				return
-			}
-			go c.db.MergeWriter.Do(redisKey+col[1].GetValue(), func() (any, error) {
+			// roomid, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
+			// if err != nil {
+			// 	laneLog.Logger.Infoln("fomat err")
+			// 	return
+			// }
+			// go c.db.MergeWriter.Do(redisKey+col[1].GetValue(), func() (any, error) {
 
-				// sql
-				userids, err := c.db.RoomUserid(roomid)
-				if err != nil {
-					laneLog.Logger.Infoln("faild to sql ", redisKey)
-				}
+			// 	// sql
+			// 	userids, err := c.db.RoomUserid(roomid)
+			// 	if err != nil {
+			// 		laneLog.Logger.Infoln("faild to sql ", redisKey)
+			// 	}
 
-				// updata setex
-				err = rds.SetEXRoomMgrUsers(c.redis.Client, roomid, userids)
-				if err != nil {
-					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
-				}
-				laneLog.Logger.Infoln("sync", redisKey)
-				return nil, nil
-			})
+			// 	// updata setex
+			// 	err = rds.SetEXRoomMgrUsers(c.redis.Client, roomid, userids)
+			// 	if err != nil {
+			// 		laneLog.Logger.Infoln("faild to sync ", redisKey, err)
+			// 	}
+			// 	laneLog.Logger.Infoln("sync", redisKey)
+			// 	return nil, nil
+			// })
 		case "comet":
 			roomid, err := strconv.ParseInt(col[1].GetValue(), 10, 64)
 			if err != nil {
 				laneLog.Logger.Infoln("fomat err")
 				return
 			}
-			go c.db.MergeWriter.Do(redisKey+col[1].GetValue(), func() (any, error) {
+			key := redisKey + col[1].GetValue()
 
-				// sql
-				comets, err := c.db.RoomComet(roomid)
-				if err != nil {
-					laneLog.Logger.Infoln("faild to sql roomid")
-				}
+			// 只对最后一次Update响应
+			go c.db.MergeWriter.Do(key, func() (any, error) {
 
-				// updata setex
-				err = rds.SetEXRoomCometBatch(c.redis.Client, roomid, comets)
+				// 根据数据库中的最新值重新update redis中的key，使用SetEx语义
+				c.daoo.UpdateCacheRoomComet(c.redis.Client, c.db, roomid)
 				if err != nil {
-					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
+					laneLog.Logger.Infoln("faild to sync ", key, err)
 				}
-				laneLog.Logger.Infoln("sync", redisKey)
+				// laneLog.Logger.Infoln("sync", key)
 				return nil, nil
 			})
 		}
 	case "user":
 		switch rediskey1 {
 		case "mgr":
-			userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
-			if err != nil {
-				laneLog.Logger.Infoln("fomat err")
-				return
-			}
-			go c.db.MergeWriter.Do(redisKey, func() (any, error) {
+			// userid, err := strconv.ParseInt(col[0].GetValue(), 10, 64)
+			// if err != nil {
+			// 	laneLog.Logger.Infoln("fomat err")
+			// 	return
+			// }
+			// go c.db.MergeWriter.Do(redisKey, func() (any, error) {
 
-				// sql
-				user, err := c.db.UserMgr(userid)
-				if err != nil {
-					laneLog.Logger.Infoln("faild to sql user")
-				}
+			// 	// sql
+			// 	user, err := c.db.UserMgr(userid)
+			// 	if err != nil {
+			// 		laneLog.Logger.Infoln("faild to sql user")
+			// 	}
 
-				// updata setex
-				err = rds.SetEXUserMgr(c.redis.Client, user)
-				if err != nil {
-					laneLog.Logger.Infoln("faild to sync ", redisKey, err)
-				}
+			// 	// updata setex
+			// 	err = rds.SetEXUserMgr(c.redis.Client, user)
+			// 	if err != nil {
+			// 		laneLog.Logger.Infoln("faild to sync ", redisKey, err)
+			// 	}
 
-				laneLog.Logger.Infoln("sync", redisKey)
-				return nil, nil
+			// 	laneLog.Logger.Infoln("sync", redisKey)
+			// 	return nil, nil
 
-			})
+			// })
 		}
 	}
 }

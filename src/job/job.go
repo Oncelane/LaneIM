@@ -9,6 +9,7 @@ import (
 	"laneIM/src/pkg"
 	"laneIM/src/pkg/laneLog"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -52,6 +53,7 @@ func NewJob(conf config.Job) *Job {
 	// wathc comet
 	go j.WatchComet()
 	go j.RunGroupComsumer()
+	go j.WatchInvaliLocalcache()
 	return j
 }
 
@@ -101,4 +103,22 @@ func (j *Job) RunGroupComsumer() {
 		log.Fatalf("Error from consumer group: %v", err)
 	}
 	laneLog.Logger.Warnln("[server] group comsumer exit")
+}
+
+func (j *Job) WatchInvaliLocalcache() {
+	pubsub := j.redis.Client.Subscribe(context.Background(), "room:comet")
+	defer pubsub.Close()
+
+	// Waiting for messages
+	for msg := range pubsub.Channel() {
+
+		// Here you can add logic to delete the local cache
+		roomid, err := strconv.ParseInt(msg.Payload, 10, 64)
+		if err != nil {
+			laneLog.Logger.Fatalln(err)
+		}
+		laneLog.Logger.Debugf("Received invlid roomid: %d", roomid)
+		localCache.DelRoomComet(j.cache, roomid)
+	}
+
 }

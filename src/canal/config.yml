@@ -1,0 +1,28 @@
+name: "0"
+canaladdress: 127.0.0.1
+canalport: 11111
+canalname: canal
+canalpassword: canal
+canaldestination: laneIM
+sotimeout: 60000
+idletimeout: 3600000
+subscribe: .*\..*
+msgchsize: 128
+kafkaproducer:
+  addr:
+    - 127.0.0.1:9092
+redis:
+  addr:
+    - 127.0.0.1:7001
+    - 127.0.0.1:7002
+    - 127.0.0.1:7003
+mysql:
+  type: ""
+  name: "0"
+  username: debian-sys-maint
+  password: FJho5xokpFqZygL5
+  addr: 127.0.0.1:3306
+  database: laneIM
+  batchwriter:
+    maxtime: 100
+    maxcount: 1000

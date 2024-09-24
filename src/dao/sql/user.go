@@ -68,7 +68,7 @@ func (d *SqlDB) UserMgr(userid int64) (*model.UserMgr, error) {
 	user := model.UserMgr{}
 	err := d.DB.Preload("Rooms").First(&user, userid).Error
 	if err != nil {
-		laneLog.Logger.Fatalln("[server] faild to sql userMgr")
+		laneLog.Logger.Fatalln("[server] faild to sql userMgr", err)
 		return nil, err
 	}
 	return &user, nil

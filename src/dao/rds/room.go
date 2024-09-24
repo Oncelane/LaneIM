@@ -214,9 +214,9 @@ func DelRoomcometBatch(rdb *redis.ClusterClient, roomids []int64, comets []strin
 	return nil
 }
 
-func SetEXRoomCometBatch(rdb *redis.ClusterClient, roomid int64, cometAddrs []string) error {
+func SetEXRoomComet(rdb *redis.ClusterClient, roomid int64, cometAddrs []string) error {
 	strRoomid := strconv.FormatInt(roomid, 36)
-	key := "room:" + strRoomid
+	key := "room:" + strRoomid + ":cometS"
 
 	err := rdb.Watch(ctx, func(tx *redis.Tx) error {
 		// 检查键是否存在
@@ -224,15 +224,15 @@ func SetEXRoomCometBatch(rdb *redis.ClusterClient, roomid int64, cometAddrs []st
 		if err != nil {
 			return err
 		}
-
+		// laneLog.Logger.Debugln("key=", key, "exists=", exists)
 		// 如果键存在，则执行写入操作
 		if exists != 0 {
 			pipe := rdb.Pipeline()
-			pipe.Del(ctx, fmt.Sprintf("%s:cometS", key))
+			pipe.Del(ctx, key)
 			for i := range cometAddrs {
-				pipe.SAdd(ctx, fmt.Sprintf("%s:cometS", key), cometAddrs[i]).Err()
+				pipe.SAdd(ctx, key, cometAddrs[i]).Err()
 			}
-			pipe.Expire(ctx, fmt.Sprintf("%s:cometS", key), time.Second*60)
+			pipe.Expire(ctx, key, time.Second*60)
 			_, err := pipe.Exec(ctx)
 			return err
 		}
@@ -247,7 +247,7 @@ func SetEXRoomCometBatch(rdb *redis.ClusterClient, roomid int64, cometAddrs []st
 
 func SetNERoomComet(rdb *redis.ClusterClient, roomid int64, cometAddrs []string) error {
 	strRoomid := strconv.FormatInt(roomid, 36)
-	key := "room:" + strRoomid
+	key := "room:" + strRoomid + ":cometS"
 
 	err := rdb.Watch(ctx, func(tx *redis.Tx) error {
 		// 检查键是否存在
@@ -260,9 +260,9 @@ func SetNERoomComet(rdb *redis.ClusterClient, roomid int64, cometAddrs []string)
 		if exists == 0 {
 			pipe := rdb.Pipeline()
 			for i := range cometAddrs {
-				pipe.SAdd(ctx, fmt.Sprintf("%s:cometS", key), cometAddrs[i]).Err()
+				pipe.SAdd(ctx, key, cometAddrs[i]).Err()
 			}
-			pipe.Expire(ctx, fmt.Sprintf("%s:cometS", key), time.Second*60)
+			pipe.Expire(ctx, key, time.Second*60)
 			_, err := pipe.Exec(ctx)
 			return err
 		}

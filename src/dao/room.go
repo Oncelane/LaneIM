@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"context"
 	"fmt"
 	"laneIM/src/dao/localCache"
 	"laneIM/src/dao/rds"
@@ -132,4 +133,24 @@ func (d *Dao) RoomComet(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *
 		return nil, fmt.Errorf("batchwriter faild")
 	}
 
+}
+
+func (d *Dao) UpdateCacheRoomComet(rdb *redis.ClusterClient, db *sql.SqlDB, roomid int64) error {
+	rrt, err := db.RoomCometBatch([]int64{roomid})
+	if err != nil {
+		laneLog.Logger.Fatalln(err)
+		return err
+	}
+	comets := rrt[0]
+	err = rds.SetEXRoomComet(rdb, roomid, comets)
+	if err != nil {
+		laneLog.Logger.Fatalln(err)
+		return err
+	}
+	// TODO sub/pub localcache
+	_, err = rdb.Publish(context.Background(), "room:comet", roomid).Result()
+	if err != nil {
+		laneLog.Logger.Fatalln(err)
+	}
+	return nil
 }

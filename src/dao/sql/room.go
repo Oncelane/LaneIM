@@ -363,6 +363,10 @@ func (d *SqlDB) AddRoomCometBatch(roomids []int64, comet string) error {
 
 // }
 
+func (d *SqlDB) ShinkRoomCometInterval(rdb *redis.ClusterClient, roomid int64) {
+
+}
+
 func (d *SqlDB) AddRoomCometWithUseridBatch(rdb *redis.ClusterClient, userids []int64, cometAddr string) error {
 	// start := time.Now()
 

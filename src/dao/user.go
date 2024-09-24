@@ -13,10 +13,12 @@ import (
 
 	"github.com/allegro/bigcache"
 	"github.com/go-redis/redis/v8"
+	"golang.org/x/sync/singleflight"
 )
 
 type Dao struct {
-	msergeWriter mergewrite.MergeWriter
+	msergeWriter   mergewrite.MergeWriter
+	singleflighter singleflight.Group
 }
 
 func NewDao(conf config.BatchWriter) *Dao {
@@ -31,7 +33,7 @@ func (d *Dao) UserRoom(cache *bigcache.BigCache, rdb *redis.ClusterClient, db *s
 	if err == nil {
 		return r, err
 	}
-	rt, err := d.msergeWriter.Do(key, func() (any, error) {
+	rt, err, _ := d.singleflighter.Do(key, func() (any, error) {
 		// laneLog.Logger.Infoln("user room query redis")
 		// rt, err := rds.UserMgrRoom(rdb, userid)
 		// if err != nil {
