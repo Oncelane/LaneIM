@@ -17,6 +17,7 @@ import (
 var ctx = context.Background()
 
 func TestRedis(t *testing.T) {
+
 	e := pkg.NewEtcd(config.Etcd{Addr: []string{
 		"172.29.178.158:51240",
 		"172.29.178.158:51241",
@@ -31,6 +32,7 @@ func TestRedis(t *testing.T) {
 }
 
 func BenchmarkSmembers(b *testing.B) {
+	var rd = pkg.NewRedisClient(config.DefaultRedis())
 	for range b.N {
 		var pipe = rd.Client.Pipeline()
 		for i := range 1000 {
@@ -46,10 +48,9 @@ func BenchmarkSmembers(b *testing.B) {
 	}
 }
 
-var rd = pkg.NewRedisClient(config.DefaultRedis())
-
 func BenchmarkNoBatchSmembers(b *testing.B) {
 	// conn := rd.Client.SlowLog()
+	var rd = pkg.NewRedisClient(config.DefaultRedis())
 	for range b.N {
 		for i := range 1000 {
 			strUserid := strconv.FormatInt(int64(i), 36)
@@ -62,9 +63,8 @@ func BenchmarkNoBatchSmembers(b *testing.B) {
 	}
 }
 
-var rdNoCluster = pkg.NewRedisClientNotCluster(config.DefaultRedis())
-
 func BenchmarkGet(b *testing.B) {
+	var rdNoCluster = pkg.NewRedisClientNotCluster(config.DefaultRedis())
 	for range b.N {
 		for range 1000 {
 			// roomSetKey := fmt.Sprintf("user:%s:roomS", strconv.FormatInt(int64(i), 36))

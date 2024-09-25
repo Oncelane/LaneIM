@@ -15,12 +15,12 @@ type MsgReadWriteCloser interface {
 	WriteMsg(message *msg.MsgBatch) error
 	PassiceClose() error
 	ForceClose() error
-	// PoolPut(message *msg.MsgBatch)
+	PoolPut(message *msg.MsgBatch)
 }
 
 type ConnWs struct {
 	conn *websocket.Conn
-	// pool *MsgPool
+	pool *MsgPool
 	once sync.Once
 }
 
@@ -29,7 +29,7 @@ var _ MsgReadWriteCloser = new(ConnWs)
 func NewConnWs(conn *websocket.Conn, pool *MsgPool) *ConnWs {
 	return &ConnWs{
 		conn: conn,
-		// pool: pool,
+		pool: pool,
 	}
 }
 
@@ -76,6 +76,6 @@ func (w *ConnWs) ForceClose() error {
 	return err
 }
 
-// func (w *ConnWs) PoolPut(message *msg.MsgBatch) {
-// 	w.pool.Put(message)
-// }
+func (w *ConnWs) PoolPut(message *msg.MsgBatch) {
+	w.pool.Put(message)
+}
