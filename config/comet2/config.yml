@@ -1,6 +1,6 @@
 id: 101
-ubuntuip: "172.29.178.158"
-windowip: "192.168.141.254"
+ubuntuip: "127.0.0.1"
+windowip: "127.0.0.1"
 grpcport: :50051
 websocketport: :40051
 name: "1"

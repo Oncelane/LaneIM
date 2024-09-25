@@ -23,7 +23,7 @@ func (c *Comet) HandleAuth(m *msg.Msg, ch *Channel) {
 	err := proto.Unmarshal(m.Data, authReq)
 	if err != nil {
 		laneLog.Logger.Fatalln("[server] faild to get token")
-		ch.ForceClose()
+		ch.ForceClose(c.poolCh)
 		return
 	}
 	rt, err := c.pickLogic().Client.Auth(context.Background(), &logic.AuthReq{

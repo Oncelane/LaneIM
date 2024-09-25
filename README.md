@@ -12,11 +12,11 @@ sycllaDB 海量消息存储和高效分页拉取; zap+lumberjack 异步日志和
 
 用户订阅消息机制，对不关心的群聊只推送消息未读数，解决扩散读问题；
 
-# 压测：
+# 压测1：
 
-两台笔记本的 WSL 虚拟机上分别运行一个 comet 实例，其余 job 和 logic 均分
+环境：两台笔记本的 WSL 虚拟机上分别运行一个 comet 实例，其余 job 和 logic 均分
 
-每个 comet 长连接 5000 个用户，总共一万个在线用户，加入同一个房间，并持续推送消息
+压测case：每个 comet 长连接 5000 个用户，总共一万个在线用户，加入同一个房间，并持续推送消息
 
 | 项目            | 数据                                   |
 | --------------- | -------------------------------------- |
@@ -37,6 +37,30 @@ server1 中的客户端监控数据
 server2 网卡统计数据
 
 ![测试截图2](./docs/压测server2网卡.png)
+
+
+# 压测2：
+
+压测环境： 本地单机搭建集群，job，comet，logic各一个
+
+压测case：在千人群中，单人发送N条消息，并等待所有成员收到所花费的时间
+
+注意，由于是单客户端发送消息，因此并非真并发，每发送一条消息都要得到comet的ack响应后才能发送下一条，
+
+在发送方发完最后一条消息后，才开始对其他客户端接收消息计时
+
+| 单人发送消息数 | 总转发数 | 从发送消息到完全接收的总耗时 | 发送方平均每条消息ACK延迟 | 等发送后，其他客户端完全接收所有消息耗时 |
+| -------------- | -------- | ---------------------------- | ------------------------- | ---------------------------------------- |
+| 1              | 1000     | 191ms                        | 0.52ms                    | 190ms                                    |
+| 36             | 3.6W     | 186ms                        | 0.28ms                    | 177ms                                    |
+| 1424           | 142.4W   | 556ms                        | 0.31ms                    | 105ms                                    |
+| 4.80W          | 4808.7W  | 16s                          | 0.33ms                    | 143ms                                    |
+| 19.32W         | 19322.8W | 62s                          | 0.32ms                    | 152ms                                    |
+
+从消息发送速度来看，单客户端0.32ms的消息发送速度是比较理想的，若换成多客户端并发发送，系统每秒处理的速度上线更高，由压测1可以看到系统上限在1000W QPS级别，压测2中则显示大概在311 W QPS级别
+
+因为batch Api的存在，客户端的多次请求会被合并，系统的网络通讯次数并不会跟随请求数线性增长，对网络IO利用率是比较高的，可以看到即使是2亿级别的消息转发量，客户端接收耗时也不会随之增长。
+
 
 # 项目依赖
 
@@ -138,27 +162,90 @@ protoc --go_out=.. --go-grpc_out=.. --go-grpc_opt=require_unimplemented_servers=
 
 # scylla 集群
 
-安装：
+## 安装：
 
 [官网网址](https://www.scylladb.com/download/?platform=ubuntu-20.04&version=scylla-6.1#open-source)
 
-配置:
+可能需要科学上网
+
+init address
+```sh
+sudo mkdir -p /etc/apt/keyrings
+sudo gpg --homedir /tmp --no-default-keyring --keyring /etc/apt/keyrings/scylladb.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 491c93b9de7496a7
+```
+```sh
+sudo curl -L --output /etc/apt/sources.list.d/scylla.list https://downloads.scylladb.com/deb/ubuntu/scylla-6.1.list
+```
+Install packages
 
 ```sh
-scylla_setup accepts command line arguments as well! For easily provisioning in a similar environment than this, type:
+sudo apt-get update
+sudo apt-get install -y scylla 
+```
+Set Java to 1.8 release
+
+```sh
+sudo apt-get update
+sudo apt-get install -y openjdk-8-jre-headless
+sudo update-java-alternatives --jre-headless -s java-1.8.0-openjdk-amd64
+```
+## 配置:
+
+setup
+
+```sh
+# scylla_setup accepts command line arguments as well! For easily provisioning in a similar environment than this, type:
 
     scylla_setup --no-raid-setup --online-discard 1 --nic eth0 \
                  --io-setup 1 --no-memory-setup --no-rsyslog-setup
 
-Also, to avoid the time-consuming I/O tuning you can add --no-io-setup and copy the contents of /etc/scylla.d/io*
-Only do that if you are moving the files into machines with the exact same hardware
+# Also, to avoid the time-consuming I/O tuning you can add --no-io-setup and copy the contents of /etc/scylla.d/io*
+# Only do that if you are moving the files into machines with the exact same hardware
+```
+config
+
+
+
+```sh
+sudo nano /etc/scylla/scylla.yaml
+
+# cluster_name: 'laneIM'
+```
+set ScyllaDB to developer mode.
+```sh
+sudo scylla_dev_mode_setup --developer-mode 1
+``` 
+## 启动
+
+```sh
+sudo systemctl start scylla-server.service
+```
+
+check status
+``` sh
+sudo systemctl status scylla-server.service
 ```
 
 # redis 集群
 
-redis-server ./redis.conf
+## 搭建
 
+启动六个单独节点
+```sh
+bash redisClusterStart.sh
+```
+组建集群
+```sh
 redis-cli --cluster create 127.0.0.1:7001 127.0.0.1:7002 127.0.0.1:7003 127.0.0.1:7004 127.0.0.1:7005 127.0.0.1:7006 --cluster-replicas 1
+```
+
+## 下次启动
+```sh
+# 启动
+bash redisClusterStart.sh
+# 关闭
+bash redisClusterClose.sh
+```
 
 ​ 执行 redis-cli -p 7001 进入客户端并通过 `info replication` 查看集群信息
 
@@ -404,9 +491,9 @@ canal.instance.tsdb.enable=true
 
 # username/password
 canal.instance.dbUsername=debian-sys-maint
-canal.instance.dbPassword=FJho5xokpFqZygL5
+canal.instance.dbPassword=QTLVb6BaeeaJsFMT
 # debian-sys-maint
-# FJho5xokpFqZygL5
+# QTLVb6BaeeaJsFMT
 canal.instance.connectionCharset = UTF-8
 # enable druid Decrypt database password
 canal.instance.enableDruid=false

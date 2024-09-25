@@ -36,7 +36,7 @@ func NewCqlDB(conf config.ScyllaDB) *ScyllaDB {
 
 func (s *ScyllaDB) initKeyspace() {
 	err := s.DB.ExecStmt(fmt.Sprintf(
-		`CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}`,
+		`CREATE KEYSPACE  IF NOT EXISTS %s WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}`,
 		s.conf.Keyspace,
 	))
 	if err != nil {

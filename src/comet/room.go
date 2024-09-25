@@ -40,7 +40,13 @@ func (g *Room) PutChannel(channel *Channel) {
 func (g *Room) DelChannel(channel *Channel) {
 	g.Online--
 	g.chsMap.Delete(channel.id)
-	channel.ForceClose()
+}
+
+func (g *Room) DelChannelBatch(in []*BatchStructSetOffline) {
+	g.Online -= int64(len(in))
+	for _, c := range in {
+		g.chsMap.Delete(c.ch.id)
+	}
 }
 
 func (g *Room) PutFullChannel(channel *Channel) {
@@ -48,16 +54,10 @@ func (g *Room) PutFullChannel(channel *Channel) {
 	g.fullChsMap.Store(channel.id, channel)
 	// g.chs[channel.id] = channel
 }
+
 func (g *Room) DelFullChannel(channel *Channel) {
 	g.Online--
 	g.fullChsMap.Delete(channel.id)
-}
-func (g *Room) DelChannelBatch(in []*BatchStructSetOffline) {
-	g.Online -= int64(len(in))
-	for _, c := range in {
-		g.chsMap.Delete(c.ch.id)
-		c.ch.ForceClose()
-	}
 }
 
 // func (g *Room) Send(m *msg.Msg) {

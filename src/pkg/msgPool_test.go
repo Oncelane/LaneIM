@@ -18,11 +18,6 @@ func TestMesagePool(t *testing.T) {
 		laneLog.Logger.Infoln(ms.Msgs[i].Seq)
 	}
 
-	tmp := ms.Msgs[0]
-	laneLog.Logger.Infoln("ms[0]=", tmp.Seq)
 	p.Put(ms)
 	laneLog.Logger.Infoln(len(ms.Msgs))
-
-	laneLog.Logger.Infoln("ms[0]=", tmp.Seq)
-
 }

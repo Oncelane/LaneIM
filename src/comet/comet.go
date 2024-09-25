@@ -61,6 +61,7 @@ type Comet struct {
 	grpc   *grpc.Server
 
 	pool    *pkg.MsgPool
+	poolCh  *ChannelPool
 	buckets []*Bucket
 
 	// chmu sync.RWMutex
@@ -85,9 +86,10 @@ type Comet struct {
 func NewSerivceComet(conf config.Comet) (ret *Comet) {
 
 	ret = &Comet{
-		conf:  conf,
-		pool:  pkg.NewMsgPool(),
-		cache: localCache.Cache(time.Minute),
+		conf:   conf,
+		pool:   pkg.NewMsgPool(),
+		poolCh: NewChannelPool(),
+		cache:  localCache.Cache(time.Minute),
 		// channels:         make(map[int64]*Channel),
 		msgUUIDGenerator: pkg.NewUuidGenerator(int64(conf.Id)),
 	}
@@ -170,7 +172,10 @@ func (c *Comet) ServeGrpc() {
 	}
 	gServer := grpc.NewServer()
 	comet.RegisterCometServer(gServer, c)
-	laneLog.Logger.Infoln("[server] comet serivce is running on port")
+	if gServer == nil {
+		laneLog.Logger.Fatalln("faild to register cometServer")
+	}
+	laneLog.Logger.Infoln("[server] comet serivce is running on port", c.conf.GrpcPort)
 	c.grpc = gServer
 	go func() {
 		if err := gServer.Serve(lis); err != nil {
@@ -240,7 +245,7 @@ func (c *Comet) Bucket(roomid int64) *Bucket {
 // delete channel from all room
 func (c *Comet) DelChannel(ch *Channel) {
 	// delete(c.channels, ch.id)
-	ch.ForceClose()
+	ch.ForceClose(c.poolCh)
 	for i := range c.buckets {
 		c.buckets[i].DelChannelAll(ch)
 	}
@@ -251,8 +256,9 @@ func (c *Comet) DelChannelBatch(in []*BatchStructSetOffline) {
 	// 	delete(c.channels, in[i].ch.id)
 	// }
 	for i := range c.buckets {
-		in[i].ch.ForceClose()
+		in[i].ch.ForceClose(c.poolCh)
 		c.buckets[i].DelChannelAllBatch(in)
+		c.poolCh.Put(in[i].ch)
 	}
 }
 

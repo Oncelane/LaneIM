@@ -10,13 +10,12 @@ import (
 )
 
 func (c *Comet) NewChannel(wsconn *websocket.Conn) *Channel {
-	ch := &Channel{
-		id:     -1,
-		conn:   pkg.NewConnWs(wsconn, c.pool),
-		sendCh: make(chan *msg.MsgBatch, 2),
-		done:   false,
-	}
-	// ch.serveIO()
+	ch := c.poolCh.Get()
+	ch.id = -1
+	ch.done = false
+	ch.conn = pkg.NewConnWs(wsconn, c.pool)
+	ch.sendCh = make(chan *msg.MsgBatch, 2)
+	ch.onceCh = sync.Once{}
 	return ch
 }
 
@@ -78,9 +77,30 @@ type Channel struct {
 	done   bool
 }
 
-// func (c *Channel) PoolPut(m *msg.MsgBatch) {
-// 	c.conn.PoolPut(m)
-// }
+type ChannelPool struct {
+	pool sync.Pool
+}
+
+func NewChannelPool() *ChannelPool {
+	return &ChannelPool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &Channel{}
+			},
+		},
+	}
+}
+
+func (c *ChannelPool) Get() *Channel {
+	return c.pool.Get().(*Channel)
+}
+
+func (c *ChannelPool) Put(in *Channel) {
+	// in.conn = nil
+	// in.sendCh = nil
+	// in.onceCh = sync.Once{}
+	c.pool.Put(in)
+}
 
 func (c *Channel) Reply(data []byte, seq int64, path string) {
 	if c.done {
@@ -108,11 +128,14 @@ func (c *Channel) PassiveClose() error {
 	return c.conn.PassiceClose()
 }
 
-func (c *Channel) ForceClose() error {
+func (c *Channel) ForceClose(p *ChannelPool) error {
 	c.done = true
+	var err error
 	c.onceCh.Do(func() {
 		// laneLog.Logger.Debugf("channel[%d] close send channel", c.id)
 		close(c.sendCh)
+		err = c.conn.ForceClose()
+		p.Put(c)
 	})
-	return c.conn.ForceClose()
+	return err
 }

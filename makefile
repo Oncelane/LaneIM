@@ -6,7 +6,7 @@ GOTEST=$(GOCMD) test
 # Default number of clusters
 
 # local Cluster
-Ncomet ?= 2
+Ncomet ?= 1
 Njob ?= 1
 Nlogic ?= 1
 

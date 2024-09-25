@@ -17,6 +17,7 @@ func DefaultScyllaDB() ScyllaDB {
 	return ScyllaDB{
 		ClusterName: "laneIM",
 		Addrs:       []string{"127.0.0.1"},
+		Keyspace:    "laneIM",
 		BatchWriter: DefaultBatchWriter(),
 	}
 }

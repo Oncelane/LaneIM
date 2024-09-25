@@ -10,11 +10,12 @@ import (
 	"time"
 )
 
-// var cometAddr []string = []string{"ws://127.0.0.1:40050/ws"}
-var cometAddr []string = []string{"ws://172.29.178.158:40050/ws"}
+var cometAddr []string = []string{"ws://127.0.0.1:40050/ws"}
+
+// var cometAddr []string = []string{"ws://172.29.178.158:40050/ws"}
 
 // var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
-var snum = 10
+var snum = 1000
 
 func TestSimulate(t *testing.T) {
 	g := client.NewClientGroup(snum)
@@ -24,8 +25,11 @@ func TestSimulate(t *testing.T) {
 		go func() {
 			defer g.Wait.Done()
 			c.Connect(cometAddr[0])
+			// laneLog.Logger.Debugln("pass1")
 			c.NewUser()
+			// laneLog.Logger.Debugln("pass2")
 			c.Online()
+			// laneLog.Logger.Debugln("pass3")
 		}()
 	}
 	g.Wait.Wait()
@@ -68,6 +72,55 @@ func TestSimulate(t *testing.T) {
 	time.Sleep(time.Second * 2)
 	receiveBytes = g.ReceiveBytes() - receiveBytes
 	laneLog.Logger.Infoln("recevie bytes:", receiveBytes)
+}
+
+var bnum = 1000
+
+func InitOneClientGroup(b *testing.B) (*client.ClientGroup, int64) {
+	b.Helper()
+	g := client.NewClientGroup(bnum)
+
+	g.Wait.Add(bnum)
+	for _, c := range g.Clients {
+		go func() {
+			defer g.Wait.Done()
+			c.Connect(cometAddr[0])
+			c.NewUser()
+			c.Online()
+		}()
+	}
+	g.Wait.Wait()
+	// select {}
+	g.Wait.Add(bnum)
+	roomid := g.Clients[0].NewRoom()
+	for _, c := range g.Clients {
+		go func() {
+			defer g.Wait.Done()
+			c.JoinRoom(roomid)
+		}()
+	}
+	g.Wait.Wait()
+
+	g.Wait.Add(bnum)
+	for i := 0; i < bnum; i++ {
+		go func() {
+			defer g.Wait.Done()
+			g.Clients[i].Subon(roomid)
+
+		}()
+	}
+	g.Wait.Wait()
+	return g, roomid
+}
+
+func BenchmarkOneClientSend(b *testing.B) {
+	g, roomid := InitOneClientGroup(b)
+	start := time.Now()
+	for range b.N {
+		g.Clients[0].SendRoomMsg(roomid, "hello")
+	}
+	g.WaitMessageCount(bnum * b.N)
+	laneLog.Logger.Infof("send %d,spand time %v", b.N, time.Since(start))
 }
 
 var tnum = 5000
