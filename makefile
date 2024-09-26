@@ -47,12 +47,12 @@ build-comet:
 	$(GOBUILD) -o bin/comet/comet ./src/cmd/comet/main.go; \
 
 # Run all comets
-run-comet:
+run-comet: stop-comet build-comet
 	for i in $(shell seq 1 $(Ncomet)); do \
 		echo "Running comet$$i..."; \
 		(cd bin/comet && ./comet -c ../../config/comet$$i/config.yml) & \
 	done
-run-cometp:
+run-cometp: stop-comet build-comet
 	for i in $(shell seq 1 $(Ncometp)); do \
 		echo "Running comet$$i..."; \
 		(cd bin/comet && ./comet -c ../../pConfig/comet$$i/config.yml) & \
@@ -67,12 +67,12 @@ build-logic:
 	$(GOBUILD) -o bin/logic/logic ./src/cmd/logic/main.go; \
 
 # Run all logics
-run-logic:
+run-logic: stop-logic build-logic
 	for i in $(shell seq 1 $(Nlogic)); do \
 		echo "Running logic$$i..."; \
 		(cd bin/logic && ./logic -c ../../config/logic$$i/config.yml) & \
 	done
-run-logicp:
+run-logicp: stop-logic build-logic
 	for i in $(shell seq 1 $(Nlogicp)); do \
 		echo "Running logic$$i..."; \
 		(cd bin/logic && ./logic -c ../../pConfig/logic$$i/config.yml) & \

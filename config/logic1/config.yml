@@ -4,27 +4,27 @@ windowip: "127.0.0.1"
 grpcport: :50060
 name: "0"
 kafkaproducer:
-    addr:
-        - 127.0.0.1:9092
+  addr:
+    - 127.0.0.1:9092
 etcd:
-    addr:
-        - 127.0.0.1:51240
-        - 127.0.0.1:51241
-        - 127.0.0.1:51242
+  addr:
+    - 127.0.0.1:51240
+    - 127.0.0.1:51241
+    - 127.0.0.1:51242
 mysql:
-    name: "0"
-    username: debian-sys-maint
-    password: QTLVb6BaeeaJsFMT
-    addr: 127.0.0.1:3306
-    database: laneIM
-    batchwriter:
-        maxtime: 100
-        maxcount: 1000
+  name: "0"
+  username: debian-sys-maint
+  password: FJho5xokpFqZygL5
+  addr: 127.0.0.1:3306
+  database: laneIM
+  batchwriter:
+    maxtime: 100
+    maxcount: 1000
 scylladb:
-    clustername: laneIM
-    addrs:
-        - 127.0.0.1
-    keyspace: "laneIM"
-    batchwriter:
-        maxtime: 100
-        maxcount: 1000
+  clustername: laneIM
+  addrs:
+    - "127.0.0.1"
+  keyspace: laneIM
+  batchwriter:
+    maxtime: 100
+    maxcount: 1000

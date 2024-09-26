@@ -20,8 +20,8 @@ func (s *ScyllaDB) InitChatMessage() {
 	user_id bigint,
 	user_seq bigint,
 	content BLOB,
-	PRIMARY KEY (group_id, message_id)
-) WITH CLUSTERING ORDER BY ( message_id DESC);`, s.conf.Keyspace))
+	PRIMARY KEY (group_id, timestamp, message_id)
+) WITH CLUSTERING ORDER BY ( timestamp DESC, message_id DESC);`, s.conf.Keyspace))
 	if err != nil {
 		laneLog.Logger.Fatalln("create table:", err)
 	}
@@ -31,7 +31,7 @@ func (s *ScyllaDB) InitChatMessage() {
 		Name:    fmt.Sprintf(`%s.messages`, s.conf.Keyspace),
 		Columns: []string{"group_id", "user_id", "user_seq", "timestamp", "message_id", "content"},
 		PartKey: []string{"group_id"},
-		SortKey: []string{"timestamp", "message_id"},
+		SortKey: []string{"timestamp,message_id"},
 	}
 
 	// personTable allows for simple CRUD operations based on personMetadata.
@@ -47,7 +47,7 @@ func (s *ScyllaDB) AddChatMessageBatch(in *msg.SendMsgBatchReq) error {
 		// batch := gocql.NewBatch(gocql.LoggedBatch)
 		batch.Cons = gocql.LocalOne
 		insertChatQryStmt, _ := qb.Insert(fmt.Sprintf("%s.messages", s.conf.Keyspace)).Columns(s.chatMessageTable.Metadata().Columns...).ToCql()
-		// Insert 100 records.
+
 		for _, m := range in.Msgs {
 			// data := model.ChatMessage{
 			// 	GroupID:   m.Roomid,
@@ -60,7 +60,6 @@ func (s *ScyllaDB) AddChatMessageBatch(in *msg.SendMsgBatchReq) error {
 			// laneLog.Logger.Debugf("check in.Msgs data:%s", string(m.Data))
 			batch.Query(insertChatQryStmt,
 				m.Roomid, m.Userid, m.Userseq, time.Unix(m.Timeunix, 0), m.Messageid, m.Data)
-
 		}
 
 		if err := s.DB.ExecuteBatch(batch); err != nil {
@@ -72,15 +71,15 @@ func (s *ScyllaDB) AddChatMessageBatch(in *msg.SendMsgBatchReq) error {
 	return nil
 }
 
-func (s *ScyllaDB) PageChatMessageByMessageid(groupID int64, lastMessageID int64, limit int) ([]model.ChatMessage, int, error) {
+func (s *ScyllaDB) PageChatMessageByMessageid(groupID int64, lastMessageID int64, lastMsgUnix int64, limit int) ([]model.ChatMessage, int, error) {
 	// 分页查询示例
 	debugSql := fmt.Sprintf(`
 	SELECT *
 	FROM %s.messages
 	WHERE group_id = %d
-	AND message_id < %d
-	LIMIT %d`, s.conf.Keyspace, groupID, lastMessageID, limit)
-	// laneLog.Logger.Debugln("sql = ", debugSql)
+	AND timestamp <= '%s'
+	LIMIT %d`, s.conf.Keyspace, groupID, time.Unix(lastMsgUnix, 0).Format("2006-01-02T15:04:05.000Z"), limit)
+	laneLog.Logger.Debugln("sql = ", debugSql)
 	iter := s.DB.Query(debugSql, nil).Iter()
 	rt := make([]model.ChatMessage, limit+1)
 	// Scan(&oneMessage.GroupID, &oneMessage.Timestamp, &oneMessage.MessageID, &oneMessage.Content, &oneMessage.UserID)
@@ -101,7 +100,7 @@ func (s *ScyllaDB) PageChatMessageByMessageid(groupID int64, lastMessageID int64
 	return rt, index, nil
 }
 
-func (s *ScyllaDB) QueryLatestGroupMessageid(groupID int64) (lastMessageID int64, err error) {
+func (s *ScyllaDB) QueryLatestGroupMessageid(groupID int64) (lastMessageID, lastMsgUnix int64, err error) {
 	// 分页查询示例
 	debugSql := fmt.Sprintf(`
 	SELECT *
@@ -116,8 +115,8 @@ func (s *ScyllaDB) QueryLatestGroupMessageid(groupID int64) (lastMessageID int64
 		return
 	}
 	if len(oneMessage) != 0 {
-		return oneMessage[0].MessageID, nil
+		return oneMessage[0].MessageID, oneMessage[0].Timestamp.Unix(), nil
 	}
 
-	return 0, gocql.ErrNotFound
+	return -1, -1, gocql.ErrNotFound
 }

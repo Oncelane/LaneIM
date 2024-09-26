@@ -16,12 +16,12 @@ import (
 
 var ctx = context.Background()
 
-func TestRedisLocal(t *testing.T) {
+func TestSetProduceRedis(t *testing.T) {
 
 	e := pkg.NewEtcd(config.Etcd{Addr: []string{
-		"127.0.0.1:51240",
-		"127.0.0.1:51241",
-		"127.0.0.1:51242"}})
+		"172.29.178.158:51240",
+		"172.29.178.158:51241",
+		"192.168.141.235:51242"}})
 	laneLog.Logger.Infoln("get: ", e.GetAddr("logic"))
 	e.SetAddr("redis:1", "127.0.0.1:7001")
 	e.SetAddr("redis:2", "127.0.0.1:7002")
@@ -30,12 +30,13 @@ func TestRedisLocal(t *testing.T) {
 	e.SetAddr("redis:3", "127.0.0.1:7005")
 	e.SetAddr("redis:3", "127.0.0.1:7006")
 }
-func TestRedis(t *testing.T) {
+
+func TestSetLocalRedis(t *testing.T) {
 
 	e := pkg.NewEtcd(config.Etcd{Addr: []string{
-		"172.29.178.158:51240",
-		"172.29.178.158:51241",
-		"192.168.141.235:51242"}})
+		"127.0.0.1:51240",
+		"127.0.0.1:51241",
+		"127.0.0.1:51242"}})
 	laneLog.Logger.Infoln("get: ", e.GetAddr("logic"))
 	e.SetAddr("redis:1", "127.0.0.1:7001")
 	e.SetAddr("redis:2", "127.0.0.1:7002")

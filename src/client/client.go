@@ -14,13 +14,14 @@ import (
 
 type Client struct {
 	//control
-	Mgr           *ClientGroup
-	conn          *pkg.ConnWs
-	Userid        int64
-	GroupSeq      int
-	Seq           int64
-	Roomids       []int64
-	LastMessageId int64
+	Mgr             *ClientGroup
+	conn            *pkg.ConnWs
+	Userid          int64
+	GroupSeq        int
+	Seq             int64
+	Roomids         []int64
+	LastMessageId   int64
+	LastMessageUnix int64
 
 	// statistics
 	SendByte         int64
@@ -31,18 +32,18 @@ type Client struct {
 	ackSpandTime time.Duration
 
 	// sync
-	waitNewRoom       chan int64
-	waitAuth          chan string
-	waitSendAck       chan string
-	waitQueryRoom     chan []int64
-	waitNewUser       chan int64
-	waitJoinRoom      chan string
-	waitOnline        chan string
-	waitOffline       chan string
-	waitLastMessageid chan int64
-	waitPaging        chan *msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs
-	waitSubOn         chan string
-	waitSubOff        chan string
+	waitNewRoom   chan int64
+	waitAuth      chan string
+	waitSendAck   chan string
+	waitQueryRoom chan []int64
+	waitNewUser   chan int64
+	waitJoinRoom  chan string
+	waitOnline    chan string
+	waitOffline   chan string
+	waitLast      chan *msg.CQueryLastResp
+	waitPaging    chan *msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs
+	waitSubOn     chan string
+	waitSubOff    chan string
 }
 
 // var cometAddr []string = []string{"ws://127.0.0.1:40050/ws", "ws://127.0.0.1:40051/ws"}
@@ -148,20 +149,20 @@ func NewClientGroup(num int) *ClientGroup {
 
 func NewClient(userid int64) *Client {
 	return &Client{
-		Userid:            userid,
-		waitNewRoom:       make(chan int64),
-		waitAuth:          make(chan string),
-		waitSendAck:       make(chan string),
-		waitQueryRoom:     make(chan []int64),
-		waitNewUser:       make(chan int64),
-		waitJoinRoom:      make(chan string),
-		waitOnline:        make(chan string),
-		waitOffline:       make(chan string),
-		waitLastMessageid: make(chan int64),
-		waitPaging:        make(chan *msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs),
-		waitSubOn:         make(chan string),
-		waitSubOff:        make(chan string),
-		RoomReceiveBytes:  make(map[int64]int64),
+		Userid:           userid,
+		waitNewRoom:      make(chan int64),
+		waitAuth:         make(chan string),
+		waitSendAck:      make(chan string),
+		waitQueryRoom:    make(chan []int64),
+		waitNewUser:      make(chan int64),
+		waitJoinRoom:     make(chan string),
+		waitOnline:       make(chan string),
+		waitOffline:      make(chan string),
+		waitLast:         make(chan *msg.CQueryLastResp),
+		waitPaging:       make(chan *msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs),
+		waitSubOn:        make(chan string),
+		waitSubOff:       make(chan string),
+		RoomReceiveBytes: make(map[int64]int64),
 	}
 }
 
@@ -355,18 +356,23 @@ func (c *Client) Offline() {
 	// return <-c.waitOffline
 }
 
-func (c *Client) QueryLastMessageId(roomid int64) (int64, error) {
-	err := c.sendCometSingle("last", []byte(strconv.FormatInt(roomid, 10)))
+func (c *Client) QueryLast(roomid int64) (*msg.CQueryLastResp, error) {
+	req := msg.CQueryLastReq{
+		Roomid: roomid,
+	}
+	data, _ := proto.Marshal(&req)
+	err := c.sendCometSingle("last", data)
 	if err != nil {
 		laneLog.Logger.Fatalln("[client] send err:", err)
-		return 0, err
+		return nil, err
 	}
-	return <-c.waitLastMessageid, nil
+	return <-c.waitLast, nil
 }
-func (c *Client) QueryPaging(roomid int64, lastMsgId int64, limit int64) (*msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs, error) {
+func (c *Client) QueryPaging(roomid int64, lastMsgId int64, lastMsgUnix int64, limit int64) (*msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs, error) {
 	data, err := proto.Marshal(&msg.CQueryStoreMessageReq{
 		Roomid:    roomid,
 		MessageId: lastMsgId,
+		TimeUnix:  lastMsgUnix,
 		Size:      limit,
 	})
 	if err != nil {
@@ -451,15 +457,17 @@ func (c *Client) Receive() {
 			case "offline":
 				// c.waitOffline <- string(m.Data)
 			case "last":
-				msgId, err := strconv.ParseInt(string(message.Msgs[i].Data), 10, 64)
+				last := msg.CQueryLastResp{}
+				err := proto.Unmarshal(m.Data, &last)
 				if err != nil {
 					laneLog.Logger.Fatalln(err)
 				}
-				c.LastMessageId = msgId
-				c.waitLastMessageid <- msgId
+				c.LastMessageId = last.MessageId
+				c.LastMessageUnix = last.TimeUnix
+				c.waitLast <- &last
 			case "his":
 				msgs := new(msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs)
-				err := proto.Unmarshal(message.Msgs[i].Data, msgs)
+				err := proto.Unmarshal(m.Data, msgs)
 				if err != nil {
 					laneLog.Logger.Fatalln(err)
 				}

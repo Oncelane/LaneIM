@@ -54,7 +54,7 @@ func testMessage(t *testing.T, db *cql.ScyllaDB, num int, room int64) {
 }
 
 func testPageMessage(t *testing.T, db *cql.ScyllaDB, limit int, room int64) {
-	lastMsgid, err := db.QueryLatestGroupMessageid(room)
+	lastMsgid, lastMsgUnix, err := db.QueryLatestGroupMessageid(room)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func testPageMessage(t *testing.T, db *cql.ScyllaDB, limit int, room int64) {
 	curpage := 0
 	for {
 		// laneLog.Logger.Debugln("last room message id =", lastMsgid)
-		rt, validSize, err := db.PageChatMessageByMessageid(int64(1005), lastMsgid, limit)
+		rt, validSize, err := db.PageChatMessageByMessageid(int64(1005), lastMsgid, lastMsgUnix, limit)
 		// select {}
 		if err != nil {
 			t.Fatal(err)

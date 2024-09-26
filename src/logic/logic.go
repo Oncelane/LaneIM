@@ -181,7 +181,7 @@ func (s *Logic) QueryStoreMsgBatch(_ context.Context, in *msg.QueryMultiRoomPage
 			PagesMsgs: make([]*msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs, len(q.PageInfos)),
 		}
 		for pageIndex, page := range q.PageInfos {
-			modelData, valid, err := s.scyllaDB.PageChatMessageByMessageid(q.Roomid, page.MessageId, int(page.Size))
+			modelData, valid, err := s.scyllaDB.PageChatMessageByMessageid(q.Roomid, page.MessageId, page.TimeUnix, int(page.Size))
 			if err != nil {
 				laneLog.Logger.Errorln("faild to cql get q.Roomid ", q.Roomid, "page.MessageId", page.MessageId, "page.Size", page.Size, "err =", err)
 			}
@@ -395,28 +395,36 @@ func (s *Logic) Auth(_ context.Context, in *pb.AuthReq) (*pb.AuthResp, error) {
 	return out, nil
 }
 
+type pair_mid_unix struct {
+	mid  int64
+	unix int64
+}
+
 func (s *Logic) QueryLast(_ context.Context, in *pb.QueryLastReq) (*pb.QueryLastRelpy, error) {
 	start := time.Now()
 	wait := sync.WaitGroup{}
 	wait.Add(len(in.Roomid))
 	out := new(pb.QueryLastRelpy)
 	out.MessageId = make([]int64, len(in.Roomid))
+	out.TimeUnix = make([]int64, len(in.Roomid))
 	for i, roomid := range in.Roomid {
 		go func(index int, roomid int64) {
 			defer wait.Done()
 			rt, err, _ := s.scyllaDB.SingleFlightGroup.Do(strconv.FormatInt(roomid, 36), func() (interface{}, error) {
-				return s.scyllaDB.QueryLatestGroupMessageid(roomid)
+				mid, uid, err := s.scyllaDB.QueryLatestGroupMessageid(roomid)
+				return pair_mid_unix{mid, uid}, err
 			})
 			if err != nil {
 				laneLog.Logger.Fatalln("[dao] wrong querylastMessageid", err)
 				return
 			}
-			msgId, ok := rt.(int64)
+			r, ok := rt.(pair_mid_unix)
 			if !ok {
 				laneLog.Logger.Fatalln("[dao] wrong querylastMessageid", err)
 				return
 			}
-			out.MessageId[i] = msgId
+			out.MessageId[i] = r.mid
+			out.TimeUnix[i] = r.unix
 
 		}(i, roomid)
 

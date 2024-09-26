@@ -21,7 +21,7 @@ cometroutinesize: 32
 mysql:
   name: "0"
   username: debian-sys-maint
-  password: QTLVb6BaeeaJsFMT
+  password: FJho5xokpFqZygL5
   addr: 127.0.0.1:3306
   database: laneIM
   batchwriter:
