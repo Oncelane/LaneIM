@@ -49,7 +49,7 @@ func NewLogic(conf config.Logic) *Logic {
 		conf:   conf,
 		daoo:   dao.NewDao(conf.Mysql.BatchWriter),
 		comets: make(map[string]struct{}),
-		cache:  localCache.Cache(time.Minute),
+		cache:  localCache.NewLocalCache(time.Minute),
 	}
 	s.uuid = pkg.NewUuidGenerator(int64(conf.Id))
 

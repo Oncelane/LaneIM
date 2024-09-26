@@ -20,6 +20,7 @@ func NewRedisClient(conf config.Redis) *RedisClient {
 		Addrs: conf.Addr, // Redis 节点地址
 		// 如果你的集群需要身份验证，请提供密码
 		// Password: "yourpassword",
+
 	})
 	c := &RedisClient{
 		Addrs:  conf.Addr,

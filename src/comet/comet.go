@@ -89,7 +89,7 @@ func NewSerivceComet(conf config.Comet) (ret *Comet) {
 		conf:   conf,
 		pool:   pkg.NewMsgPool(),
 		poolCh: NewChannelPool(),
-		cache:  localCache.Cache(time.Minute),
+		cache:  localCache.NewLocalCache(time.Minute),
 		// channels:         make(map[int64]*Channel),
 		msgUUIDGenerator: pkg.NewUuidGenerator(int64(conf.Id)),
 	}

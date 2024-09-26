@@ -43,7 +43,7 @@ func NewJob(conf config.Job) *Job {
 		conf:          conf,
 		comets:        make(map[string]*CometClient),
 		daoo:          dao.NewDao(conf.Mysql.BatchWriter),
-		cache:         localCache.Cache(time.Minute),
+		cache:         localCache.NewLocalCache(time.Minute),
 	}
 
 	j.db = sql.NewDB(conf.Mysql)

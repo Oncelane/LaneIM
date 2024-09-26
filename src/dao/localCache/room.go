@@ -9,7 +9,7 @@ import (
 	"github.com/allegro/bigcache"
 )
 
-func Cache(time time.Duration) *bigcache.BigCache {
+func NewLocalCache(time time.Duration) *bigcache.BigCache {
 	rt, err := bigcache.NewBigCache(bigcache.DefaultConfig(time))
 	if err != nil {
 		log.Panicln("faild to create local cache")

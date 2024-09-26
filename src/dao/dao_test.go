@@ -16,7 +16,7 @@ import (
 )
 
 func TestCahce(t *testing.T) {
-	lcache := localCache.Cache(time.Millisecond * 1)
+	lcache := localCache.NewLocalCache(time.Millisecond * 1)
 	rdb := pkg.NewRedisClient(config.Redis{Addr: []string{"127.0.0.1:7001", "127.0.0.1:7002", "127.0.0.1:7003"}})
 	db := sql.NewDB(config.DefaultMysql())
 
