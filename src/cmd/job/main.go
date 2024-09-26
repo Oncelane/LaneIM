@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"laneIM/src/config"
-	"laneIM/src/job"
+	"laneIM/src/internal/job"
 	"laneIM/src/pkg/laneLog"
 	"os"
 	"os/signal"

@@ -3,7 +3,7 @@ syntax = "proto3";
 package lane.logic;
 option go_package = "laneIM/proto/logic;logic";
 import "proto/msg/msg.proto";
-
+import "google/protobuf/timestamp.proto";
 message NoReq {}
 message NoResp {}
 
@@ -85,7 +85,7 @@ message AuthResp { bool pass = 1; }
 message QueryLastReq { repeated int64 roomid = 1; }
 message QueryLastRelpy {
   repeated int64 messageId = 1;
-  repeated int64 timeUnix = 2;
+  repeated google.protobuf.Timestamp timeunix = 2;
 }
 
 service logic {

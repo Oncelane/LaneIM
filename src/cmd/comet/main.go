@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"laneIM/src/comet"
 	"laneIM/src/config"
+	"laneIM/src/internal/comet"
 	"laneIM/src/pkg/laneLog"
 	"net/http"
 	"os"

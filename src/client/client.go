@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Client struct {
@@ -21,7 +22,7 @@ type Client struct {
 	Seq             int64
 	Roomids         []int64
 	LastMessageId   int64
-	LastMessageUnix int64
+	LastMessageUnix time.Time
 
 	// statistics
 	SendByte         int64
@@ -368,11 +369,21 @@ func (c *Client) QueryLast(roomid int64) (*msg.CQueryLastResp, error) {
 	}
 	return <-c.waitLast, nil
 }
-func (c *Client) QueryPaging(roomid int64, lastMsgId int64, lastMsgUnix int64, limit int64) (*msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs, error) {
+
+func (c *Client) SetQueryLastIndex(mid int64, unix time.Time) {
+	c.LastMessageId = mid
+	c.LastMessageUnix = unix
+}
+
+func (c *Client) GetQueryLastIndex() (int64, time.Time) {
+	return c.LastMessageId, c.LastMessageUnix
+}
+
+func (c *Client) QueryPaging(roomid int64, lastMsgId int64, lastMsgUnix time.Time, limit int64) (*msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs, error) {
 	data, err := proto.Marshal(&msg.CQueryStoreMessageReq{
 		Roomid:    roomid,
 		MessageId: lastMsgId,
-		TimeUnix:  lastMsgUnix,
+		TimeUnix:  timestamppb.New(lastMsgUnix),
 		Size:      limit,
 	})
 	if err != nil {
@@ -463,7 +474,7 @@ func (c *Client) Receive() {
 					laneLog.Logger.Fatalln(err)
 				}
 				c.LastMessageId = last.MessageId
-				c.LastMessageUnix = last.TimeUnix
+				c.LastMessageUnix = last.TimeUnix.AsTime().Local()
 				c.waitLast <- &last
 			case "his":
 				msgs := new(msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs)

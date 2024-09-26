@@ -22,6 +22,7 @@ require (
 	github.com/Oncelane/laneEtcd v1.1.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gocql/gocql v1.6.0
+	github.com/golang/protobuf v1.5.4
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/scylladb/gocqlx v1.5.0
 	github.com/scylladb/gocqlx/v3 v3.0.0

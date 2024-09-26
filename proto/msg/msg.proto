@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package lane.msg;
 option go_package = "laneIM/proto/msg;msg";
-
+import "google/protobuf/timestamp.proto";
 // protoc --go_out=.. --go-grpc_out=..
 // --go-grpc_opt=require_unimplemented_servers=false -I. -Iproto
 // proto/msg/msg.proto proto/comet/comet.proto proto/logic/logic.proto
@@ -23,14 +23,14 @@ message CSendRoomReq {
   int64 roomid = 2;
   string msg = 3;
   // set by cometserver
-  int64 timeunix = 4;
+  google.protobuf.Timestamp timeunix = 4;
 }
 message CSendRoomResp { bool ack = 1; }
 
 message CQueryStoreMessageReq {
   int64 roomid = 1;
   int64 messageId = 2;
-  int64 timeUnix = 3;
+  google.protobuf.Timestamp timeUnix = 3;
   int64 size = 4;
 }
 
@@ -48,7 +48,7 @@ message SendMsgReq {
   int64 userid = 4;
   int64 roomid = 5;
   int64 userseq = 6;
-  int64 timeunix = 7;
+  google.protobuf.Timestamp timeunix = 7;
   int64 toUserid = 8;
   bytes data = 9;
 }
@@ -57,7 +57,7 @@ message RoomStoreChatMessage {
   int64 messageid = 1;
   int64 userid = 2;
   int64 userseq = 3;
-  int64 timeunix = 4;
+  google.protobuf.Timestamp timeunix = 4;
   bytes data = 5;
 }
 // comet->logic->kafka->job
@@ -68,7 +68,7 @@ message QueryMultiRoomPagesReq { // 对应某房间
     // 对应某一段
     message PageInfo {
       int64 messageId = 1;
-      int64 timeUnix = 2;
+      google.protobuf.Timestamp timeUnix = 2;
       int64 size = 3;
     }
     int64 roomid = 1;
@@ -146,5 +146,5 @@ message COnlineResp {
 message CQueryLastReq { int64 roomid = 1; }
 message CQueryLastResp {
   int64 messageId = 1;
-  int64 timeUnix = 2;
+  google.protobuf.Timestamp timeUnix = 2;
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UserJson struct {
@@ -210,7 +211,7 @@ func (c *Comet) HandleSendRoomBatch(m *msg.Msg, ch *Channel) {
 		laneLog.Logger.Fatalln("[server] faild to decode proto", err)
 		return
 	}
-	cSendRoomReq.Timeunix = time.Now().Unix()
+	cSendRoomReq.Timeunix = timestamppb.Now()
 	c.BatcherSendRoom.Add(&BatchStructSendRoom{
 		arg: cSendRoomReq,
 		ch:  ch,
@@ -617,7 +618,7 @@ func (c *Comet) doQueryStoreMsgBatch(in []*BatchStructQueryStoreMsg) {
 		laneLog.Logger.Errorln(err)
 		return
 	}
-	laneLog.Logger.Debugln("check queryRoompages", rt.String())
+	// laneLog.Logger.Debugln("check queryRoompages", rt.String())
 	for i, pages := range rt.RoomMultiPageMsgs {
 		roomid := multiPageInfos[i].Roomid
 		pageInfos := multiPageInfos[i].PageInfos
@@ -690,7 +691,7 @@ func (c *Comet) doQueryLast(in []*BatcheStructLast) {
 	midAndUnix := msg.CQueryLastResp{}
 	for i := range rt.MessageId {
 		midAndUnix.MessageId = rt.MessageId[i]
-		midAndUnix.TimeUnix = rt.TimeUnix[i]
+		midAndUnix.TimeUnix = rt.Timeunix[i]
 		data, _ := proto.Marshal(&midAndUnix)
 		in[i].ch.Reply(data, in[i].seq, "last")
 	}

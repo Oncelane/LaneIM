@@ -60,6 +60,23 @@ server2 网卡统计数据
 
 因为 batch Api 的存在，客户端的多次请求会被合并，系统的网络通讯次数并不会跟随请求数线性增长，对网络 IO 利用率是比较高的，可以看到即使是 2 亿级别的消息转发量，客户端接收耗时也不会随之增长。
 
+# 压测3
+
+历史消息的分页拉取性能：群内已存入1000条历史消息，客户端每次拉取20条历史消息
+
+![历史消息](./docs/每页20拉取1000条历史消息.png)
+
+每页耗时100ms左右
+
+由于scyllaDB的时间存储精度只能达到ms级别，对于1ms内的重复消息无法准确区分页的边界，只能采取消极应对方法，使用 <= 的语义拉取历史消息，而不是<
+
+因此最终拉取的分页数目将超过50，重复的消息将由客户端负责去重
+
+![分页数目](./docs/拉取分页的数目.png)
+
+>可见，最后拉取了57页的数据
+
+
 # 项目依赖
 
 - [laneEtcd](<(https://github.com/Oncelane/laneEtcd)>) (本人另一个项目，性能相当的 etcd 实现)
@@ -110,19 +127,19 @@ Nlogicp ?= 1
 logic 集群
 
 ```sh
-make run-logic
+make run-logic -i
 ```
 
 comet 集群
 
 ```sh
-make run-comet
+make run-comet -i
 ```
 
 job 集群
 
 ```sh
-make run-job
+make run-job -i
 ```
 
 canal 服务器是可选的，它可以用于保障 sql 和 redis 之间，以及 redis 和 localcache 之间的数据一致性，但是有一定的延迟
@@ -501,9 +518,9 @@ canal.instance.tsdb.enable=true
 
 # username/password
 canal.instance.dbUsername=debian-sys-maint
-canal.instance.dbPassword=FJho5xokpFqZygL5
+canal.instance.dbPassword=QTLVb6BaeeaJsFMT
 # debian-sys-maint
-# FJho5xokpFqZygL5
+# QTLVb6BaeeaJsFMT
 canal.instance.connectionCharset = UTF-8
 # enable druid Decrypt database password
 canal.instance.enableDruid=false

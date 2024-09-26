@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"laneIM/src/canal"
 	"laneIM/src/config"
+	"laneIM/src/internal/canal"
 	"laneIM/src/pkg/laneLog"
 	"time"
 )

@@ -59,7 +59,7 @@ func (s *ScyllaDB) AddChatMessageBatch(in *msg.SendMsgBatchReq) error {
 			// }
 			// laneLog.Logger.Debugf("check in.Msgs data:%s", string(m.Data))
 			batch.Query(insertChatQryStmt,
-				m.Roomid, m.Userid, m.Userseq, time.Unix(m.Timeunix, 0), m.Messageid, m.Data)
+				m.Roomid, m.Userid, m.Userseq, m.Timeunix.AsTime(), m.Messageid, m.Data)
 		}
 
 		if err := s.DB.ExecuteBatch(batch); err != nil {
@@ -71,15 +71,15 @@ func (s *ScyllaDB) AddChatMessageBatch(in *msg.SendMsgBatchReq) error {
 	return nil
 }
 
-func (s *ScyllaDB) PageChatMessageByMessageid(groupID int64, lastMessageID int64, lastMsgUnix int64, limit int) ([]model.ChatMessage, int, error) {
+func (s *ScyllaDB) PageChatMessageByMessageid(groupID int64, lastMessageID int64, lastMsgUnix time.Time, limit int) ([]model.ChatMessage, int, error) {
 	// 分页查询示例
 	debugSql := fmt.Sprintf(`
 	SELECT *
 	FROM %s.messages
 	WHERE group_id = %d
 	AND timestamp <= '%s'
-	LIMIT %d`, s.conf.Keyspace, groupID, time.Unix(lastMsgUnix, 0).Format("2006-01-02T15:04:05.000Z"), limit)
-	laneLog.Logger.Debugln("sql = ", debugSql)
+	LIMIT %d`, s.conf.Keyspace, groupID, lastMsgUnix.Format("2006-01-02T15:04:05.000Z+0800"), limit)
+	// laneLog.Logger.Debugln("sql = ", debugSql)
 	iter := s.DB.Query(debugSql, nil).Iter()
 	rt := make([]model.ChatMessage, limit+1)
 	// Scan(&oneMessage.GroupID, &oneMessage.Timestamp, &oneMessage.MessageID, &oneMessage.Content, &oneMessage.UserID)
@@ -100,7 +100,7 @@ func (s *ScyllaDB) PageChatMessageByMessageid(groupID int64, lastMessageID int64
 	return rt, index, nil
 }
 
-func (s *ScyllaDB) QueryLatestGroupMessageid(groupID int64) (lastMessageID, lastMsgUnix int64, err error) {
+func (s *ScyllaDB) QueryLatestGroupMessageid(groupID int64) (lastMessageID int64, lastMsgUnix time.Time, err error) {
 	// 分页查询示例
 	debugSql := fmt.Sprintf(`
 	SELECT *
@@ -115,8 +115,22 @@ func (s *ScyllaDB) QueryLatestGroupMessageid(groupID int64) (lastMessageID, last
 		return
 	}
 	if len(oneMessage) != 0 {
-		return oneMessage[0].MessageID, oneMessage[0].Timestamp.Unix(), nil
+		return oneMessage[0].MessageID, oneMessage[0].Timestamp, nil
 	}
 
-	return -1, -1, gocql.ErrNotFound
+	return -1, lastMsgUnix, gocql.ErrNotFound
+}
+
+func (s *ScyllaDB) PageChatMessageUnReadCountByMessageid(groupID int64, lastMessageID int64, lastMsgUnix time.Time) (count int, err error) {
+	// 分页查询示例
+	debugSql := fmt.Sprintf(`
+	select  count (*) from %s.messages
+	where group_id = %d AND timestamp >= '%s' ;`, s.conf.Keyspace, groupID, lastMsgUnix.UTC().Format("2006-01-02T15:04:05.000Z"))
+	// laneLog.Logger.Debugln("sql = ", debugSql)
+	// Scan(&oneMessage.GroupID, &oneMessage.Timestamp, &oneMessage.MessageID, &oneMessage.Content, &oneMessage.UserID)
+	err = s.DB.Query(debugSql, nil).Iter().Get(&count)
+	if err != nil {
+		return -1, err
+	}
+	return
 }

@@ -435,17 +435,38 @@ func HelpGeneratorMessage(b *testing.B, groupSize int, messageSize int) (*client
 func BenchmarkPaging(b *testing.B) {
 	messageSize := 1000
 	roomSize := 100
+	pageSize := 20
 	g, roomid := HelpGeneratorMessage(b, roomSize, messageSize)
 	laneLog.Logger.Infoln("save ", messageSize, " messages")
 	last, err := g.Clients[0].QueryLast(roomid)
+	g.Clients[0].LastMessageId = last.MessageId
+	g.Clients[0].LastMessageUnix = last.TimeUnix.AsTime().Local()
 	if err != nil {
 		b.Fatal(err)
 	}
 	laneLog.Logger.Infoln("query last =", last.String())
-	msgs, err := g.Clients[0].QueryPaging(roomid, last.MessageId, last.TimeUnix, 10)
-	if err != nil {
-		b.Fatal(err)
+	var pageIndex = 0
+	c := g.Clients[0]
+	for {
+
+		msgs, err := c.QueryPaging(roomid, c.LastMessageId, c.LastMessageUnix, int64(pageSize))
+		if err != nil {
+			b.Fatal(err)
+		}
+		if len(msgs.Msgs) < pageSize {
+			laneLog.Logger.Infoln("===========end%d==========", pageIndex)
+			break
+		}
+		lastMsg := msgs.Msgs[len(msgs.Msgs)-1]
+		laneLog.Logger.Infof("=========page%d=>lastMsg:%s", pageIndex, string(lastMsg.Data))
+		c.SetQueryLastIndex(lastMsg.Messageid, lastMsg.Timeunix.AsTime().Local())
+		pageIndex++
 	}
-	laneLog.Logger.Infoln(msgs.String())
 
 }
+
+// 测试上线后获取离线消息
+// func TestPageChatMessageUnReadCountByMessageid(t *testing.T) {
+// 	db :=
+// 	db.PageChatMessageUnReadCountByMessageid()
+// }

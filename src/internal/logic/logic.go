@@ -23,6 +23,7 @@ import (
 	"github.com/allegro/bigcache"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Logic struct {
@@ -181,7 +182,7 @@ func (s *Logic) QueryStoreMsgBatch(_ context.Context, in *msg.QueryMultiRoomPage
 			PagesMsgs: make([]*msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs, len(q.PageInfos)),
 		}
 		for pageIndex, page := range q.PageInfos {
-			modelData, valid, err := s.scyllaDB.PageChatMessageByMessageid(q.Roomid, page.MessageId, page.TimeUnix, int(page.Size))
+			modelData, valid, err := s.scyllaDB.PageChatMessageByMessageid(q.Roomid, page.MessageId, page.TimeUnix.AsTime().Local(), int(page.Size))
 			if err != nil {
 				laneLog.Logger.Errorln("faild to cql get q.Roomid ", q.Roomid, "page.MessageId", page.MessageId, "page.Size", page.Size, "err =", err)
 			}
@@ -203,7 +204,7 @@ func TrueMsgFromModelToProto(in []model.ChatMessage, valid int) []*msg.RoomStore
 			Messageid: in[i].MessageID,
 			Userid:    in[i].UserID,
 			Userseq:   in[i].UserSeq,
-			Timeunix:  in[i].Timestamp.Unix(),
+			Timeunix:  timestamppb.New(in[i].Timestamp),
 			Data:      in[i].Content,
 		}
 	}
@@ -397,7 +398,7 @@ func (s *Logic) Auth(_ context.Context, in *pb.AuthReq) (*pb.AuthResp, error) {
 
 type pair_mid_unix struct {
 	mid  int64
-	unix int64
+	unix time.Time
 }
 
 func (s *Logic) QueryLast(_ context.Context, in *pb.QueryLastReq) (*pb.QueryLastRelpy, error) {
@@ -406,7 +407,7 @@ func (s *Logic) QueryLast(_ context.Context, in *pb.QueryLastReq) (*pb.QueryLast
 	wait.Add(len(in.Roomid))
 	out := new(pb.QueryLastRelpy)
 	out.MessageId = make([]int64, len(in.Roomid))
-	out.TimeUnix = make([]int64, len(in.Roomid))
+	out.Timeunix = make([]*timestamppb.Timestamp, len(in.Roomid))
 	for i, roomid := range in.Roomid {
 		go func(index int, roomid int64) {
 			defer wait.Done()
@@ -424,7 +425,7 @@ func (s *Logic) QueryLast(_ context.Context, in *pb.QueryLastReq) (*pb.QueryLast
 				return
 			}
 			out.MessageId[i] = r.mid
-			out.TimeUnix[i] = r.unix
+			out.Timeunix[i] = timestamppb.New(r.unix)
 
 		}(i, roomid)
 

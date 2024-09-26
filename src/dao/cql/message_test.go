@@ -5,26 +5,50 @@ import (
 	"laneIM/proto/msg"
 	"laneIM/src/config"
 	"laneIM/src/dao/cql"
+	"laneIM/src/pkg/laneLog"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestAddAndPage(t *testing.T) {
+	db := GetDB_T(t)
+
+	num := 10000
+	limit := 100
+	GeneratorMessage_T(t, db, num, 1005)
+	GeneratorMessage_T(t, db, num, 404)
+	testPageMessage(t, db, limit, 1005)
+	testPageMessage(t, db, limit, 404)
+}
+
+func GetDB_T(t *testing.T) *cql.ScyllaDB {
+	t.Helper()
 	conf := config.DefaultScyllaDB()
 	conf.Keyspace = "examples"
 	db := cql.NewCqlDB(conf)
 	db.ResetKeySpace()
 	db.InitChatMessage()
-
-	num := 10000
-	limit := 100
-	testMessage(t, db, num, 1005)
-	testMessage(t, db, num, 404)
-	testPageMessage(t, db, limit, 1005)
-	testPageMessage(t, db, limit, 404)
+	if db == nil {
+		t.Fatal("faild to connect scyllaDB")
+	}
+	return db
 }
 
-func testMessage(t *testing.T, db *cql.ScyllaDB, num int, room int64) {
+func GetDB_B(t *testing.B) *cql.ScyllaDB {
+	t.Helper()
+	conf := config.DefaultScyllaDB()
+	conf.Keyspace = "examples"
+	db := cql.NewCqlDB(conf)
+	db.ResetKeySpace()
+	db.InitChatMessage()
+	if db == nil {
+		t.Fatal("faild to connect scyllaDB")
+	}
+	return db
+}
+func doGeneratorMessage(db *cql.ScyllaDB, num int, room int64) error {
 	msgs := make([]*msg.SendMsgReq, num)
 	for i := range num {
 		// data := ChatMessage{
@@ -39,7 +63,7 @@ func testMessage(t *testing.T, db *cql.ScyllaDB, num int, room int64) {
 			Userid:    int64(i),
 			Roomid:    room,
 			Userseq:   0,
-			Timeunix:  time.Now().Unix(),
+			Timeunix:  timestamppb.Now(),
 			Data:      []byte(fmt.Sprintf("i am message from %d", i)),
 		}
 		// laneLog.Logger.Debugf("check data:%s", string(msgs[i].Data))
@@ -47,6 +71,18 @@ func testMessage(t *testing.T, db *cql.ScyllaDB, num int, room int64) {
 	err := db.AddChatMessageBatch(&msg.SendMsgBatchReq{
 		Msgs: msgs,
 	})
+	return err
+}
+func GeneratorMessage_T(t *testing.T, db *cql.ScyllaDB, num int, room int64) {
+	t.Helper()
+	err := doGeneratorMessage(db, num, room)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+func GeneratorMessage_B(t *testing.B, db *cql.ScyllaDB, num int, room int64) {
+	t.Helper()
+	err := doGeneratorMessage(db, num, room)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,4 +115,23 @@ func testPageMessage(t *testing.T, db *cql.ScyllaDB, limit int, room int64) {
 
 	}
 
+}
+
+func BenchmarkGetPageChatMessageUnReadCountByMessageid(t *testing.B) {
+	// laneLog.Logger.Debugln("time.Now=", time.Now())
+	// laneLog.Logger.Debugln("timestamp.Now=", timestamppb.Now().AsTime())
+
+	db := GetDB_B(t)
+	GeneratorMessage_B(t, db, 100, 1005)
+	// 60秒前下线
+	offlineTimpStamp := time.Now().Add(time.Second * -60)
+	var count int
+	var err error
+	for range t.N {
+		count, err = db.PageChatMessageUnReadCountByMessageid(1005, -1, offlineTimpStamp)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	laneLog.Logger.Debugln("online, query unread message count:", count)
 }
