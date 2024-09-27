@@ -466,6 +466,7 @@ func BenchmarkPaging(b *testing.B) {
 
 }
 
+// 历史消息拉取-并发拉取相同的页数
 func BenchmarkPagingConcurrensy(b *testing.B) {
 	messageSize := 1000
 	roomSize := 100
