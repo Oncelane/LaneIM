@@ -24,6 +24,7 @@ require (
 	github.com/gocql/gocql v1.6.0
 	github.com/golang/protobuf v1.5.4
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+	github.com/panjf2000/ants v1.3.0
 	github.com/scylladb/gocqlx v1.5.0
 	github.com/scylladb/gocqlx/v3 v3.0.0
 )

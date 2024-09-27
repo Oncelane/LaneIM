@@ -38,6 +38,7 @@ func (s *ScyllaDB) InitChatMessage() {
 	s.chatMessageTable = table.New(chatMessageMetadata)
 }
 
+// 将SendMsgBatchReq中的消息批量插入scyallDB
 func (s *ScyllaDB) AddChatMessageBatch(in *msg.SendMsgBatchReq) error {
 	// start := time.Now()
 	{ // 多插入
@@ -124,7 +125,7 @@ func (s *ScyllaDB) QueryLatestGroupMessageid(groupID int64) (lastMessageID int64
 func (s *ScyllaDB) PageChatMessageUnReadCountByMessageid(groupID int64, lastMessageID int64, lastMsgUnix time.Time) (count int, err error) {
 	// 分页查询示例
 	debugSql := fmt.Sprintf(`
-	select  count (*) from %s.messages
+	select  count (1) from %s.messages
 	where group_id = %d AND timestamp >= '%s' ;`, s.conf.Keyspace, groupID, lastMsgUnix.UTC().Format("2006-01-02T15:04:05.000Z"))
 	// laneLog.Logger.Debugln("sql = ", debugSql)
 	// Scan(&oneMessage.GroupID, &oneMessage.Timestamp, &oneMessage.MessageID, &oneMessage.Content, &oneMessage.UserID)

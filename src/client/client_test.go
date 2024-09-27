@@ -3,10 +3,12 @@ package client_test
 import (
 	"bytes"
 	"encoding/gob"
+	"laneIM/proto/msg"
 	"laneIM/src/client"
 	"laneIM/src/pkg/laneLog"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -448,7 +450,6 @@ func BenchmarkPaging(b *testing.B) {
 	var pageIndex = 0
 	c := g.Clients[0]
 	for {
-
 		msgs, err := c.QueryPaging(roomid, c.LastMessageId, c.LastMessageUnix, int64(pageSize))
 		if err != nil {
 			b.Fatal(err)
@@ -460,6 +461,55 @@ func BenchmarkPaging(b *testing.B) {
 		lastMsg := msgs.Msgs[len(msgs.Msgs)-1]
 		laneLog.Logger.Infof("=========page%d=>lastMsg:%s", pageIndex, string(lastMsg.Data))
 		c.SetQueryLastIndex(lastMsg.Messageid, lastMsg.Timeunix.AsTime().Local())
+		pageIndex++
+	}
+
+}
+
+func BenchmarkPagingConcurrensy(b *testing.B) {
+	messageSize := 1000
+	roomSize := 100
+	pageSize := 20
+	g, roomid := HelpGeneratorMessage(b, roomSize, messageSize)
+	laneLog.Logger.Infoln("save ", messageSize, " messages")
+	last, err := g.Clients[0].QueryLast(roomid)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// 设置离线时间
+	for _, c := range g.Clients {
+		c.SetQueryLastIndex(last.MessageId, last.TimeUnix.AsTime())
+	}
+
+	laneLog.Logger.Infoln("query last =", last.String())
+	var pageIndex = 0
+
+	for {
+		wait := sync.WaitGroup{}
+		wait.Add(roomSize)
+		var msgs *msg.QueryMultiRoomPagesReply_RoomMultiPageMsg_PageMsgs
+		var err error
+		for _, c := range g.Clients {
+			go func() {
+				defer wait.Done()
+				msgs, err = c.QueryPaging(roomid, c.LastMessageId, c.LastMessageUnix, int64(pageSize))
+				if err != nil {
+					laneLog.Logger.Fatalln(err)
+				}
+			}()
+		}
+
+		wait.Wait()
+		if len(msgs.Msgs) < pageSize {
+			laneLog.Logger.Infoln("===========end%d==========", pageIndex)
+			break
+		}
+		lastMsg := msgs.Msgs[len(msgs.Msgs)-1]
+		laneLog.Logger.Infof("=========page%d=>lastMsg:%s", pageIndex, string(lastMsg.Data))
+		for _, c := range g.Clients {
+			c.SetQueryLastIndex(lastMsg.Messageid, lastMsg.Timeunix.AsTime().Local())
+		}
 		pageIndex++
 	}
 
