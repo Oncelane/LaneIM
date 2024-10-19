@@ -19,7 +19,7 @@ require (
 )
 
 require (
-	github.com/Oncelane/laneEtcd v1.1.1
+	github.com/Oncelane/laneEtcd v1.2.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gocql/gocql v1.6.0
 	github.com/golang/protobuf v1.5.4
@@ -41,6 +41,7 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/go-zookeeper/zk v1.0.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

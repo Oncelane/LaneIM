@@ -29,7 +29,7 @@ func NewRedisClient(conf config.Redis) *RedisClient {
 	// 测试连接
 	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
-		log.Fatalf("could not connect to redis cluster: %v", err)
+		log.Fatalf("could not connect to redis cluster: %v conf.Addr:%v", err, conf.Addr)
 	}
 	return c
 }

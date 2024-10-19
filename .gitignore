@@ -10,3 +10,5 @@
 src/client/userids
 
 *pConfig/
+
+go.sum

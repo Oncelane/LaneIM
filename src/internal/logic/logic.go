@@ -83,6 +83,7 @@ func NewLogic(conf config.Logic) *Logic {
 	}()
 	// register etcd
 	go s.WatchComet()
+
 	s.etcd.SetAddr("grpc:logic:"+s.conf.Name, s.conf.WindowIP+s.conf.GrpcPort)
 	return s
 }

@@ -8,9 +8,11 @@ redis 缓存用户状态，网关路由等信息；kafka 消息队列，解耦�
 
 二级缓存设计，设置 bigcache 一级本地缓存，redis 二级远程缓存；canal 维持 redis 数据一致性；redis 的 sub/pub 维持本地缓存一致性；
 
-sycllaDB 海量消息存储和高效分页拉取; zap+lumberjack 异步日志和日志轮转;singleflight 优化高并发读；请求合并+batch APi 优化高并发读写：以可控较少延迟为代价减少网络请求次数
+scyllaDB 海量消息存储和高效分页拉取; zap+lumberjack 异步日志和日志轮转;singleflight 优化高并发读；请求合并+batch APi 优化高并发读写：以可控较少延迟为代价减少网络请求次数
 
 用户订阅消息机制，对不关心的群聊只接收消息未读数，解决扩散读问题；
+
+离线消息机制：用户上线拉取历史未读信息数目
 
 ## 已实现业务
 
@@ -30,7 +32,7 @@ sycllaDB 海量消息存储和高效分页拉取; zap+lumberjack 异步日志和
 - gRpc
 - protobuf
 - mysql
-- scylla
+- scyllaDB
 - kafka
 - canal
 - redis
@@ -62,6 +64,14 @@ server1 中的客户端监控数据
 server2 网卡统计数据
 
 ![测试截图2](./docs/压测server2网卡.png)
+
+系统消息转发数
+
+![2](./docs/压测每秒转发数.png)
+
+客户端接受流量
+
+![2](./docs/每秒输出接收量.png)
 
 # 压测二 千人群发送消息可用性测试
 

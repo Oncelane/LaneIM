@@ -6,12 +6,13 @@ import (
 	"laneIM/src/pkg/laneLog"
 	"log"
 
+	ec "github.com/Oncelane/laneEtcd/src/client"
 	"github.com/Oncelane/laneEtcd/src/kvraft"
 	"github.com/Oncelane/laneEtcd/src/pkg/laneConfig"
 )
 
 type EtcdClient struct {
-	etcd *kvraft.Clerk
+	etcd *ec.Clerk
 }
 
 var (
@@ -20,7 +21,7 @@ var (
 )
 
 func NewEtcd(conf config.Etcd) *EtcdClient {
-	etcdClient := kvraft.MakeClerk(laneConfig.Clerk{
+	etcdClient := ec.MakeClerk(laneConfig.Clerk{
 		EtcdAddrs: conf.Addr,
 	})
 	return &EtcdClient{etcdClient}
@@ -32,16 +33,25 @@ func (e *EtcdClient) GetAddr(key string) []string {
 		log.Fatalln("failed to get etcd:", err.Error())
 		return nil
 	}
-	return rt
+	strs := make([]string, len(rt))
+	for i := range rt {
+		strs[i] = string(rt[i])
+	}
+	return strs
 }
 
-func (e *EtcdClient) SetAddr(key, addr string) {
-	err := e.etcd.Put("laneIM:"+key, addr)
-	if err != nil {
-		log.Fatalln("failed to set etcd:", err.Error())
-		return
-	}
+func (e *EtcdClient) SetAddr(key, addr string) (cancel func()) {
+	// err := e.etcd.Put("laneIM:"+key, []byte(addr), 0)
+	cancel = e.etcd.WatchDog("laneIM:"+key, []byte(addr))
 	laneLog.Logger.Infof("[laneEtcd] registe %s:%s\n", key, addr)
+	return
+}
+
+func (e *EtcdClient) SetAddr_WithoutWatch(key, addr string) error {
+	err := e.etcd.Put("laneIM:"+key, []byte(addr), 0)
+	// cancel = e.etcd.WatchDog("laneIM:"+key, []byte(addr))
+	laneLog.Logger.Infof("[laneEtcd] registe %s:%s\n", key, addr)
+	return err
 }
 
 func (e *EtcdClient) DelAddr(key, addr string) {

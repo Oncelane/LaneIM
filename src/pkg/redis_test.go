@@ -23,12 +23,12 @@ func TestSetProduceRedis(t *testing.T) {
 		"172.29.178.158:51241",
 		"192.168.141.235:51242"}})
 	laneLog.Logger.Infoln("get: ", e.GetAddr("logic"))
-	e.SetAddr("redis:1", "127.0.0.1:7001")
-	e.SetAddr("redis:2", "127.0.0.1:7002")
-	e.SetAddr("redis:3", "127.0.0.1:7003")
-	e.SetAddr("redis:3", "127.0.0.1:7004")
-	e.SetAddr("redis:3", "127.0.0.1:7005")
-	e.SetAddr("redis:3", "127.0.0.1:7006")
+	e.SetAddr_WithoutWatch("redis:1", "127.0.0.1:7001")
+	e.SetAddr_WithoutWatch("redis:2", "127.0.0.1:7002")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7003")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7004")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7005")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7006")
 }
 
 func TestSetLocalRedis(t *testing.T) {
@@ -38,12 +38,12 @@ func TestSetLocalRedis(t *testing.T) {
 		"127.0.0.1:51241",
 		"127.0.0.1:51242"}})
 	laneLog.Logger.Infoln("get: ", e.GetAddr("logic"))
-	e.SetAddr("redis:1", "127.0.0.1:7001")
-	e.SetAddr("redis:2", "127.0.0.1:7002")
-	e.SetAddr("redis:3", "127.0.0.1:7003")
-	e.SetAddr("redis:3", "127.0.0.1:7004")
-	e.SetAddr("redis:3", "127.0.0.1:7005")
-	e.SetAddr("redis:3", "127.0.0.1:7006")
+	e.SetAddr_WithoutWatch("redis:1", "127.0.0.1:7001")
+	e.SetAddr_WithoutWatch("redis:2", "127.0.0.1:7002")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7003")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7004")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7005")
+	e.SetAddr_WithoutWatch("redis:3", "127.0.0.1:7006")
 }
 
 func BenchmarkSmembers(b *testing.B) {
